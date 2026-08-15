@@ -1,0 +1,549 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum Role {
+  customer
+  admin
+}
+
+enum AddressLabel {
+  home
+  work
+  other
+}
+
+enum RestaurantType {
+  restaurant
+  cloud_kitchen
+  home_kitchen
+}
+
+enum RestaurantStatus {
+  pending
+  active
+  suspended
+  rejected
+}
+
+enum SubscriptionPlan {
+  starter
+  growth
+  pro
+}
+
+enum DayOfWeek {
+  mon
+  tue
+  wed
+  thu
+  fri
+  sat
+  sun
+}
+
+enum PartnerRole {
+  owner
+  manager
+}
+
+enum AvailabilityType {
+  full_time
+  part_time
+}
+
+enum PartnerStatus {
+  pending
+  active
+  suspended
+  rejected
+}
+
+enum OrderStatus {
+  pending
+  restaurant_confirmed
+  preparing
+  ready
+  rider_assigned
+  picked_up
+  out_for_delivery
+  delivered
+  cancelled
+  rejected
+}
+
+enum PaymentMethod {
+  upi
+  card
+  net_banking
+  wallet
+  cod
+}
+
+enum PaymentStatus {
+  pending
+  processing
+  success
+  failed
+  refunded
+}
+
+enum CancelledBy {
+  customer
+  restaurant
+  admin
+}
+
+enum DiscountType {
+  percentage
+  flat
+}
+
+enum FundedBy {
+  restaurant
+  platform
+  shared
+}
+
+enum RecipientType {
+  customer
+  restaurant_partner
+  delivery_partner
+  admin
+}
+
+enum TicketCategory {
+  missing_item
+  wrong_item
+  payment_issue
+  delivery_issue
+  restaurant_issue
+  account_issue
+}
+
+enum TicketStatus {
+  open
+  in_progress
+  resolved
+  closed
+}
+
+// Models
+model User {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String    @db.VarChar(255)
+  phone             String    @unique @db.VarChar(15)
+  email             String?   @unique @db.VarChar(255)
+  password_hash     String?
+  role              Role
+  profile_photo_url String?
+  dob               DateTime? @db.Date
+  is_active         Boolean   @default(true)
+  created_at        DateTime  @default(now()) @db.Timestamptz
+  updated_at        DateTime  @default(now()) @updatedAt @db.Timestamptz
+
+  addresses         Address[]
+  orders            Order[]
+  coupon_redemptions CouponRedemption[]
+  ratings           Rating[]
+  support_tickets   SupportTicket[]
+  admin_configs     AdminConfig[]
+  admin_audit_logs  AdminAuditLog[]
+
+  @@map("users")
+}
+
+model Address {
+  id           String       @id @default(uuid()) @db.Uuid
+  user_id      String       @db.Uuid
+  label        AddressLabel
+  custom_label String?      @db.VarChar(100)
+  address_line String
+  city         String       @db.VarChar(100)
+  state        String       @db.VarChar(100)
+  pincode      String       @db.VarChar(10)
+  latitude     Decimal      @db.Decimal(10, 8)
+  longitude    Decimal      @db.Decimal(11, 8)
+  is_default   Boolean      @default(false)
+  created_at   DateTime     @default(now()) @db.Timestamptz
+
+  user         User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  orders       Order[]
+
+  @@map("addresses")
+}
+
+model Restaurant {
+  id                        String           @id @default(uuid()) @db.Uuid
+  name                      String           @db.VarChar(255)
+  type                      RestaurantType
+  owner_name                String           @db.VarChar(255)
+  phone                     String           @db.VarChar(15)
+  email                     String?          @db.VarChar(255)
+  address_line              String
+  city                      String           @db.VarChar(100)
+  state                     String           @db.VarChar(100)
+  pincode                   String           @db.VarChar(10)
+  latitude                  Decimal          @db.Decimal(10, 8)
+  longitude                 Decimal          @db.Decimal(11, 8)
+  service_radius_km         Decimal          @db.Decimal(5, 2)
+  logo_url                  String?
+  cover_image_url           String?
+  photo_gallery_urls        String[]         @default([])
+  is_pure_veg               Boolean          @default(false)
+  cuisine_tags              String[]         @default([])
+  status                    RestaurantStatus @default(pending)
+  is_open                   Boolean          @default(false)
+  commission_rate           Decimal          @db.Decimal(5, 2)
+  subscription_plan         SubscriptionPlan @default(starter)
+  avg_preparation_time_mins Int?
+  created_at                DateTime         @default(now()) @db.Timestamptz
+  updated_at                DateTime         @default(now()) @updatedAt @db.Timestamptz
+
+  operating_hours           RestaurantOperatingHour[]
+  documents                 RestaurantDocument[]
+  partners                  RestaurantPartner[]
+  menu_categories           MenuCategory[]
+  menu_items                MenuItem[]
+  orders                    Order[]
+  coupons                   Coupon[]
+  ratings                   Rating[]
+
+  @@map("restaurants")
+}
+
+model RestaurantOperatingHour {
+  id            String     @id @default(uuid()) @db.Uuid
+  restaurant_id String     @db.Uuid
+  day_of_week   DayOfWeek
+  open_time     DateTime   @db.Time
+  close_time    DateTime   @db.Time
+  is_closed     Boolean    @default(false)
+
+  restaurant    Restaurant @relation(fields: [restaurant_id], references: [id])
+
+  @@map("restaurant_operating_hours")
+}
+
+model RestaurantDocument {
+  id            String     @id @default(uuid()) @db.Uuid
+  restaurant_id String     @db.Uuid
+  document_type String     @db.VarChar(100)
+  document_url  String
+  verified      Boolean    @default(false)
+  uploaded_at   DateTime   @default(now()) @db.Timestamptz
+
+  restaurant    Restaurant @relation(fields: [restaurant_id], references: [id])
+
+  @@map("restaurant_documents")
+}
+
+model RestaurantPartner {
+  id            String      @id @default(uuid()) @db.Uuid
+  restaurant_id String      @db.Uuid
+  name          String      @db.VarChar(255)
+  phone         String      @unique @db.VarChar(15)
+  email         String?     @db.VarChar(255)
+  password_hash String?
+  role          PartnerRole
+  is_active     Boolean     @default(true)
+  created_at    DateTime    @default(now()) @db.Timestamptz
+
+  restaurant    Restaurant  @relation(fields: [restaurant_id], references: [id])
+
+  @@map("restaurant_partners")
+}
+
+model MenuCategory {
+  id            String     @id @default(uuid()) @db.Uuid
+  restaurant_id String     @db.Uuid
+  name          String     @db.VarChar(255)
+  display_order Int        @default(0)
+  is_active     Boolean    @default(true)
+
+  restaurant    Restaurant @relation(fields: [restaurant_id], references: [id])
+  menu_items    MenuItem[]
+
+  @@map("menu_categories")
+}
+
+model MenuItem {
+  id                    String       @id @default(uuid()) @db.Uuid
+  restaurant_id         String       @db.Uuid
+  category_id           String       @db.Uuid
+  name                  String       @db.VarChar(255)
+  description           String?
+  price                 Decimal      @db.Decimal(10, 2)
+  image_url             String?
+  is_veg                Boolean
+  is_available          Boolean      @default(true)
+  is_bestseller         Boolean      @default(false)
+  stock_quantity        Int?
+  preparation_time_mins Int?
+  created_at            DateTime     @default(now()) @db.Timestamptz
+  updated_at            DateTime     @default(now()) @updatedAt @db.Timestamptz
+
+  restaurant            Restaurant   @relation(fields: [restaurant_id], references: [id])
+  category              MenuCategory @relation(fields: [category_id], references: [id])
+  customizations        MenuItemCustomization[]
+  order_items           OrderItem[]
+
+  @@map("menu_items")
+}
+
+model MenuItemCustomization {
+  id              String  @id @default(uuid()) @db.Uuid
+  menu_item_id    String  @db.Uuid
+  group_name      String  @db.VarChar(100)
+  is_required     Boolean @default(false)
+  is_multi_select Boolean @default(false)
+
+  menu_item       MenuItem @relation(fields: [menu_item_id], references: [id])
+  options         MenuItemCustomizationOption[]
+
+  @@map("menu_item_customizations")
+}
+
+model MenuItemCustomizationOption {
+  id               String  @id @default(uuid()) @db.Uuid
+  customization_id String  @db.Uuid
+  label            String  @db.VarChar(100)
+  additional_price Decimal @default(0) @db.Decimal(10, 2)
+
+  customization    MenuItemCustomization @relation(fields: [customization_id], references: [id])
+
+  @@map("menu_item_customization_options")
+}
+
+model DeliveryPartner {
+  id                  String           @id @default(uuid()) @db.Uuid
+  name                String           @db.VarChar(255)
+  phone               String           @unique @db.VarChar(15)
+  email               String?          @db.VarChar(255)
+  password_hash       String?
+  profile_photo_url   String?
+  vehicle_type        String?          @db.VarChar(100)
+  vehicle_number      String?          @db.VarChar(50)
+  bank_account_number String?
+  bank_ifsc           String?          @db.VarChar(20)
+  availability_type   AvailabilityType
+  is_online           Boolean          @default(false)
+  current_latitude    Decimal?         @db.Decimal(10, 8)
+  current_longitude   Decimal?         @db.Decimal(11, 8)
+  status              PartnerStatus    @default(pending)
+  created_at          DateTime         @default(now()) @db.Timestamptz
+  updated_at          DateTime         @default(now()) @updatedAt @db.Timestamptz
+
+  availabilities      DeliveryPartnerAvailability[]
+  documents           DeliveryPartnerDocument[]
+  orders              Order[]
+  ratings             Rating[]
+
+  @@map("delivery_partners")
+}
+
+model DeliveryPartnerAvailability {
+  id         String          @id @default(uuid()) @db.Uuid
+  partner_id String          @db.Uuid
+  day_of_week DayOfWeek
+  start_time DateTime        @db.Time
+  end_time   DateTime        @db.Time
+
+  partner    DeliveryPartner @relation(fields: [partner_id], references: [id])
+
+  @@map("delivery_partner_availability")
+}
+
+model DeliveryPartnerDocument {
+  id            String          @id @default(uuid()) @db.Uuid
+  partner_id    String          @db.Uuid
+  document_type String          @db.VarChar(100)
+  document_url  String
+  verified      Boolean         @default(false)
+  uploaded_at   DateTime        @default(now()) @db.Timestamptz
+
+  partner       DeliveryPartner @relation(fields: [partner_id], references: [id])
+
+  @@map("delivery_partner_documents")
+}
+
+model Order {
+  id                   String           @id @default(uuid()) @db.Uuid
+  customer_id          String           @db.Uuid
+  restaurant_id        String           @db.Uuid
+  delivery_partner_id  String?          @db.Uuid
+  delivery_address_id  String           @db.Uuid
+  status               OrderStatus
+  item_subtotal        Decimal          @db.Decimal(10, 2)
+  delivery_fee         Decimal          @db.Decimal(10, 2)
+  platform_fee         Decimal          @db.Decimal(10, 2)
+  discount_amount      Decimal          @default(0) @db.Decimal(10, 2)
+  tax_amount           Decimal          @default(0) @db.Decimal(10, 2)
+  total_amount         Decimal          @db.Decimal(10, 2)
+  payment_method       PaymentMethod
+  payment_status       PaymentStatus
+  razorpay_order_id    String?
+  razorpay_payment_id  String?
+  idempotency_key      String           @unique
+  coupon_id            String?          @db.Uuid
+  special_instructions String?
+  cancelled_by         CancelledBy?
+  cancellation_reason  String?
+  created_at           DateTime         @default(now()) @db.Timestamptz
+  updated_at           DateTime         @default(now()) @updatedAt @db.Timestamptz
+
+  customer             User             @relation(fields: [customer_id], references: [id])
+  restaurant           Restaurant       @relation(fields: [restaurant_id], references: [id])
+  delivery_partner     DeliveryPartner? @relation(fields: [delivery_partner_id], references: [id])
+  delivery_address     Address          @relation(fields: [delivery_address_id], references: [id])
+  coupon               Coupon?          @relation(fields: [coupon_id], references: [id])
+
+  order_items          OrderItem[]
+  coupon_redemptions   CouponRedemption[]
+  ratings              Rating?
+  support_tickets      SupportTicket[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id                      String   @id @default(uuid()) @db.Uuid
+  order_id                String   @db.Uuid
+  menu_item_id            String   @db.Uuid
+  name_snapshot           String   @db.VarChar(255)
+  price_snapshot          Decimal  @db.Decimal(10, 2)
+  quantity                Int
+  customizations_snapshot Json?
+  subtotal                Decimal  @db.Decimal(10, 2)
+
+  order                   Order    @relation(fields: [order_id], references: [id])
+  menu_item               MenuItem @relation(fields: [menu_item_id], references: [id])
+
+  @@map("order_items")
+}
+
+model Coupon {
+  id                String       @id @default(uuid()) @db.Uuid
+  code              String       @unique @db.VarChar(50)
+  discount_type     DiscountType
+  discount_value    Decimal      @db.Decimal(10, 2)
+  max_discount_cap  Decimal?     @db.Decimal(10, 2)
+  min_order_value   Decimal      @default(0) @db.Decimal(10, 2)
+  funded_by         FundedBy
+  restaurant_id     String?      @db.Uuid
+  max_uses_total    Int?
+  max_uses_per_user Int          @default(1)
+  valid_from        DateTime     @db.Timestamptz
+  valid_until       DateTime     @db.Timestamptz
+  is_active         Boolean      @default(true)
+  created_at        DateTime     @default(now()) @db.Timestamptz
+
+  restaurant        Restaurant?  @relation(fields: [restaurant_id], references: [id])
+  orders            Order[]
+  redemptions       CouponRedemption[]
+
+  @@map("coupons")
+}
+
+model CouponRedemption {
+  id          String   @id @default(uuid()) @db.Uuid
+  coupon_id   String   @db.Uuid
+  user_id     String   @db.Uuid
+  order_id    String   @db.Uuid
+  redeemed_at DateTime @default(now()) @db.Timestamptz
+
+  coupon      Coupon   @relation(fields: [coupon_id], references: [id])
+  user        User     @relation(fields: [user_id], references: [id])
+  order       Order    @relation(fields: [order_id], references: [id])
+
+  @@map("coupon_redemptions")
+}
+
+model Rating {
+  id                  String           @id @default(uuid()) @db.Uuid
+  order_id            String           @unique @db.Uuid
+  customer_id         String           @db.Uuid
+  restaurant_id       String           @db.Uuid
+  delivery_partner_id String?          @db.Uuid
+  food_rating         Int              @db.SmallInt
+  restaurant_rating   Int              @db.SmallInt
+  delivery_rating     Int?             @db.SmallInt
+  review_text         String?
+  photo_urls          String[]         @default([])
+  tags                String[]         @default([])
+  created_at          DateTime         @default(now()) @db.Timestamptz
+
+  order               Order            @relation(fields: [order_id], references: [id])
+  customer            User             @relation(fields: [customer_id], references: [id])
+  restaurant          Restaurant       @relation(fields: [restaurant_id], references: [id])
+  delivery_partner    DeliveryPartner? @relation(fields: [delivery_partner_id], references: [id])
+
+  @@map("ratings")
+}
+
+model Notification {
+  id             String        @id @default(uuid()) @db.Uuid
+  recipient_type RecipientType
+  recipient_id   String        @db.Uuid
+  type           String        @db.VarChar(100)
+  title          String        @db.VarChar(255)
+  body           String
+  data           Json?
+  is_read        Boolean       @default(false)
+  created_at     DateTime      @default(now()) @db.Timestamptz
+
+  @@map("notifications")
+}
+
+model SupportTicket {
+  id               String         @id @default(uuid()) @db.Uuid
+  customer_id      String         @db.Uuid
+  order_id         String?        @db.Uuid
+  category         TicketCategory
+  description      String
+  status           TicketStatus   @default(open)
+  resolution_notes String?
+  created_at       DateTime       @default(now()) @db.Timestamptz
+  updated_at       DateTime       @default(now()) @updatedAt @db.Timestamptz
+
+  customer         User           @relation(fields: [customer_id], references: [id])
+  order            Order?         @relation(fields: [order_id], references: [id])
+
+  @@map("support_tickets")
+}
+
+model AdminConfig {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique @db.VarChar(100)
+  value       String
+  description String?
+  updated_by  String   @db.Uuid
+  updated_at  DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  admin       User     @relation(fields: [updated_by], references: [id])
+
+  @@map("admin_config")
+}
+
+model AdminAuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  admin_id    String   @db.Uuid
+  action      String
+  target_type String?  @db.VarChar(100)
+  target_id   String?  @db.Uuid
+  details     Json?
+  created_at  DateTime @default(now()) @db.Timestamptz
+
+  admin       User     @relation(fields: [admin_id], references: [id])
+
+  @@map("admin_audit_log")
+}
