@@ -11,6 +11,17 @@
 - **Files touched**: `website/src/index.css`, `website/src/pages/Landing.tsx`, `website/src/pages/customer/Login.tsx`, `website/src/pages/restaurant/Login.tsx`, `website/src/pages/admin/Login.tsx`, `website/src/pages/restaurant/DashboardLayout.tsx`
 
 ---
+## 2026-08-16 — Entry 17
+- **What changed**: Reset and seeded the database.
+- **Why**: The user requested a database wipe and seed to start fresh for testing the new Auth system.
+- **Details**:
+  - Configured `backend/package.json` and `backend/prisma.config.ts` to use a custom seed script (`tsx prisma/seed.ts`).
+  - Created a robust seed script that clears orphaned users from Supabase Auth (via Admin API), then recreates standard test users (`admin`, `customer`, `partner`).
+  - The seed script then injects a full test restaurant ("The Spice Grill") into the database with menu categories and items.
+  - Executed `npx prisma db push --force-reset` followed by `npx prisma db seed`.
+- **Files touched**: `backend/package.json`, `backend/prisma.config.ts`, `backend/prisma/seed.ts`
+
+---
 ## 2026-08-16 — Entry 15
 - **What changed**: Migrated Authentication to Supabase Auth & Passport.js.
 - **Why**: The user requested a robust session-based system that natively prevents duplicate emails and handles passwords securely without custom bcrypt logic.

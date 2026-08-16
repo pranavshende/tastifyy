@@ -11,19 +11,31 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
-    // 1. Create user in Supabase Auth (prevents duplicate emails natively)
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // 1. Create user using Admin API to bypass Free Tier rate limits (3/hr)
+    const { data: adminData, error: adminError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true
+    });
+
+    if (adminError) {
+      res.status(400).json({ error: adminError.message });
+      return;
+    }
+
+    if (!adminData.user) {
+      res.status(400).json({ error: 'Failed to create user. Email may already be registered.' });
+      return;
+    }
+
+    // Now log them in immediately to get the session token
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (authError) {
-      res.status(400).json({ error: authError.message });
-      return;
-    }
-
-    if (!authData.user) {
-      res.status(400).json({ error: 'Email already registered or requires confirmation. Try logging in.' });
+    if (authError || !authData.session) {
+      res.status(500).json({ error: 'User created but failed to generate session token.' });
       return;
     }
 
