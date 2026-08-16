@@ -15,8 +15,7 @@
 | `name` | VARCHAR(255) | NOT NULL | |
 | `phone` | VARCHAR(15) | UNIQUE, NOT NULL | Primary login identifier |
 | `email` | VARCHAR(255) | UNIQUE, NULLABLE | |
-| `password_hash` | TEXT | NULLABLE | For email login |
-| `role` | ENUM | NOT NULL | `customer`, `admin` |
+| `role` | ENUM | NOT NULL | `customer`, `admin`, `delivery_partner`, `restaurant_partner` |
 | `profile_photo_url` | TEXT | NULLABLE | |
 | `dob` | DATE | NULLABLE | For birthday offers (Phase 2) |
 | `is_active` | BOOLEAN | DEFAULT true | |
@@ -107,7 +106,6 @@
 | `name` | VARCHAR(255) | NOT NULL | |
 | `phone` | VARCHAR(15) | UNIQUE, NOT NULL | |
 | `email` | VARCHAR(255) | NULLABLE | |
-| `password_hash` | TEXT | NULLABLE | |
 | `role` | ENUM | NOT NULL | `owner`, `manager` |
 | `is_active` | BOOLEAN | DEFAULT true | |
 | `created_at` | TIMESTAMPTZ | DEFAULT now() | |

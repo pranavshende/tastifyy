@@ -7,13 +7,14 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // Enums
 enum Role {
   customer
   admin
+  delivery_partner
+  restaurant_partner
 }
 
 enum AddressLabel {
@@ -143,7 +144,6 @@ model User {
   name              String    @db.VarChar(255)
   phone             String    @unique @db.VarChar(15)
   email             String?   @unique @db.VarChar(255)
-  password_hash     String?
   role              Role
   profile_photo_url String?
   dob               DateTime? @db.Date

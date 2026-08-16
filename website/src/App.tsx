@@ -1,13 +1,37 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Landing from './pages/Landing';
+import AdminLogin from './pages/admin/Login';
+import AdminDashboard from './pages/admin/Dashboard';
+import CustomerLogin from './pages/customer/Login';
+import CustomerPlaceholder from './pages/customer/Placeholder';
+import RestaurantRegister from './pages/restaurant/Register';
+import RestaurantLogin from './pages/restaurant/Login';
+import DashboardLayout from './pages/restaurant/DashboardLayout';
+import RestaurantDashboard from './pages/restaurant/Dashboard';
+import MenuManager from './pages/restaurant/MenuManager';
 
 function App() {
   return (
     <Router>
       <div className="min-h-screen bg-gray-50">
         <Routes>
-          <Route path="/" element={<Navigate to="/restaurant" replace />} />
-          <Route path="/restaurant/*" element={<div className="p-4 text-2xl font-bold text-orange-600">Restaurant Panel Placeholder</div>} />
-          <Route path="/admin/*" element={<div className="p-4 text-2xl font-bold text-blue-600">Admin Panel Placeholder</div>} />
+          <Route path="/" element={<Landing />} />
+          
+          {/* Customer Routes */}
+          <Route path="/customer/login" element={<CustomerLogin />} />
+          <Route path="/customer/home" element={<CustomerPlaceholder />} />
+          
+          {/* Admin Routes */}
+          <Route path="/admin" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
+          {/* Restaurant Routes */}
+          <Route path="/restaurant" element={<RestaurantRegister />} />
+          <Route path="/restaurant/login" element={<RestaurantLogin />} />
+          <Route element={<DashboardLayout />}>
+            <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
+            <Route path="/restaurant/menu" element={<MenuManager />} />
+          </Route>
         </Routes>
       </div>
     </Router>
