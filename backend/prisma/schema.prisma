@@ -326,16 +326,19 @@ model MenuItemCustomizationOption {
 
 model DeliveryPartner {
   id                  String           @id @default(uuid()) @db.Uuid
+  user_id             String           @unique @db.Uuid
   name                String           @db.VarChar(255)
   phone               String           @unique @db.VarChar(15)
   email               String?          @db.VarChar(255)
-  password_hash       String?
   profile_photo_url   String?
   vehicle_type        String?          @db.VarChar(100)
   vehicle_number      String?          @db.VarChar(50)
+  vehicle_model       String?          @db.VarChar(100)
+  license_number      String?          @db.VarChar(50)
   bank_account_number String?
-  bank_ifsc           String?          @db.VarChar(20)
-  availability_type   AvailabilityType
+  ifsc_code           String?          @db.VarChar(20)
+  upi_id              String?          @db.VarChar(100)
+  availability_type   AvailabilityType @default(full_time)
   is_online           Boolean          @default(false)
   current_latitude    Decimal?         @db.Decimal(10, 8)
   current_longitude   Decimal?         @db.Decimal(11, 8)
@@ -347,6 +350,7 @@ model DeliveryPartner {
   documents           DeliveryPartnerDocument[]
   orders              Order[]
   ratings             Rating[]
+  assignments         DeliveryAssignment[]
 
   @@map("delivery_partners")
 }
@@ -546,4 +550,20 @@ model AdminAuditLog {
   admin       User     @relation(fields: [admin_id], references: [id])
 
   @@map("admin_audit_log")
+}
+
+model DeliveryAssignment {
+  id             String          @id @default(uuid()) @db.Uuid
+  order_id       String          @unique @db.Uuid
+  partner_id     String          @db.Uuid
+  status         String          @db.VarChar(50) // accepted, picked_up, delivered, rejected
+  earning_amount Decimal?        @db.Decimal(10, 2)
+  pickup_distance_km Decimal?    @db.Decimal(6, 2)
+  delivery_distance_km Decimal?  @db.Decimal(6, 2)
+  assigned_at    DateTime        @default(now()) @db.Timestamptz
+  updated_at     DateTime        @default(now()) @updatedAt @db.Timestamptz
+
+  partner        DeliveryPartner @relation(fields: [partner_id], references: [id])
+
+  @@map("delivery_assignments")
 }

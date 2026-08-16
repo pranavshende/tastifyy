@@ -14,7 +14,6 @@ export default function Landing() {
           </div>
           <div className="hidden md:flex gap-8 items-center font-medium text-gray-600">
             <a href="#features" className="hover:text-brand-primary transition-colors">Features</a>
-            <a href="#partners" className="hover:text-brand-primary transition-colors">Partners</a>
             <Link to="/customer/login" className="px-5 py-2 rounded-full bg-brand-dark text-white hover:bg-black transition-transform hover:scale-105 active:scale-95 shadow-md">
               Order Now
             </Link>
@@ -53,7 +52,7 @@ export default function Landing() {
         </div>
 
         {/* Feature Cards Showcase */}
-        <div className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full relative z-10 px-4">
+        <div id="features" className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full relative z-10 px-4">
           {[
             { title: 'Lightning Fast', desc: 'Real-time order tracking and optimized routing for hot, fresh food.', icon: '🚀' },
             { title: 'Restaurant Hub', desc: 'Powerful dashboard to manage menu, inventory, and analytics.', icon: '📊' },

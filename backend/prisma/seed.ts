@@ -1,3 +1,4 @@
+// @ts-ignore
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { createClient } from '@supabase/supabase-js';

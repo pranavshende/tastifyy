@@ -6,12 +6,17 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   const { email, password, phone, name, role } = req.body;
 
   if (!email || !password || !phone || !name || !role) {
-    res.status(400).json({ error: 'Email, password, phone, name, and role are required' });
+    res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Email, password, phone, name, and role are required' } });
+    return;
+  }
+
+  // Block self-registration of admin accounts
+  if (role === 'admin') {
+    res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Admin accounts cannot be self-registered' } });
     return;
   }
 
   try {
-    // 1. Create user using Admin API to bypass Free Tier rate limits (3/hr)
     const { data: adminData, error: adminError } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -19,100 +24,123 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     });
 
     if (adminError) {
-      res.status(400).json({ error: adminError.message });
+      res.status(400).json({ success: false, error: { code: 'AUTH_ERROR', message: adminError.message } });
       return;
     }
 
     if (!adminData.user) {
-      res.status(400).json({ error: 'Failed to create user. Email may already be registered.' });
+      res.status(400).json({ success: false, error: { code: 'AUTH_ERROR', message: 'Failed to create user. Email may already be registered.' } });
       return;
     }
 
-    // Now log them in immediately to get the session token
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
     if (authError || !authData.session) {
-      res.status(500).json({ error: 'User created but failed to generate session token.' });
+      res.status(500).json({ success: false, error: { code: 'SESSION_ERROR', message: 'User created but failed to generate session.' } });
       return;
     }
 
-    // 2. Create the corresponding user record in our Prisma database
-    // We use the Supabase Auth UUID as our primary key so they stay synced.
     const user = await prisma.user.create({
-      data: {
-        id: authData.user.id,
-        email,
-        phone,
-        name,
-        role
-      }
+      data: { id: authData.user.id, email, phone, name, role }
     });
 
-    res.status(201).json({ message: 'Registration successful', user, session: authData.session });
+    res.status(201).json({ success: true, user, session: authData.session });
   } catch (error: any) {
     console.error('Registration Error:', error);
-    // Handle Prisma unique constraint errors (e.g. phone already exists)
     if (error.code === 'P2002') {
-      res.status(400).json({ error: 'A user with this phone number already exists' });
+      res.status(400).json({ success: false, error: { code: 'DUPLICATE', message: 'A user with this phone or email already exists' } });
       return;
     }
-    res.status(500).json({ error: 'Internal server error during registration', details: error.message || String(error) });
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Internal server error during registration' } });
   }
 };
 
 export const login = async (req: Request, res: Response): Promise<void> => {
-  const { email, password, role } = req.body;
+  const { email, password } = req.body;
 
-  if (!email || !password || !role) {
-    res.status(400).json({ error: 'Email, password, and role are required' });
+  if (!email || !password) {
+    res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Email and password are required' } });
     return;
   }
 
   try {
-    // 1. Authenticate with Supabase
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
     if (authError) {
-      res.status(401).json({ error: 'Invalid email or password' });
+      res.status(401).json({ success: false, error: { code: 'AUTH_FAILED', message: 'Invalid email or password' } });
       return;
     }
 
     if (!authData.user || !authData.session) {
-      res.status(500).json({ error: 'Failed to retrieve session from Supabase' });
+      res.status(500).json({ success: false, error: { code: 'SESSION_ERROR', message: 'Failed to retrieve session' } });
       return;
     }
 
-    // 2. Verify the role in our database
-    const user = await prisma.user.findUnique({
-      where: { id: authData.user.id }
-    });
+    const user = await prisma.user.findUnique({ where: { id: authData.user.id } });
 
     if (!user) {
-      res.status(404).json({ error: 'User profile not found in database' });
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User profile not found' } });
       return;
     }
 
-    if (user.role !== role) {
-      res.status(403).json({ error: `Account is registered as a ${user.role}. Cannot login as ${role}.` });
+    if (!user.is_active) {
+      res.status(403).json({ success: false, error: { code: 'ACCOUNT_SUSPENDED', message: 'Your account has been suspended. Contact support.' } });
       return;
     }
 
-    // 3. Return the user profile and the Supabase JWT session
-    // The client will use `authData.session.access_token` for Bearer auth
-    res.json({
-      message: 'Login successful',
-      user,
-      session: authData.session,
-      token: authData.session.access_token // For backward compatibility with existing frontends during transition
-    });
+    res.json({ success: true, user, session: authData.session });
   } catch (error) {
     console.error('Login Error:', error);
-    res.status(500).json({ error: 'Internal server error during login' });
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Internal server error during login' } });
   }
+};
+
+// GET /auth/me — validate session and return full user profile + role
+export const me = async (req: Request, res: Response): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'No token provided' } });
+    return;
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const { data: { user: supabaseUser }, error } = await supabase.auth.getUser(token);
+
+    if (error || !supabaseUser) {
+      res.status(401).json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Session expired or invalid. Please log in again.' } });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: supabaseUser.id } });
+
+    if (!user) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User profile not found' } });
+      return;
+    }
+
+    if (!user.is_active) {
+      res.status(403).json({ success: false, error: { code: 'ACCOUNT_SUSPENDED', message: 'Account suspended' } });
+      return;
+    }
+
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error('Me Error:', error);
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } });
+  }
+};
+
+// POST /auth/logout
+export const logout = async (req: Request, res: Response): Promise<void> => {
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    // Best-effort sign out — invalidates the refresh token on Supabase
+    if (token) {
+      try { await supabase.auth.admin.signOut(token); } catch (_) {}
+    }
+  }
+  res.json({ success: true, message: 'Logged out successfully' });
 };

@@ -1,5 +1,16 @@
 # Memory / Changelog
 
+## 2026-08-16 — Entry 18
+- **What changed**: Built the Web Customer Portal Dashboard.
+- **Why**: The user explicitly requested to start building the customer portal dashboard.
+- **Details**:
+  - Replaced `website/src/pages/customer/Placeholder.tsx` with a fully functional `Home.tsx`.
+  - Updated React Router in `App.tsx` to point `/customer/home` to the new page.
+  - Built a premium dashboard UI featuring a sticky glassmorphism header, an animated Hero search section, and a responsive CSS grid of restaurant cards.
+  - Integrated the `GET /api/restaurants` backend route so the dashboard dynamically fetches the seeded restaurants (e.g., "The Spice Grill").
+- **Files touched**: `website/src/App.tsx`, `website/src/pages/customer/Home.tsx`
+
+---
 ## 2026-08-16 — Entry 16
 - **What changed**: Executed Part 1 of the Global UI/UX Redesign (Website Overhaul).
 - **Why**: The user requested a global redesign to meet the premium, modern aesthetic outlined in `design.md`.
@@ -175,3 +186,8 @@
   - **Deployment**: Render (backend), Vercel (web panels), Supabase (database), Expo EAS (mobile builds)
   - **Monorepo**: pnpm workspaces
 - **Files touched**: `architecture.md`, `database.md`, `memory.md`
+
+## 2026-08-16
+- **What Changed**: Established the Unified Mobile App Foundation (tastifyyApp) based on the Master Implementation Plan. Built Universal Login, Zustand Auth Store, Axios API client, and strict role-based routing guards in Expo Router.
+- **Why**: To align the mobile application with the PRD v2.1 requirement for a single unified app controlling all roles (Customer, Restaurant, Delivery, Admin) against the real Node.js backend.
+- **Files Touched**: `tastifyyApp/app/_layout.tsx`, `tastifyyApp/app/(auth)/login.tsx`, `tastifyyApp/store/authStore.ts`, `tastifyyApp/api/axios.ts`, and dummy dashboard roots.

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../api/axios';
+import { useAuthStore } from '../../store/authStore';
 
 export default function CustomerLogin() {
   const [isRegister, setIsRegister] = useState(false);
@@ -11,6 +12,7 @@ export default function CustomerLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { setAuth } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,16 +20,19 @@ export default function CustomerLogin() {
     setError('');
 
     try {
+      let res;
       if (isRegister) {
-        const res = await api.post('/auth/register', { email, password, name, phone, role: 'customer' });
-        localStorage.setItem('token', res.data.token || res.data.session.access_token);
+        res = await api.post('/auth/register', { email, password, name, phone, role: 'customer' });
       } else {
-        const res = await api.post('/auth/login', { email, password, role: 'customer' });
-        localStorage.setItem('token', res.data.token || res.data.session.access_token);
+        res = await api.post('/auth/login', { email, password });
       }
+      const token = res.data.session?.access_token;
+      if (!token || !res.data.user) throw new Error('Invalid response from server');
+      setAuth(res.data.user, token);
       navigate('/customer/home');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Authentication failed');
+      const msg = err.response?.data?.error?.message || err.response?.data?.error || err.message || 'Authentication failed';
+      setError(msg);
     } finally {
       setLoading(false);
     }

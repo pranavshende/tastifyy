@@ -24,6 +24,16 @@ export const initSocket = (server: HttpServer) => {
     socket.on('disconnect', () => {
       console.log(`Socket disconnected: ${socket.id}`);
     });
+
+    // Relay rider's live location to the specific customer
+    socket.on('update_location', (data: { customerId: string, orderId: string, lat: number, lng: number }) => {
+      io.to(`customer_${data.customerId}`).emit('rider_location_update', {
+        orderId: data.orderId,
+        lat: data.lat,
+        lng: data.lng,
+        timestamp: new Date().toISOString()
+      });
+    });
   });
 
   return io;

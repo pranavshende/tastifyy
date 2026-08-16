@@ -1,12 +1,14 @@
-import React from 'react';
+
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
 
 export default function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuthStore();
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
+  const handleLogout = async () => {
+    await logout();
     navigate('/restaurant/login');
   };
 

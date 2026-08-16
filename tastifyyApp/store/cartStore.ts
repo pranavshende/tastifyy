@@ -12,6 +12,7 @@ interface CartState {
   items: CartItem[];
   addItem: (restaurantId: string, item: CartItem) => void;
   removeItem: (menuItemId: string) => void;
+  updateQuantity: (menuItemId: string, delta: number) => void;
   clearCart: () => void;
   getTotal: () => number;
 }
@@ -44,6 +45,18 @@ export const useCartStore = create<CartState>((set, get) => ({
   }),
   removeItem: (menuItemId) => set((state) => {
     const updatedItems = state.items.filter(i => i.menu_item_id !== menuItemId);
+    return {
+      items: updatedItems,
+      restaurantId: updatedItems.length === 0 ? null : state.restaurantId
+    };
+  }),
+  updateQuantity: (menuItemId, delta) => set((state) => {
+    const updatedItems = state.items.map(i => {
+      if (i.menu_item_id === menuItemId) {
+        return { ...i, quantity: i.quantity + delta };
+      }
+      return i;
+    }).filter(i => i.quantity > 0);
     return {
       items: updatedItems,
       restaurantId: updatedItems.length === 0 ? null : state.restaurantId
