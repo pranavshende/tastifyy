@@ -207,7 +207,7 @@ export default function RestaurantProfile() {
     return (
       <div className="flex-1 flex justify-center items-center h-full">
         <div className="bg-red-50 text-red-600 p-6 rounded-2xl font-bold border border-red-100 flex items-center">
-          <AlertCircle className="w-5 h-5 mr-2" /> {error}
+          <AlertCircle className="w-5 h-5 mr-2" /> {typeof error === 'object' ? (error as any).message || JSON.stringify(error) : String(error)}
         </div>
       </div>
     );
@@ -239,7 +239,7 @@ export default function RestaurantProfile() {
         {/* Upload Error */}
         {uploadError && (
           <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-medium flex items-center">
-            <AlertCircle className="w-4 h-4 mr-2 shrink-0" /> {uploadError}
+            <AlertCircle className="w-4 h-4 mr-2 shrink-0" /> {typeof uploadError === 'object' ? (uploadError as any).message || JSON.stringify(uploadError) : String(uploadError)}
             <button onClick={() => setUploadError('')} className="ml-auto text-red-400 hover:text-red-600">✕</button>
           </div>
         )}
@@ -461,7 +461,7 @@ export default function RestaurantProfile() {
         {/* ── Error + Save ── */}
         {error && (
           <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-medium flex items-center">
-            <AlertCircle className="w-4 h-4 mr-2 shrink-0" /> {error}
+            <AlertCircle className="w-4 h-4 mr-2 shrink-0" /> {typeof error === 'object' ? (error as any).message || JSON.stringify(error) : String(error)}
           </div>
         )}
         {saveSuccess && (

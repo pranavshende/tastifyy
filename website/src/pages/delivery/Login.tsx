@@ -56,7 +56,7 @@ export default function DeliveryLogin() {
 
         {error && (
           <div className="bg-red-50 text-red-500 p-4 rounded-xl mb-6 text-sm font-medium border border-red-100">
-            {error}
+            {typeof error === 'object' ? (error as any).message || JSON.stringify(error) : String(error)}
           </div>
         )}
 

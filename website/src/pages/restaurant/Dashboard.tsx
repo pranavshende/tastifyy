@@ -213,8 +213,8 @@ export default function RestaurantDashboard() {
             <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : error ? (
-          <div className="bg-red-50 text-red-600 p-6 rounded-2xl border border-red-100 font-bold flex items-center">
-            <AlertCircle className="w-6 h-6 mr-3" /> {error}
+          <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl font-medium flex items-center shadow-sm">
+            <AlertCircle className="w-6 h-6 mr-3" /> {typeof error === 'object' ? (error as any).message || JSON.stringify(error) : String(error)}
           </div>
         ) : (
           <div className="flex-1 flex gap-6 overflow-x-auto pb-4 scrollbar-hide snap-x">

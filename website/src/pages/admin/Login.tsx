@@ -42,7 +42,7 @@ export default function AdminLogin() {
         <div className="bg-gray-800 rounded-3xl shadow-2xl p-8 border border-gray-700">
           {error && (
             <div className="bg-red-500/10 text-red-400 p-4 rounded-xl mb-6 text-sm font-medium border border-red-500/20">
-              {error}
+              {typeof error === 'object' ? (error as any).message || JSON.stringify(error) : String(error)}
             </div>
           )}
 

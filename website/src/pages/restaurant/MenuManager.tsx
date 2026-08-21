@@ -162,8 +162,8 @@ function ItemModal({ isOpen, onClose, onSave, categories, existingItem, defaultC
         </div>
 
         {error && (
-          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-medium flex items-center">
-            <AlertCircle className="w-4 h-4 mr-2 shrink-0" /> {error}
+          <div className="mb-4 bg-red-50 text-red-600 p-4 rounded-xl text-sm font-medium border border-red-100 flex items-center">
+            <AlertCircle className="w-4 h-4 mr-2 shrink-0" /> {typeof error === 'object' ? (error as any).message || JSON.stringify(error) : String(error)}
           </div>
         )}
 
@@ -424,7 +424,9 @@ export default function MenuManager() {
             <div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : error ? (
-          <div className="bg-red-50 text-red-600 p-6 rounded-2xl font-bold">{error}</div>
+          <div className="flex-1 flex justify-center items-center h-full">
+            <div className="bg-red-50 text-red-600 p-6 rounded-2xl font-bold">{typeof error === 'object' ? (error as any).message || JSON.stringify(error) : String(error)}</div>
+          </div>
         ) : filteredCategories.length === 0 ? (
           <div className="bg-white rounded-3xl p-12 text-center border border-gray-100 shadow-sm mt-4">
             <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
