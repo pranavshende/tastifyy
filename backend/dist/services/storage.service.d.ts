@@ -8,7 +8,7 @@ export declare function validateFile(buffer: Buffer, mimetype: string, size: num
  * Upload a file to Supabase Storage.
  * Returns the storage path (relative) that should be saved in the database.
  */
-export declare function uploadFile(restaurantId: string, folder: 'profile' | 'cover' | 'menu', filename: string, buffer: Buffer, mimetype: string): Promise<{
+export declare function uploadFile(entityId: string, folder: string, filename: string, buffer: Buffer, mimetype: string): Promise<{
     path: string;
     publicUrl: string;
 }>;

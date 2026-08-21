@@ -17,6 +17,7 @@ import MenuManager from './pages/restaurant/MenuManager';
 import RestaurantProfile from './pages/restaurant/Profile';
 import RestaurantTransactions from './pages/restaurant/Transactions';
 import DeliveryLogin from './pages/delivery/Login';
+import DeliveryDashboard from './pages/delivery/Dashboard';
 import CustomerOnboarding from './pages/onboarding/CustomerOnboarding';
 import RestaurantOnboarding from './pages/onboarding/RestaurantOnboarding';
 import DeliveryOnboarding from './pages/onboarding/DeliveryOnboarding';
@@ -153,11 +154,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route path="/delivery/dashboard" element={
-          <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500 font-bold text-lg">Delivery Dashboard — Coming in Phase H</p>
-          </div>
-        } />
+        <Route path="/delivery/dashboard" element={<DeliveryDashboard />} />
         <Route path="/delivery/profile" element={<DeliveryProfile />} />
       </Route>
 

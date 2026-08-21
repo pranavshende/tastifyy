@@ -190,6 +190,65 @@ router.get('/restaurant/active', authorizeRole(['restaurant_partner']), async (r
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch orders' } });
     }
 });
+// GET /api/orders/restaurant/transactions
+// Fetch completed orders/transactions for the logged-in restaurant
+router.get('/restaurant/transactions', authorizeRole(['restaurant_partner']), async (req, res) => {
+    const user = req.user;
+    try {
+        const partner = await prisma.restaurantPartner.findFirst({ where: { phone: user.phone } });
+        if (!partner) {
+            res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not a restaurant partner' } });
+            return;
+        }
+        const orders = await prisma.order.findMany({
+            where: {
+                restaurant_id: partner.restaurant_id,
+                status: 'delivered'
+            },
+            include: {
+                customer: { select: { name: true } },
+                restaurant: { select: { commission_rate: true } }
+            },
+            orderBy: { created_at: 'desc' }
+        });
+        let total_earnings = 0;
+        let pending_payout = 0;
+        const now = new Date();
+        const transactions = orders.map(order => {
+            // Mock payout logic: paid if older than 7 days
+            const daysOld = (now.getTime() - order.created_at.getTime()) / (1000 * 3600 * 24);
+            const is_paid_to_restaurant = daysOld > 7;
+            const commissionRate = Number(order.restaurant?.commission_rate || 0);
+            const subtotal = Number(order.item_subtotal || 0);
+            const earnings = subtotal * (1 - commissionRate / 100);
+            total_earnings += earnings;
+            if (!is_paid_to_restaurant) {
+                pending_payout += earnings;
+            }
+            return {
+                id: order.id,
+                created_at: order.created_at,
+                customer_name: order.customer?.name,
+                total_amount: Number(order.total_amount),
+                earnings,
+                payment_method: order.payment_method,
+                is_paid_to_restaurant
+            };
+        });
+        res.json({
+            success: true,
+            data: {
+                total_earnings,
+                pending_payout,
+                total_completed_orders: orders.length,
+                transactions
+            }
+        });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch transactions' } });
+    }
+});
 // ─── SHARED PARTNER ROUTES ───────────────────────────────────────────────────
 // PUT /api/orders/:id/status
 router.put('/:id/status', authorizeRole(['restaurant_partner', 'delivery_partner', 'admin']), async (req, res) => {

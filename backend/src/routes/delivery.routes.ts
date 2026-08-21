@@ -186,7 +186,7 @@ router.post('/orders/:id/accept', async (req: Request, res: Response) => {
     const [updatedOrder] = await prisma.$transaction([
       prisma.order.update({
         where: { id },
-        data: { delivery_partner_id: partnerId }
+        data: { delivery_partner_id: partnerId, status: 'out_for_delivery' }
       }),
       prisma.deliveryAssignment.create({
         data: {
@@ -203,6 +203,43 @@ router.post('/orders/:id/accept', async (req: Request, res: Response) => {
     res.json({ success: true, data: updatedOrder });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to accept order' } });
+  }
+});
+
+// PATCH /delivery/orders/:id/status — update active order status
+router.patch('/orders/:id/status', async (req: Request, res: Response) => {
+  try {
+    const { status } = req.body;
+    const id = req.params.id as string;
+    const partner = await getPartner((req.user as any).id);
+    
+    if (!partner) return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not a delivery partner' } });
+    
+    // Ensure the order is assigned to this partner
+    const order = await prisma.order.findFirst({
+      where: { id, delivery_partner_id: partner.id }
+    });
+
+    if (!order) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found or not assigned to you' } });
+    }
+
+    const updatedOrder = await prisma.order.update({
+      where: { id },
+      data: { status }
+    });
+
+    // If delivered, update assignment status
+    if (status === 'delivered') {
+      await prisma.deliveryAssignment.update({
+        where: { order_id: id },
+        data: { status: 'delivered' }
+      });
+    }
+
+    res.json({ success: true, data: updatedOrder });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to update order status' } });
   }
 });
 

@@ -1,9 +1,102 @@
 import { Router } from 'express';
 import { authenticate, authorizeRole } from '../middlewares/auth.js';
 import { prisma } from '../utils/prisma.js';
+import { getPublicUrl, uploadFile, deleteFile, validateFile, generateFilename } from '../services/storage.service.js';
+import multer from 'multer';
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+});
 const router = Router();
 // All admin routes require authentication + admin role
 router.use(authenticate, authorizeRole(['admin']));
+// ─── PROFILE ROUTES ─────────────────────────────────────────────────────────
+router.get('/profile', async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: { id: true, name: true, phone: true, email: true, profile_photo_url: true }
+        });
+        if (!user) {
+            res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
+            return;
+        }
+        user.profile_photo_url = getPublicUrl(user.profile_photo_url);
+        res.json({ success: true, data: user });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch profile' } });
+    }
+});
+router.put('/profile', async (req, res) => {
+    const { name, phone, email } = req.body;
+    if (!name || !phone) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Name and phone are required' } });
+        return;
+    }
+    try {
+        const user = await prisma.user.update({
+            where: { id: req.user.id },
+            data: { name, phone, email },
+            select: { id: true, name: true, phone: true, email: true, profile_photo_url: true }
+        });
+        user.profile_photo_url = getPublicUrl(user.profile_photo_url);
+        res.json({ success: true, data: user });
+    }
+    catch (error) {
+        if (error.code === 'P2002') {
+            res.status(400).json({ success: false, error: { code: 'UNIQUE_CONSTRAINT', message: 'Phone or email already exists' } });
+            return;
+        }
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to update profile' } });
+    }
+});
+router.post('/profile/photo', upload.single('image'), async (req, res) => {
+    const file = req.file;
+    if (!file) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'No image file provided' } });
+        return;
+    }
+    const validation = validateFile(file.buffer, file.mimetype, file.size);
+    if (!validation.valid) {
+        res.status(400).json({ success: false, error: { code: 'INVALID_FILE', message: validation.error } });
+        return;
+    }
+    try {
+        const filename = generateFilename(file.originalname, 'profile');
+        const path = `users/${req.user.id}/${filename}`;
+        const uploadResult = await uploadFile('users', req.user.id, filename, file.buffer, file.mimetype);
+        const oldUser = await prisma.user.findUnique({ where: { id: req.user.id }, select: { profile_photo_url: true } });
+        if (oldUser?.profile_photo_url) {
+            await deleteFile(oldUser.profile_photo_url);
+        }
+        await prisma.user.update({
+            where: { id: req.user.id },
+            data: { profile_photo_url: uploadResult.path }
+        });
+        res.json({ success: true, data: { profile_photo_url: getPublicUrl(uploadResult.path) } });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to upload photo' } });
+    }
+});
+router.delete('/profile/photo', async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { profile_photo_url: true } });
+        if (user?.profile_photo_url) {
+            await deleteFile(user.profile_photo_url);
+            await prisma.user.update({
+                where: { id: req.user.id },
+                data: { profile_photo_url: null }
+            });
+        }
+        res.json({ success: true, message: 'Photo deleted successfully' });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to delete photo' } });
+    }
+});
+// ─── PLATFORM METRICS ───────────────────────────────────────────────────────
 // GET /admin/dashboard — platform metrics
 router.get('/dashboard', async (_req, res) => {
     try {

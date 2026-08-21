@@ -24,8 +24,8 @@ export function validateFile(buffer, mimetype, size) {
  * Upload a file to Supabase Storage.
  * Returns the storage path (relative) that should be saved in the database.
  */
-export async function uploadFile(restaurantId, folder, filename, buffer, mimetype) {
-    const storagePath = `${restaurantId}/${folder}/${filename}`;
+export async function uploadFile(entityId, folder, filename, buffer, mimetype) {
+    const storagePath = `${entityId}/${folder}/${filename}`;
     const { error } = await supabase.storage
         .from(BUCKET)
         .upload(storagePath, buffer, {

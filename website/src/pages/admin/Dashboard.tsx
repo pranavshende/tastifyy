@@ -4,7 +4,7 @@ import socketService from '../../api/socket';
 import Sidebar from '../../components/dashboard/Sidebar';
 import { 
   Users, Store, ShoppingBag, Bike, ShieldAlert, 
-  TrendingUp, AlertCircle, RefreshCw, User, Phone, Mail, Save, Loader2, Camera, Trash2
+  TrendingUp, AlertCircle, RefreshCw, User, Phone, Mail, Save, Loader2
 } from 'lucide-react';
 import { ImageUploadButton } from '../../components/ui/ImageUploadButton';
 
