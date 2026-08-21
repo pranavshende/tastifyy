@@ -31,8 +31,12 @@ const httpServer = createServer(app);
 const io = initSocket(httpServer);
 
 // Standard Middleware
+const allowedOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()) 
+  : '*';
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN,
+  origin: allowedOrigins,
 }));
 app.use(express.json());
 
