@@ -186,6 +186,7 @@ export default function RestaurantProfile() {
 
       setSaveSuccess(true);
       await fetchProfile();
+      window.dispatchEvent(new Event('restaurant-updated'));
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Failed to save profile');
@@ -203,6 +204,7 @@ export default function RestaurantProfile() {
       const { data } = await api.post('/profile/logo', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (data.success) {
         setProfile((prev: any) => ({ ...prev, logo_url: data.data.logo_url }));
+        window.dispatchEvent(new Event('restaurant-updated'));
       }
     } catch (err: any) {
       setUploadError(err.response?.data?.error?.message || 'Upload failed');
@@ -216,6 +218,7 @@ export default function RestaurantProfile() {
     try {
       await api.delete('/profile/logo');
       setProfile((prev: any) => ({ ...prev, logo_url: null }));
+      window.dispatchEvent(new Event('restaurant-updated'));
     } catch {
       setUploadError('Failed to delete logo');
     } finally {
@@ -351,10 +354,10 @@ export default function RestaurantProfile() {
             )}
           </div>
 
-          <div className="px-6 pb-6 pt-0 relative">
+          <div className="px-6 pb-6 pt-0 relative flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6">
             {/* Profile Logo — overlaps cover */}
-            <div className="absolute -top-12 left-6">
-              <div className="relative">
+            <div className="relative -mt-12 shrink-0 z-10">
+              <div className="relative inline-block">
                 <div className="w-24 h-24 rounded-2xl shadow-md border-4 border-white overflow-hidden bg-gray-100 flex items-center justify-center">
                   {logoUrl ? (
                     <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
@@ -373,26 +376,12 @@ export default function RestaurantProfile() {
               </div>
             </div>
 
-            <div className="mt-16">
-              <h2 className="text-xl font-black text-gray-900">{profile?.name}</h2>
+            <div className="flex-1 pb-1 mt-2 sm:mt-0">
+              <h2 className="text-2xl font-black text-gray-900">{profile?.name}</h2>
               <div className="flex items-center gap-3 text-sm font-medium text-gray-500 mt-1">
                 <span className="flex items-center"><MapPin className="w-3.5 h-3.5 mr-1" /> {profile?.city || 'Location not set'}</span>
                 <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
                 <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">ID: {profile?.id?.split('-')[0].toUpperCase()}</span>
-              </div>
-
-              {/* Accepting orders toggle */}
-              <div className="mt-4 flex items-center gap-3">
-                <span className="text-sm font-bold text-gray-700">Accepting Orders</span>
-                <button
-                  onClick={toggleAcceptingOrders}
-                  className={`relative inline-flex w-12 h-6 rounded-full transition-colors ${form.is_open ? 'bg-green-500' : 'bg-gray-300'}`}
-                >
-                  <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${form.is_open ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                </button>
-                <span className={`text-sm font-bold ${form.is_open ? 'text-green-600' : 'text-gray-400'}`}>
-                  {form.is_open ? 'Open' : 'Closed'}
-                </span>
               </div>
             </div>
           </div>

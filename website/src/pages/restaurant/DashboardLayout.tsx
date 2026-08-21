@@ -13,17 +13,21 @@ export default function DashboardLayout() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch minimal restaurant info for sidebar display
-    api.get('/menu/info').then(({ data }) => {
-      if (data.success && data.data.restaurant) {
-        const r = data.data.restaurant;
-        setRestaurantName(r.name || user?.name || 'Restaurant Partner');
-        setLogoUrl(getStorageUrl(r.logo_url) || null);
-      }
-    }).catch(() => {
-      // Silently fail — fallback to user name
-    });
-  }, [user?.name]);
+    const fetchInfo = () => {
+      api.get('/menu/info').then(({ data }) => {
+        if (data.success && data.data.restaurant) {
+          const r = data.data.restaurant;
+          setRestaurantName(r.name || user?.name || 'Restaurant Partner');
+          setLogoUrl(getStorageUrl(r.logo_url) || null);
+        }
+      }).catch(() => {});
+    };
+
+    fetchInfo();
+    
+    window.addEventListener('restaurant-updated', fetchInfo);
+    return () => window.removeEventListener('restaurant-updated', fetchInfo);
+  }, [user?.name, location.pathname]);
 
   const handleLogout = async () => {
     await logout();
@@ -42,7 +46,7 @@ export default function DashboardLayout() {
       <aside className="w-56 bg-[#161B22] border-r border-gray-800 hidden md:flex flex-col z-30 fixed h-screen top-0 left-0 text-white">
         
         {/* Top — Restaurant Identity */}
-        <div className="h-16 flex items-center px-4 border-b border-gray-800 shrink-0">
+        <Link to="/restaurant/dashboard" className="h-16 flex items-center px-4 border-b border-gray-800 shrink-0 hover:bg-gray-800 transition-colors">
           <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-primary text-white flex items-center justify-center font-black mr-3 text-sm shadow-sm shrink-0">
             {logoUrl ? (
               <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
@@ -54,7 +58,7 @@ export default function DashboardLayout() {
             <span className="text-sm font-bold tracking-tight leading-tight truncate">{restaurantName}</span>
             <span className="text-xs text-gray-400 font-medium mt-0.5">Restaurant Partner</span>
           </div>
-        </div>
+        </Link>
         
         {/* Navigation */}
         <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
@@ -79,15 +83,19 @@ export default function DashboardLayout() {
 
         {/* Bottom — User + Logout */}
         <div className="p-4 border-t border-gray-800 shrink-0">
-          <div className="flex items-center gap-3 mb-4 px-1">
-            <div className="w-8 h-8 rounded-full bg-brand-primary text-white flex items-center justify-center font-bold text-sm shrink-0">
-              {user?.name?.charAt(0).toUpperCase() || 'R'}
+          <Link to="/restaurant/profile" className="flex items-center gap-3 mb-4 px-2 py-2 hover:bg-gray-800 rounded-lg transition-colors cursor-pointer">
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-brand-primary text-white flex items-center justify-center font-bold text-sm shrink-0 border border-gray-700">
+              {user?.profile_photo_url ? (
+                <img src={user.profile_photo_url} alt={user.name} className="w-full h-full object-cover" />
+              ) : (
+                <span>{user?.name?.charAt(0).toUpperCase() || 'R'}</span>
+              )}
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-bold text-white truncate">{user?.name || 'Restaurant'}</span>
               <span className="text-[10px] text-gray-400 font-medium">Partner</span>
             </div>
-          </div>
+          </Link>
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 px-2 py-2 w-full text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all font-bold text-sm"

@@ -7,6 +7,26 @@ export default function RestaurantDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+
+  const fetchProfileStatus = async () => {
+    try {
+      const { data } = await api.get('/profile');
+      if (data.success) {
+        setIsOpen(data.data.is_open);
+      }
+    } catch (e) {}
+  };
+
+  const toggleAcceptingOrders = async () => {
+    const newVal = !isOpen;
+    setIsOpen(newVal);
+    try {
+      await api.patch('/profile/accepting-orders', { is_open: newVal });
+    } catch {
+      setIsOpen(!newVal);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -25,6 +45,7 @@ export default function RestaurantDashboard() {
 
   useEffect(() => {
     fetchOrders();
+    fetchProfileStatus();
 
     api.get('/menu/info').then(({ data }) => {
       if (data.success && data.data.restaurant_id) {
@@ -125,9 +146,24 @@ export default function RestaurantDashboard() {
             <h1 className="text-2xl font-black text-gray-900">Kitchen Display</h1>
             <p className="text-gray-500 font-medium text-sm mt-0.5">Manage and track orders in real-time</p>
           </div>
-          <div className="bg-white border border-gray-200 px-4 py-2 rounded-lg text-sm font-bold text-gray-700 flex items-center shadow-sm">
-            <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-            21 Aug 2025, 08:28 AM
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm">
+              <span className="text-sm font-bold text-gray-700">Accepting Orders</span>
+              <button
+                onClick={toggleAcceptingOrders}
+                className={`relative inline-flex w-12 h-6 rounded-full transition-colors ${isOpen ? 'bg-green-500' : 'bg-gray-300'}`}
+              >
+                <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${isOpen ? 'translate-x-6' : 'translate-x-0'}`}></div>
+              </button>
+              <span className={`text-sm font-bold w-12 ${isOpen ? 'text-green-600' : 'text-gray-400'}`}>
+                {isOpen ? 'Open' : 'Closed'}
+              </span>
+            </div>
+            
+            <div className="hidden md:flex bg-white border border-gray-200 px-4 py-2 rounded-lg text-sm font-bold text-gray-700 items-center shadow-sm">
+              <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+              {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </div>
           </div>
         </div>
 
