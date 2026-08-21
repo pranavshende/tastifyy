@@ -1,4 +1,18 @@
 import { prisma } from '../utils/prisma.js';
+import { getPublicUrl } from '../services/storage.service.js';
+function formatRestaurant(r) {
+    return {
+        ...r,
+        logo_url: getPublicUrl(r.logo_url),
+        cover_image_url: getPublicUrl(r.cover_image_url),
+    };
+}
+function formatMenuItem(item) {
+    return {
+        ...item,
+        image_url: getPublicUrl(item.image_url),
+    };
+}
 export const getActiveRestaurants = async (req, res) => {
     try {
         const restaurants = await prisma.restaurant.findMany({
@@ -14,7 +28,7 @@ export const getActiveRestaurants = async (req, res) => {
                 ? r.ratings.reduce((sum, rating) => sum + rating.restaurant_rating, 0) / totalRatings
                 : 4.2;
             const { ratings, ...rest } = r;
-            return { ...rest, rating: Number(avgRating.toFixed(1)) };
+            return formatRestaurant({ ...rest, rating: Number(avgRating.toFixed(1)) });
         });
         res.json(formatted);
     }
@@ -123,7 +137,15 @@ export const getRestaurantMenu = async (req, res) => {
             res.status(404).json({ error: 'Restaurant not found' });
             return;
         }
-        res.json(restaurant);
+        // Format image URLs
+        const result = formatRestaurant({
+            ...restaurant,
+            menu_categories: restaurant.menu_categories.map(cat => ({
+                ...cat,
+                menu_items: cat.menu_items.map(formatMenuItem),
+            })),
+        });
+        res.json(result);
     }
     catch (error) {
         console.error(error);

@@ -16,18 +16,26 @@ interface RestaurantCardProps {
 export default function RestaurantCard({
   id, name, coverImage, cuisineTags, rating, prepTime, isOpen, isPureVeg
 }: RestaurantCardProps) {
-  const defaultImage = `https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=600&q=80`;
-
   return (
     <Link to={`/customer/restaurants/${id}`} className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-card transition-all duration-300 border border-gray-100 flex flex-col cursor-pointer block relative">
       
-      {/* Cover Image (16:9 ratio approximately) */}
+      {/* Cover Image */}
       <div className="relative h-40 w-full overflow-hidden bg-gray-100">
-        <img 
-          src={coverImage || defaultImage} 
-          alt={name}
-          className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${!isOpen ? 'grayscale opacity-70' : ''}`}
-        />
+        {coverImage ? (
+          <img
+            src={coverImage}
+            alt={name}
+            loading="lazy"
+            className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${!isOpen ? 'grayscale opacity-70' : ''}`}
+          />
+        ) : (
+          <div className={`w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center group-hover:from-orange-50 group-hover:to-orange-100 transition-all ${!isOpen ? 'grayscale opacity-70' : ''}`}>
+            <div className="text-center">
+              <div className="text-4xl mb-1">🍽️</div>
+              <span className="text-xs text-gray-400 font-medium">No photo</span>
+            </div>
+          </div>
+        )}
 
         {!isOpen && (
           <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] flex items-center justify-center">

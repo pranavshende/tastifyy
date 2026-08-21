@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { initSocket } from './socket.js';
+import { prisma } from './utils/prisma.js';
 import authRoutes from './routes/auth.routes.js';
 import restaurantRoutes from './routes/restaurant.routes.js';
 import menuRoutes from './routes/menu.routes.js';
@@ -16,6 +17,7 @@ import reviewRoutes from './routes/review.routes.js';
 import supportRoutes from './routes/support.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import aiRoutes from './routes/ai.routes.js';
+import profileRoutes from './routes/profile.routes.js';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 dotenv.config();
@@ -23,8 +25,11 @@ const app = express();
 const httpServer = createServer(app);
 const io = initSocket(httpServer);
 // Standard Middleware
+const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+    : '*';
 app.use(cors({
-    origin: process.env.CORS_ORIGIN,
+    origin: allowedOrigins,
 }));
 app.use(express.json());
 // Security Middleware
@@ -58,9 +63,29 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/ai', aiRoutes);
-// Health check
+app.use('/api/profile', profileRoutes);
+// Health check (Root)
 app.get('/', (_req, res) => {
     res.json({ message: 'Tastifyy API is running!', version: '2.0.0' });
+});
+// Deep Health Check
+app.get('/health', async (_req, res) => {
+    try {
+        await prisma.$queryRaw `SELECT 1`;
+        res.status(200).json({
+            status: 'healthy',
+            database: 'connected',
+            timestamp: new Date().toISOString()
+        });
+    }
+    catch (error) {
+        console.error('Health check failed:', error);
+        res.status(503).json({
+            status: 'unhealthy',
+            database: 'disconnected',
+            timestamp: new Date().toISOString()
+        });
+    }
 });
 if (process.env.NODE_ENV !== 'test') {
     const PORT = process.env.PORT;

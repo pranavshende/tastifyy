@@ -45,6 +45,17 @@ export default function Sidebar({ role, activeTab, onTabChange, title, items, ba
           { name: 'Delivery Fleet', id: 'delivery', path: '#', icon: <Bike className="w-5 h-5" /> },
           { name: 'Platform Users', id: 'users', path: '#', icon: <Users className="w-5 h-5" /> },
           { name: 'Support', id: 'support', path: '#', icon: <LifeBuoy className="w-5 h-5" /> },
+          { name: 'Profile', id: 'profile', path: '#', icon: <User className="w-5 h-5" /> },
+        ]
+      };
+    }
+    if (role === 'delivery') {
+      return {
+        title: 'Delivery',
+        baseRoute: '/delivery',
+        items: [
+          { name: 'Dashboard', id: 'dashboard', path: '/delivery/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+          { name: 'Profile', id: 'profile', path: '/delivery/profile', icon: <Settings className="w-5 h-5" /> },
         ]
       };
     }
@@ -101,9 +112,13 @@ export default function Sidebar({ role, activeTab, onTabChange, title, items, ba
       {/* Profile & Logout */}
       <div className="p-4 border-t border-gray-800 shrink-0">
         <div className="flex items-center gap-3 px-4 py-3 mb-2 rounded-xl bg-white/5 border border-white/10">
-          <div className="w-10 h-10 rounded-full bg-brand-primary flex items-center justify-center font-bold">
-            {user?.name?.charAt(0) || <User className="w-5 h-5" />}
-          </div>
+          {user?.profile_photo_url ? (
+            <img src={user.profile_photo_url} alt={user.name} className="w-10 h-10 rounded-full object-cover border border-gray-700" />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-brand-primary flex items-center justify-center font-bold">
+              {user?.name?.charAt(0) || <User className="w-5 h-5" />}
+            </div>
+          )}
           <div className="overflow-hidden flex-1">
             <p className="text-sm font-bold truncate">{user?.name || 'Partner'}</p>
             <p className="text-xs text-gray-400 truncate capitalize">{user?.role?.replace('_', ' ')}</p>

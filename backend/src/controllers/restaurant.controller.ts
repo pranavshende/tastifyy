@@ -1,5 +1,21 @@
 import type { Request, Response } from 'express';
 import { prisma } from '../utils/prisma.js';
+import { getPublicUrl } from '../services/storage.service.js';
+
+function formatRestaurant(r: any) {
+  return {
+    ...r,
+    logo_url: getPublicUrl(r.logo_url),
+    cover_image_url: getPublicUrl(r.cover_image_url),
+  };
+}
+
+function formatMenuItem(item: any) {
+  return {
+    ...item,
+    image_url: getPublicUrl(item.image_url),
+  };
+}
 
 export const getActiveRestaurants = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -18,7 +34,7 @@ export const getActiveRestaurants = async (req: Request, res: Response): Promise
         : 4.2;
       
       const { ratings, ...rest } = r;
-      return { ...rest, rating: Number(avgRating.toFixed(1)) };
+      return formatRestaurant({ ...rest, rating: Number(avgRating.toFixed(1)) });
     });
 
     res.json(formatted);
@@ -139,7 +155,16 @@ export const getRestaurantMenu = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    res.json(restaurant);
+    // Format image URLs
+    const result = formatRestaurant({
+      ...restaurant,
+      menu_categories: restaurant.menu_categories.map(cat => ({
+        ...cat,
+        menu_items: cat.menu_items.map(formatMenuItem),
+      })),
+    });
+
+    res.json(result);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal server error' });

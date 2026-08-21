@@ -26,7 +26,10 @@ import RestaurantDetails from './pages/customer/RestaurantDetails';
 import Checkout from './pages/customer/Checkout';
 import Orders from './pages/customer/Orders';
 import OrderDetails from './pages/customer/OrderDetails';
+import CustomerProfile from './pages/customer/Profile';
 import RestaurantProfile from './pages/restaurant/Profile';
+import DeliveryDashboardLayout from './pages/delivery/DashboardLayout';
+import DeliveryProfile from './pages/delivery/Profile';
 
 function AppRoutes() {
   const { user } = useAuthStore();
@@ -64,6 +67,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['customer']}>
             <CustomerHome />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/profile"
+        element={
+          <ProtectedRoute allowedRoles={['customer']}>
+            <CustomerProfile />
           </ProtectedRoute>
         }
       />
@@ -131,17 +142,21 @@ function AppRoutes() {
         <Route path="/restaurant/profile" element={<RestaurantProfile />} />
       </Route>
 
-      {/* Delivery Routes — placeholder, will be built in Phase H */}
+      {/* Delivery Routes */}
       <Route
-        path="/delivery/dashboard"
         element={
           <ProtectedRoute allowedRoles={['delivery_partner']}>
-            <div className="min-h-screen flex items-center justify-center">
-              <p className="text-gray-500">Delivery Dashboard — Coming in Phase H</p>
-            </div>
+            <DeliveryDashboardLayout />
           </ProtectedRoute>
         }
-      />
+      >
+        <Route path="/delivery/dashboard" element={
+          <div className="flex items-center justify-center h-full">
+            <p className="text-gray-500 font-bold text-lg">Delivery Dashboard — Coming in Phase H</p>
+          </div>
+        } />
+        <Route path="/delivery/profile" element={<DeliveryProfile />} />
+      </Route>
 
       {/* Onboarding Routes */}
       <Route

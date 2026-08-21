@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate, authorizeRole } from '../middlewares/auth.js';
 import { prisma } from '../utils/prisma.js';
+import { getPublicUrl } from '../services/storage.service.js';
 const router = Router();
 router.use(authenticate, authorizeRole(['customer']));
 // GET /api/customer/restaurants
@@ -24,7 +25,12 @@ router.get('/restaurants', async (req, res) => {
             },
             orderBy: { created_at: 'desc' }
         });
-        res.json({ success: true, data: restaurants });
+        const result = restaurants.map(r => ({
+            ...r,
+            logo_url: getPublicUrl(r.logo_url),
+            cover_image_url: getPublicUrl(r.cover_image_url),
+        }));
+        res.json({ success: true, data: result });
     }
     catch (error) {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch restaurants' } });
@@ -45,6 +51,9 @@ router.get('/restaurants/:id/menu', async (req, res) => {
                 is_pure_veg: true,
                 cuisine_tags: true,
                 avg_preparation_time_mins: true,
+                cover_image_url: true,
+                logo_url: true,
+                is_open: true,
             }
         });
         if (!restaurant) {
@@ -67,8 +76,19 @@ router.get('/restaurants/:id/menu', async (req, res) => {
             }
         });
         // Filter out empty categories for the customer view
-        const filteredCategories = categories.filter((cat) => cat.menu_items && cat.menu_items.length > 0);
-        res.json({ success: true, data: { restaurant, menu: filteredCategories } });
+        const filteredCategories = categories.filter((cat) => cat.menu_items && cat.menu_items.length > 0).map((cat) => ({
+            ...cat,
+            menu_items: cat.menu_items.map((item) => ({
+                ...item,
+                image_url: getPublicUrl(item.image_url),
+            }))
+        }));
+        const formattedRestaurant = {
+            ...restaurant,
+            logo_url: getPublicUrl(restaurant.logo_url),
+            cover_image_url: getPublicUrl(restaurant.cover_image_url),
+        };
+        res.json({ success: true, data: { restaurant: formattedRestaurant, menu: filteredCategories } });
     }
     catch (error) {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch menu' } });

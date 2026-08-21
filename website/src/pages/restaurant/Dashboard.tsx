@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import api from '../../api/axios';
-import { Package, Clock, Check, X, ChefHat, TrendingUp, AlertCircle } from 'lucide-react';
+import { Package, Clock, Check, X, ChefHat, TrendingUp, AlertCircle, Calendar } from 'lucide-react';
 import socketService from '../../api/socket';
 
 export default function RestaurantDashboard() {
@@ -120,48 +120,52 @@ export default function RestaurantDashboard() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header & Stats */}
       <div className="mb-6 shrink-0">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-4">
           <div>
             <h1 className="text-2xl font-black text-gray-900">Kitchen Display</h1>
-            <p className="text-gray-500 font-medium text-sm mt-0.5">Manage active orders in real-time</p>
+            <p className="text-gray-500 font-medium text-sm mt-0.5">Manage and track orders in real-time</p>
+          </div>
+          <div className="bg-white border border-gray-200 px-4 py-2 rounded-lg text-sm font-bold text-gray-700 flex items-center shadow-sm">
+            <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+            21 Aug 2025, 08:28 AM
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center">
-              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mr-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex items-center">
+              <div className="w-12 h-12 bg-orange-50 text-brand-primary rounded-xl flex items-center justify-center mr-4">
                 <Package className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-sm font-bold text-gray-500 uppercase">Active</p>
-                <p className="text-2xl font-black text-gray-900">{totalActive}</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Active Orders</p>
+                <p className="text-2xl font-black text-gray-900 leading-none">{totalActive}</p>
               </div>
             </div>
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center">
-              <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center mr-3">
-                <ChefHat className="w-5 h-5" />
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex items-center">
+              <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center mr-4">
+                <ChefHat className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-xs font-bold text-gray-500 uppercase">Preparing</p>
-                <p className="text-xl font-black text-gray-900">{preparingOrders.length}</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Preparing</p>
+                <p className="text-2xl font-black text-gray-900 leading-none">{preparingOrders.length}</p>
               </div>
             </div>
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center">
-              <div className="w-10 h-10 bg-green-50 text-green-600 rounded-lg flex items-center justify-center mr-3">
-                <Check className="w-5 h-5" />
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex items-center">
+              <div className="w-12 h-12 bg-green-50 text-green-500 rounded-xl flex items-center justify-center mr-4">
+                <Check className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-xs font-bold text-gray-500 uppercase">Ready</p>
-                <p className="text-xl font-black text-gray-900">{readyOrders.length}</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Ready</p>
+                <p className="text-2xl font-black text-gray-900 leading-none">{readyOrders.length}</p>
               </div>
             </div>
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center">
-              <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center mr-3">
-                <TrendingUp className="w-5 h-5" />
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex items-center">
+              <div className="w-12 h-12 bg-red-50 text-red-500 rounded-xl flex items-center justify-center mr-4">
+                <TrendingUp className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-xs font-bold text-gray-500 uppercase">Value</p>
-                <p className="text-xl font-black text-gray-900">₹{totalSales.toFixed(0)}</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Today's Sales</p>
+                <p className="text-2xl font-black text-gray-900 leading-none">₹{totalSales.toFixed(0)}</p>
               </div>
             </div>
           </div>
@@ -200,9 +204,9 @@ export default function RestaurantDashboard() {
                       </button>
                       <button 
                         onClick={() => updateOrderStatus(order.id, 'cancelled')}
-                        className="px-4 bg-red-50 text-red-600 border border-red-200 rounded-xl font-bold flex items-center justify-center hover:bg-red-100 transition-colors"
+                        className="px-4 bg-white text-red-500 border border-red-500 rounded-xl font-bold flex items-center justify-center hover:bg-red-50 transition-colors"
                       >
-                        <X className="w-4 h-4" />
+                        <X className="w-4 h-4 mr-1" /> Reject
                       </button>
                     </>
                   ) : (
@@ -227,35 +231,58 @@ export default function RestaurantDashboard() {
                 <span className="bg-gray-200 text-gray-700 font-bold px-2 py-0.5 rounded-full text-xs">{preparingOrders.length}</span>
               </div>
               <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide space-y-4">
-                {preparingOrders.map(order => renderOrderCard(order, 
-                  <button 
-                    onClick={() => updateOrderStatus(order.id, 'ready')}
-                    className="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-bold flex items-center justify-center hover:bg-indigo-700 transition-colors shadow-sm"
-                  >
-                    <Package className="w-4 h-4 mr-2" /> Mark Ready
-                  </button>
-                ))}
+                {preparingOrders.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-4">
+                    <div className="w-16 h-16 bg-purple-50 rounded-full flex items-center justify-center mb-4">
+                       <ChefHat className="w-8 h-8 text-purple-300" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-sm">No orders are being prepared</h3>
+                    <p className="text-xs text-gray-500 mt-1 max-w-[200px]">Orders moved here will appear for kitchen preparation.</p>
+                  </div>
+                ) : (
+                  preparingOrders.map(order => renderOrderCard(order, 
+                    <button 
+                      onClick={() => updateOrderStatus(order.id, 'ready')}
+                      className="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-bold flex items-center justify-center hover:bg-indigo-700 transition-colors shadow-sm"
+                    >
+                      <Package className="w-4 h-4 mr-2" /> Mark Ready
+                    </button>
+                  ))
+                )}
               </div>
             </div>
 
             {/* Column 3: Ready */}
-            <div className="bg-gray-100/60 rounded-2xl p-3 flex flex-col min-w-[300px] max-w-[320px] snap-start border border-gray-200">
-              <div className="flex items-center justify-between mb-3 px-1">
-                <h2 className="text-sm font-black text-gray-900 flex items-center">
+            <div className="bg-[#F8F9FA] rounded-2xl p-4 flex flex-col min-w-[320px] max-w-[340px] snap-start border border-gray-200 shadow-sm">
+              <div className="flex items-center justify-between mb-4 px-1">
+                <h2 className="text-xs font-black text-gray-900 flex items-center">
                   <div className="w-2.5 h-2.5 bg-green-500 rounded-full mr-2"></div>
                   READY / PICKUP
                 </h2>
-                <span className="bg-gray-200 text-gray-700 font-bold px-2 py-0.5 rounded-full text-xs">{readyOrders.length}</span>
+                <span className="bg-gray-200/60 text-gray-700 font-bold px-2.5 py-0.5 rounded-full text-xs">{readyOrders.length}</span>
               </div>
               <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide space-y-4">
-                {readyOrders.map(order => renderOrderCard(order, 
-                  <button 
-                    onClick={() => updateOrderStatus(order.id, 'delivered')}
-                    className="w-full bg-green-600 text-white py-2.5 rounded-xl font-bold flex items-center justify-center hover:bg-green-700 transition-colors shadow-sm"
-                  >
-                    <Check className="w-4 h-4 mr-2" /> Complete Order
-                  </button>
-                ))}
+                {readyOrders.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-4">
+                    <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mb-4 relative">
+                       <div className="absolute inset-0 flex items-center justify-center">
+                          <Check className="w-5 h-5 text-green-500 absolute bottom-1 right-1 bg-white rounded-full" />
+                       </div>
+                       <Package className="w-8 h-8 text-green-300" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-sm">No orders ready for pickup</h3>
+                    <p className="text-xs text-gray-500 mt-1 max-w-[200px]">Completed orders will appear here for pickup.</p>
+                  </div>
+                ) : (
+                  readyOrders.map(order => renderOrderCard(order, 
+                    <button 
+                      onClick={() => updateOrderStatus(order.id, 'delivered')}
+                      className="w-full bg-green-600 text-white py-2.5 rounded-xl font-bold flex items-center justify-center hover:bg-green-700 transition-colors shadow-sm"
+                    >
+                      <Check className="w-4 h-4 mr-2" /> Complete Order
+                    </button>
+                  ))
+                )}
               </div>
             </div>
 

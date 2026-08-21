@@ -190,12 +190,21 @@ export default function RestaurantDetails() {
           )}
           
           <div className="h-48 sm:h-72 relative bg-gray-100 overflow-hidden">
-            <ImageWithFallback 
-              src={restaurant.cover_image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1000&q=80'} 
-              alt={restaurant.name}
-              fallbackType="restaurant"
-              className={!isOpen ? 'grayscale opacity-80' : ''}
-            />
+            {restaurant.cover_image_url ? (
+              <ImageWithFallback
+                src={restaurant.cover_image_url}
+                alt={restaurant.name}
+                fallbackType="restaurant"
+                className={!isOpen ? 'grayscale opacity-80' : ''}
+              />
+            ) : (
+              <div className={`w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center ${!isOpen ? 'grayscale opacity-80' : ''}`}>
+                <div className="text-center">
+                  <div className="text-5xl mb-2">🍽️</div>
+                  <p className="text-gray-400 font-medium text-sm">No cover photo</p>
+                </div>
+              </div>
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
             
             {restaurant.logo_url && (

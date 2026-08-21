@@ -20,6 +20,7 @@ import reviewRoutes from './routes/review.routes.js';
 import supportRoutes from './routes/support.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import aiRoutes from './routes/ai.routes.js';
+import profileRoutes from './routes/profile.routes.js';
 
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -33,7 +34,11 @@ const io = initSocket(httpServer);
 // Standard Middleware
 const allowedOrigins = process.env.CORS_ORIGIN 
   ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()) 
-  : '*';
+  : ['http://localhost:5173', 'https://tastifyy.pranavshende.online'];
+
+if (process.env.CORS_ORIGIN && !allowedOrigins.includes('https://tastifyy.pranavshende.online')) {
+  allowedOrigins.push('https://tastifyy.pranavshende.online');
+}
 
 app.use(cors({
   origin: allowedOrigins,
@@ -75,6 +80,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/profile', profileRoutes);
 
 // Health check (Root)
 app.get('/', (_req, res) => {

@@ -72,15 +72,23 @@ export default function Header({ showSearch = true, searchQuery = '', onSearchCh
           {user ? (
             <div className="relative group hidden sm:block">
               <div className="flex items-center gap-2 cursor-pointer">
-                <div className="w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center font-bold text-sm">
-                  {user.name?.charAt(0).toUpperCase() || 'U'}
-                </div>
+                {user.profile_photo_url ? (
+                  <img src={user.profile_photo_url} alt={user.name} className="w-8 h-8 rounded-full object-cover border border-gray-200" />
+                ) : (
+                  <div className="w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center font-bold text-sm">
+                    {user.name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                )}
                 <span className="text-sm font-bold text-gray-700 max-w-[80px] truncate">{user.name?.split(' ')[0]}</span>
               </div>
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-soft border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all transform origin-top-right z-50 p-2">
                 <div className="px-3 py-2 border-b border-gray-50 mb-1">
                   <p className="text-sm font-black text-gray-900 truncate">{user.name}</p>
                 </div>
+                <Link to="/customer/profile" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                  <User className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm font-bold text-gray-700">My Profile</span>
+                </Link>
                 <Link to="/customer/orders" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
                   <Receipt className="w-4 h-4 text-gray-600" />
                   <span className="text-sm font-bold text-gray-700">Orders</span>

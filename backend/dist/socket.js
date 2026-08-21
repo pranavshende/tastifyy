@@ -4,7 +4,9 @@ let io;
 export const initSocket = (server) => {
     io = new SocketIOServer(server, {
         cors: {
-            origin: process.env.CORS_ORIGIN,
+            origin: process.env.CORS_ORIGIN
+                ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+                : '*',
             methods: ['GET', 'POST']
         }
     });
