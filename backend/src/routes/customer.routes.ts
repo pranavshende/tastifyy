@@ -37,7 +37,7 @@ router.get('/restaurants', async (req: Request, res: Response) => {
 // GET /api/customer/restaurants/:id/menu
 // Fetch restaurant details and its active menu items, grouped by category
 router.get('/restaurants/:id/menu', async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   try {
     const restaurant = await prisma.restaurant.findUnique({
       where: { id, status: 'active' },
@@ -74,7 +74,7 @@ router.get('/restaurants/:id/menu', async (req: Request, res: Response) => {
     });
 
     // Filter out empty categories for the customer view
-    const filteredCategories = categories.filter(cat => cat.menu_items.length > 0);
+    const filteredCategories = categories.filter((cat: any) => cat.menu_items && cat.menu_items.length > 0);
 
     res.json({ success: true, data: { restaurant, menu: filteredCategories } });
   } catch (error) {

@@ -1,5 +1,9 @@
 import request from 'supertest';
-import app from '../src/index';
+import app from '../src/index.js';
+
+declare var describe: any;
+declare var it: any;
+declare var expect: any;
 
 describe('Auth API Endpoints', () => {
   let mockToken: string;

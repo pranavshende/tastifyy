@@ -52,7 +52,9 @@ router.get('/dashboard', async (_req: Request, res: Response) => {
 
 // GET /admin/users
 router.get('/users', async (req: Request, res: Response) => {
-  const { search, page = '1', limit = '20' } = req.query as Record<string, string>;
+  const search = req.query.search as string | undefined;
+  const page = (req.query.page as string) || '1';
+  const limit = (req.query.limit as string) || '20';
   const skip = (parseInt(page) - 1) * parseInt(limit);
   try {
     const where = search ? {
@@ -74,7 +76,7 @@ router.get('/users', async (req: Request, res: Response) => {
 
 // PATCH /admin/users/:id/block
 router.patch('/users/:id/block', async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const { block } = req.body as { block: boolean };
   try {
     const user = await prisma.user.update({ where: { id }, data: { is_active: !block } });
@@ -86,7 +88,9 @@ router.patch('/users/:id/block', async (req: Request, res: Response) => {
 
 // GET /admin/restaurants
 router.get('/restaurants', async (req: Request, res: Response) => {
-  const { status, page = '1', limit = '20' } = req.query as Record<string, string>;
+  const status = req.query.status as string | undefined;
+  const page = (req.query.page as string) || '1';
+  const limit = (req.query.limit as string) || '20';
   const skip = (parseInt(page) - 1) * parseInt(limit);
   try {
     const where = status ? { status: status as any } : {};
@@ -102,7 +106,7 @@ router.get('/restaurants', async (req: Request, res: Response) => {
 
 // PATCH /admin/restaurants/:id/approve
 router.patch('/restaurants/:id/approve', async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   try {
     const restaurant = await prisma.restaurant.update({ where: { id }, data: { status: 'active' } });
     res.json({ success: true, data: restaurant });
@@ -113,7 +117,7 @@ router.patch('/restaurants/:id/approve', async (req: Request, res: Response) => 
 
 // PATCH /admin/restaurants/:id/reject
 router.patch('/restaurants/:id/reject', async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const { reason } = req.body as { reason: string };
   try {
     const restaurant = await prisma.restaurant.update({ where: { id }, data: { status: 'rejected' } });
@@ -125,7 +129,7 @@ router.patch('/restaurants/:id/reject', async (req: Request, res: Response) => {
 
 // PATCH /admin/restaurants/:id/suspend
 router.patch('/restaurants/:id/suspend', async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   try {
     const restaurant = await prisma.restaurant.update({ where: { id }, data: { status: 'suspended' } });
     res.json({ success: true, data: restaurant });
@@ -136,7 +140,9 @@ router.patch('/restaurants/:id/suspend', async (req: Request, res: Response) => 
 
 // GET /admin/delivery-partners
 router.get('/delivery-partners', async (req: Request, res: Response) => {
-  const { status, page = '1', limit = '20' } = req.query as Record<string, string>;
+  const status = req.query.status as string | undefined;
+  const page = (req.query.page as string) || '1';
+  const limit = (req.query.limit as string) || '20';
   const skip = (parseInt(page) - 1) * parseInt(limit);
   try {
     const where = status ? { status: status as any } : {};
@@ -152,7 +158,7 @@ router.get('/delivery-partners', async (req: Request, res: Response) => {
 
 // PATCH /admin/delivery-partners/:id/approve
 router.patch('/delivery-partners/:id/approve', async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   try {
     const partner = await prisma.deliveryPartner.update({ where: { id }, data: { status: 'active' } });
     res.json({ success: true, data: partner });
@@ -163,7 +169,7 @@ router.patch('/delivery-partners/:id/approve', async (req: Request, res: Respons
 
 // PATCH /admin/delivery-partners/:id/reject
 router.patch('/delivery-partners/:id/reject', async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const { reason } = req.body as { reason: string };
   try {
     const partner = await prisma.deliveryPartner.update({ where: { id }, data: { status: 'rejected' } });
@@ -175,7 +181,9 @@ router.patch('/delivery-partners/:id/reject', async (req: Request, res: Response
 
 // GET /admin/orders
 router.get('/orders', async (req: Request, res: Response) => {
-  const { status, page = '1', limit = '20' } = req.query as Record<string, string>;
+  const status = req.query.status as string | undefined;
+  const page = (req.query.page as string) || '1';
+  const limit = (req.query.limit as string) || '20';
   const skip = (parseInt(page) - 1) * parseInt(limit);
   try {
     const where = status ? { status: status as any } : {};
@@ -197,7 +205,9 @@ router.get('/orders', async (req: Request, res: Response) => {
 
 // GET /admin/support
 router.get('/support', async (req: Request, res: Response) => {
-  const { status, page = '1', limit = '20' } = req.query as Record<string, string>;
+  const status = req.query.status as string | undefined;
+  const page = (req.query.page as string) || '1';
+  const limit = (req.query.limit as string) || '20';
   const skip = (parseInt(page) - 1) * parseInt(limit);
   try {
     const where = status ? { status: status as any } : {};
@@ -219,7 +229,7 @@ router.get('/support', async (req: Request, res: Response) => {
 
 // PATCH /admin/support/:id/resolve
 router.patch('/support/:id/resolve', async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const { resolution_notes, issue_refund } = req.body;
   
   try {
@@ -236,7 +246,7 @@ router.patch('/support/:id/resolve', async (req: Request, res: Response) => {
     if (issue_refund && ticket.order_id) {
       await prisma.order.update({
         where: { id: ticket.order_id },
-        data: { status: 'refunded', payment_status: 'refunded' }
+        data: { status: 'cancelled', payment_status: 'refunded' }
       });
       // Optionally notify user via socket
     }

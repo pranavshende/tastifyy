@@ -33,23 +33,26 @@ router.get('/admin', async (_req: Request, res: Response) => {
     for (let i = 0; i <= 30; i++) {
       const d = new Date(thirtyDaysAgo);
       d.setDate(d.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = d.toISOString().split('T')[0] as string;
       dailyData[dateStr] = { revenue: 0, orders: 0 };
     }
 
     recentOrders.forEach(o => {
-      const dateStr = new Date(o.created_at).toISOString().split('T')[0];
+      const dateStr = new Date(o.created_at).toISOString().split('T')[0] as string;
       if (dailyData[dateStr]) {
         dailyData[dateStr].revenue += Number(o.total_amount);
         dailyData[dateStr].orders += 1;
       }
     });
 
-    const chartData = Object.keys(dailyData).sort().map(date => ({
-      date,
-      revenue: dailyData[date].revenue,
-      orders: dailyData[date].orders
-    }));
+    const chartData = Object.keys(dailyData).sort().map(date => {
+      const d = dailyData[date];
+      return {
+        date,
+        revenue: d?.revenue || 0,
+        orders: d?.orders || 0
+      };
+    });
 
     res.json({ success: true, data: chartData });
   } catch (error) {

@@ -22,7 +22,7 @@ router.get('/orders/available', async (req: Request, res: Response) => {
 
     const orders = await prisma.order.findMany({
       where: { 
-        status: { in: ['accepted', 'preparing', 'ready_for_pickup'] },
+        status: { in: ['restaurant_confirmed', 'preparing', 'ready'] },
         delivery_partner_id: null 
       },
       include: {
@@ -46,7 +46,7 @@ router.get('/orders/active', async (req: Request, res: Response) => {
     const order = await prisma.order.findFirst({
       where: {
         delivery_partner_id: partnerId,
-        status: { in: ['ready_for_pickup', 'out_for_delivery'] }
+        status: { in: ['ready', 'out_for_delivery'] }
       },
       include: {
         restaurant: { select: { name: true, address_line: true, city: true, phone: true } },
@@ -66,7 +66,7 @@ router.post('/orders/:id/accept', async (req: Request, res: Response) => {
     const partnerId = await getPartnerId((req.user as any).id);
     if (!partnerId) return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not a delivery partner' } });
 
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     // Ensure it's not already assigned
     const order = await prisma.order.findUnique({ where: { id } });

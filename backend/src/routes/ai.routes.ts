@@ -55,13 +55,10 @@ router.post('/recommend', async (req: Request, res: Response) => {
     }
 
     if (keywords.length > 0) {
-      whereClause.OR = keywords.map((k: string) => ({
-        name: { contains: k, mode: 'insensitive' }
-      })).concat(
-        keywords.map((k: string) => ({
-          description: { contains: k, mode: 'insensitive' }
-        }))
-      );
+      whereClause.OR = [
+        ...keywords.map((k: string) => ({ name: { contains: k, mode: 'insensitive' } })),
+        ...keywords.map((k: string) => ({ description: { contains: k, mode: 'insensitive' } }))
+      ];
     }
 
     const recommendations = await prisma.menuItem.findMany({

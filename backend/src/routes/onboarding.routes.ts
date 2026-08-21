@@ -61,7 +61,7 @@ router.post('/restaurant', async (req: Request, res: Response) => {
   const {
     name, type, owner_name, phone, email, address_line, city, state, pincode,
     latitude, longitude, service_radius_km, avg_preparation_time_mins,
-    is_pure_veg, cuisine_tags, description, onboarding_step
+    is_pure_veg, cuisine_tags, onboarding_step
   } = req.body;
 
   try {
@@ -77,7 +77,7 @@ router.post('/restaurant', async (req: Request, res: Response) => {
         data: {
           name, type, owner_name, phone, email, address_line, city, state, pincode,
           latitude, longitude, service_radius_km, avg_preparation_time_mins,
-          is_pure_veg, cuisine_tags, description
+          is_pure_veg, cuisine_tags
         }
       });
       res.json({ success: true, data: restaurant, onboarding_step });
@@ -182,6 +182,8 @@ router.post('/delivery', async (req: Request, res: Response) => {
       const partner = await prisma.deliveryPartner.create({
         data: {
           user_id: user.id,
+          name: user.name,
+          phone: user.phone,
           vehicle_type: vehicle_type || '',
           vehicle_number: vehicle_number || '',
           vehicle_model: vehicle_model || '',
