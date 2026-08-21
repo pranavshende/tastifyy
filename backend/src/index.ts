@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { initSocket } from './socket.js';
+import { prisma } from './utils/prisma.js';
 
 import authRoutes from './routes/auth.routes.js';
 import restaurantRoutes from './routes/restaurant.routes.js';
@@ -71,9 +72,28 @@ app.use('/api/support', supportRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/ai', aiRoutes);
 
-// Health check
+// Health check (Root)
 app.get('/', (_req, res) => {
   res.json({ message: 'Tastifyy API is running!', version: '2.0.0' });
+});
+
+// Deep Health Check
+app.get('/health', async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({ 
+      status: 'healthy', 
+      database: 'connected', 
+      timestamp: new Date().toISOString() 
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(503).json({ 
+      status: 'unhealthy', 
+      database: 'disconnected', 
+      timestamp: new Date().toISOString() 
+    });
+  }
 });
 
 if (process.env.NODE_ENV !== 'test') {
