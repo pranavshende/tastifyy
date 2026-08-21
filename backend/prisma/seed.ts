@@ -45,7 +45,7 @@ async function main() {
   console.log(`✅ Deleted ${totalDeleted} users from Supabase Auth.`);
 
   console.log('🧹 Truncating Prisma Database...');
-  await prisma.$executeRawUnsafe(`TRUNCATE TABLE users CASCADE;`);
+  await prisma.$executeRawUnsafe(`TRUNCATE TABLE users, restaurants CASCADE;`);
   console.log(`✅ Truncated Prisma DB.`);
 
   // --- PHASE 2: SUPABASE & PRISMA SEEDING ---
@@ -151,11 +151,28 @@ async function main() {
         { restaurant_id: restaurant.id, category_id: mains.id, name: 'Dal Makhani', description: 'Slow cooked black lentils', price: 300, is_veg: true, is_available: true }
       ]
     });
-
-    console.log(`✅ Created Restaurant: ${restaurant.name} with Menu Categories and Items`);
+    console.log(`✅ Seeded restaurant: ${restaurant.name} with Menu`);
   }
 
-  console.log('🎉 Seeding completed successfully!');
+  if (createdUsers['delivery_partner']) {
+    const deliveryUser = createdUsers['delivery_partner'];
+    await prisma.deliveryPartner.create({
+      data: {
+        user_id: deliveryUser.id,
+        name: deliveryUser.name,
+        phone: deliveryUser.phone,
+        vehicle_type: 'bike',
+        vehicle_number: 'MH-01-AB-1234',
+        current_latitude: 18.922,
+        current_longitude: 72.834,
+        is_online: false,
+        status: 'active'
+      }
+    });
+    console.log(`✅ Seeded delivery partner profile for: ${deliveryUser.name}`);
+  }
+
+  console.log('🎉 Database seeding completed successfully!');
 }
 
 main()
