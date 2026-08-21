@@ -34,6 +34,20 @@ router.use(attachRestaurantId);
 
 // ─── CATEGORIES ──────────────────────────────────────────────────────────────
 
+// GET /api/menu/info — returns restaurant_id for the logged-in partner (used for WebSocket room join)
+router.get('/info', async (req: Request, res: Response) => {
+  const restaurant_id = (req as any).restaurant_id;
+  try {
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: restaurant_id },
+      select: { id: true, name: true, status: true, is_open: true }
+    });
+    res.json({ success: true, data: { restaurant_id, restaurant } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch restaurant info' } });
+  }
+});
+
 // GET /api/menu/categories
 router.get('/categories', async (req: Request, res: Response) => {
   const restaurant_id = (req as any).restaurant_id;
@@ -70,14 +84,14 @@ router.put('/categories/:id', async (req: Request, res: Response) => {
   const { name, display_order, is_active } = req.body;
   try {
     // Ensure ownership
-    const existing = await prisma.menuCategory.findFirst({ where: { id, restaurant_id } });
+    const existing = await prisma.menuCategory.findFirst({ where: { id: id as string, restaurant_id: restaurant_id as string } });
     if (!existing) {
       res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Category not found' } });
       return;
     }
 
     const category = await prisma.menuCategory.update({
-      where: { id },
+      where: { id: id as string },
       data: { name, display_order, is_active }
     });
     res.json({ success: true, data: category });
@@ -91,20 +105,20 @@ router.delete('/categories/:id', async (req: Request, res: Response) => {
   const restaurant_id = (req as any).restaurant_id;
   const { id } = req.params;
   try {
-    const existing = await prisma.menuCategory.findFirst({ where: { id, restaurant_id } });
+    const existing = await prisma.menuCategory.findFirst({ where: { id: id as string, restaurant_id: restaurant_id as string } });
     if (!existing) {
       res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Category not found' } });
       return;
     }
     
     // Check if items exist
-    const itemsCount = await prisma.menuItem.count({ where: { category_id: id } });
+    const itemsCount = await prisma.menuItem.count({ where: { category_id: id as string } });
     if (itemsCount > 0) {
       res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'Cannot delete category with items' } });
       return;
     }
 
-    await prisma.menuCategory.delete({ where: { id } });
+    await prisma.menuCategory.delete({ where: { id: id as string } });
     res.json({ success: true, message: 'Category deleted' });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to delete category' } });
@@ -164,14 +178,14 @@ router.put('/items/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
   const { category_id, name, description, price, is_veg, image_url, is_available } = req.body;
   try {
-    const existing = await prisma.menuItem.findFirst({ where: { id, restaurant_id } });
+    const existing = await prisma.menuItem.findFirst({ where: { id: id as string, restaurant_id: restaurant_id as string } });
     if (!existing) {
       res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Item not found' } });
       return;
     }
 
     const item = await prisma.menuItem.update({
-      where: { id },
+      where: { id: id as string },
       data: { category_id, name, description, price, is_veg, image_url, is_available }
     });
     res.json({ success: true, data: item });
@@ -186,14 +200,14 @@ router.patch('/items/:id/status', async (req: Request, res: Response) => {
   const { id } = req.params;
   const { is_available } = req.body;
   try {
-    const existing = await prisma.menuItem.findFirst({ where: { id, restaurant_id } });
+    const existing = await prisma.menuItem.findFirst({ where: { id: id as string, restaurant_id: restaurant_id as string } });
     if (!existing) {
       res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Item not found' } });
       return;
     }
 
     const item = await prisma.menuItem.update({
-      where: { id },
+      where: { id: id as string },
       data: { is_available }
     });
     res.json({ success: true, data: item });
@@ -207,13 +221,13 @@ router.delete('/items/:id', async (req: Request, res: Response) => {
   const restaurant_id = (req as any).restaurant_id;
   const { id } = req.params;
   try {
-    const existing = await prisma.menuItem.findFirst({ where: { id, restaurant_id } });
+    const existing = await prisma.menuItem.findFirst({ where: { id: id as string, restaurant_id: restaurant_id as string } });
     if (!existing) {
       res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Item not found' } });
       return;
     }
 
-    await prisma.menuItem.delete({ where: { id } });
+    await prisma.menuItem.delete({ where: { id: id as string } });
     res.json({ success: true, message: 'Item deleted' });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to delete item' } });

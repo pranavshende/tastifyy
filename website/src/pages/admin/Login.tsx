@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../api/axios';
+import { useAuthStore } from '../../store/authStore';
 
 export default function AdminLogin() {
+  const { setAuth } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,7 +18,8 @@ export default function AdminLogin() {
 
     try {
       const res = await api.post('/auth/login', { email, password, role: 'admin' });
-      localStorage.setItem('token', res.data.token || res.data.session.access_token);
+      const token = res.data.token || res.data.session?.access_token;
+      setAuth(res.data.user, token);
       navigate('/admin/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Authentication failed');

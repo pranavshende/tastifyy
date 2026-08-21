@@ -1,92 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '../../store/authStore';
+import { useState, useEffect } from 'react';
 import api from '../../api/axios';
+import socketService from '../../api/socket';
+import Sidebar from '../../components/dashboard/Sidebar';
+import { 
+  Users, Store, ShoppingBag, Bike, ShieldAlert, 
+  TrendingUp, AlertCircle, RefreshCw
+} from 'lucide-react';
 
-type Tab = 'overview' | 'restaurants' | 'delivery' | 'users' | 'support';
+type Tab = 'overview' | 'restaurants' | 'orders' | 'delivery' | 'users' | 'support';
 
 export default function AdminDashboard() {
-  const { user, logout } = useAuthStore();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
-  const handleLogout = async () => {
-    await logout();
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <div className="w-64 bg-brand-dark text-white flex flex-col">
-        <div className="p-6">
-          <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center text-xl font-black mb-4">
-            T
-          </div>
-          <h2 className="text-xl font-bold">Admin Portal</h2>
-          <p className="text-gray-400 text-sm">Welcome, {user?.name}</p>
-        </div>
+    <div className="min-h-screen bg-brand-light flex font-sans text-brand-dark">
+      <Sidebar role="admin" activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as Tab)} />
 
-        <nav className="flex-1 px-4 space-y-2 mt-4">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition-all ${
-              activeTab === 'overview' ? 'bg-brand-primary text-white' : 'text-gray-400 hover:text-white hover:bg-white/10'
-            }`}
-          >
-            📊 Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('restaurants')}
-            className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition-all ${
-              activeTab === 'restaurants' ? 'bg-brand-primary text-white' : 'text-gray-400 hover:text-white hover:bg-white/10'
-            }`}
-          >
-            🏪 Restaurants
-          </button>
-          <button
-            onClick={() => setActiveTab('delivery')}
-            className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition-all ${
-              activeTab === 'delivery' ? 'bg-brand-primary text-white' : 'text-gray-400 hover:text-white hover:bg-white/10'
-            }`}
-          >
-            🛵 Delivery Partners
-          </button>
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition-all ${
-              activeTab === 'users' ? 'bg-brand-primary text-white' : 'text-gray-400 hover:text-white hover:bg-white/10'
-            }`}
-          >
-            👥 Users
-          </button>
-          <button
-            onClick={() => setActiveTab('support')}
-            className={`w-full text-left px-4 py-3 rounded-xl font-semibold transition-all ${
-              activeTab === 'support' ? 'bg-brand-primary text-white' : 'text-gray-400 hover:text-white hover:bg-white/10'
-            }`}
-          >
-            🎫 Support
-          </button>
-        </nav>
-
-        <div className="p-4">
-          <button
-            onClick={handleLogout}
-            className="w-full bg-white/10 text-white font-semibold py-3 rounded-xl hover:bg-white/20 transition-all"
-          >
-            Log Out
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="p-8">
+      <main className="flex-1 lg:ml-64 p-6 lg:p-8 h-screen overflow-y-auto">
+        <div className="max-w-7xl mx-auto">
           {activeTab === 'overview' && <OverviewTab />}
+          {activeTab === 'orders' && <OrdersTab />}
           {activeTab === 'restaurants' && <RestaurantsTab />}
           {activeTab === 'delivery' && <DeliveryTab />}
           {activeTab === 'users' && <UsersTab />}
           {activeTab === 'support' && <SupportTab />}
         </div>
-      </div>
+      </main>
     </div>
   );
 }
@@ -98,64 +37,86 @@ function OverviewTab() {
   const [analytics, setAnalytics] = useState<any[]>([]);
 
   useEffect(() => {
-    api.get('/admin/dashboard').then((res) => {
-      setMetrics(res.data.data);
+    Promise.all([
+      api.get('/admin/dashboard'),
+      api.get('/analytics/admin')
+    ]).then(([resMetrics, resAnalytics]) => {
+      setMetrics(resMetrics.data.data);
+      setAnalytics(resAnalytics.data.data);
       setLoading(false);
-    });
-    api.get('/analytics/admin').then((res) => {
-      setAnalytics(res.data.data);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
     });
   }, []);
 
-  if (loading) return <div className="text-gray-500 font-semibold animate-pulse">Loading metrics...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   const cards = [
-    { title: 'Total Users', value: metrics.totalUsers, icon: '👥', color: 'bg-blue-100 text-blue-600' },
-    { title: 'Active Restaurants', value: metrics.activeRestaurants, icon: '🏪', color: 'bg-green-100 text-green-600' },
-    { title: 'Pending Restaurants', value: metrics.pendingRestaurants, icon: '⏳', color: 'bg-orange-100 text-orange-600' },
-    { title: 'Delivery Partners', value: metrics.totalDeliveryPartners, icon: '🛵', color: 'bg-purple-100 text-purple-600' },
-    { title: 'Pending Delivery', value: metrics.pendingDeliveryPartners, icon: '⏳', color: 'bg-orange-100 text-orange-600' },
-    { title: 'Total Orders', value: metrics.totalOrders, icon: '📦', color: 'bg-indigo-100 text-indigo-600' },
+    { title: 'Total Users', value: metrics?.totalUsers || 0, icon: <Users />, color: 'bg-blue-50 text-blue-600 border-blue-100' },
+    { title: 'Active Restaurants', value: metrics?.activeRestaurants || 0, icon: <Store />, color: 'bg-green-50 text-green-600 border-green-100' },
+    { title: 'Pending Partners', value: metrics?.pendingRestaurants || 0, icon: <AlertCircle />, color: 'bg-orange-50 text-orange-600 border-orange-100' },
+    { title: 'Delivery Fleet', value: metrics?.totalDeliveryPartners || 0, icon: <Bike />, color: 'bg-purple-50 text-purple-600 border-purple-100' },
+    { title: 'Total Orders', value: metrics?.totalOrders || 0, icon: <ShoppingBag />, color: 'bg-brand-primary/10 text-brand-primary border-brand-primary/20' },
   ];
 
-  // For the simple bar chart
-  const maxRevenue = Math.max(...analytics.map(a => a.revenue), 1); // prevent div by zero
+  const maxRevenue = Math.max(...analytics.map(a => a.revenue), 1);
 
   return (
-    <div>
-      <h2 className="text-3xl font-black text-gray-900 mb-8">Platform Overview</h2>
+    <div className="animate-fade-in-up">
+      <div className="mb-8">
+        <h1 className="text-3xl font-black text-gray-900">Platform Overview</h1>
+        <p className="text-gray-500 font-medium mt-1">Real-time marketplace analytics and health</p>
+      </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
         {cards.map((c, i) => (
-          <div key={i} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center">
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl ${c.color} mr-4`}>
+          <div key={i} className={`p-6 rounded-3xl border shadow-sm flex flex-col ${c.color}`}>
+            <div className="w-12 h-12 rounded-2xl bg-white/60 flex items-center justify-center mb-4 shadow-sm">
               {c.icon}
             </div>
-            <div>
-              <p className="text-gray-500 text-sm font-semibold">{c.title}</p>
-              <p className="text-3xl font-black text-gray-900">{c.value}</p>
-            </div>
+            <p className="text-sm font-bold opacity-80 uppercase tracking-wider mb-1">{c.title}</p>
+            <p className="text-3xl font-black">{c.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-        <h3 className="text-xl font-bold text-gray-900 mb-6">Revenue Trend (30 Days)</h3>
+      <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 mb-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h3 className="text-xl font-black text-gray-900 flex items-center">
+              <TrendingUp className="w-6 h-6 mr-2 text-brand-primary" />
+              Revenue Trend (30 Days)
+            </h3>
+            <p className="text-sm text-gray-500 font-medium mt-1">Platform fee generation over time</p>
+          </div>
+        </div>
+        
         {analytics.length === 0 ? (
-          <div className="text-gray-400 font-semibold text-center py-10">No revenue data available yet.</div>
+          <div className="bg-gray-50 rounded-2xl border border-dashed border-gray-200 h-64 flex items-center justify-center">
+            <div className="text-gray-400 font-bold text-center">
+              <TrendingUp className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              No revenue data available yet.
+            </div>
+          </div>
         ) : (
-          <div className="flex items-end h-64 gap-2">
+          <div className="flex items-end h-64 gap-2 px-2">
             {analytics.map((day, idx) => {
               const heightPct = (day.revenue / maxRevenue) * 100;
               return (
-                <div key={idx} className="flex-1 flex flex-col justify-end items-center group relative">
-                  {/* Tooltip on hover */}
-                  <div className="opacity-0 group-hover:opacity-100 absolute -top-12 bg-gray-900 text-white text-xs font-bold py-1 px-2 rounded-lg pointer-events-none whitespace-nowrap transition-opacity">
+                <div key={idx} className="flex-1 flex flex-col justify-end items-center group relative h-full pt-10">
+                  <div className="opacity-0 group-hover:opacity-100 absolute top-0 bg-gray-900 text-white text-xs font-bold py-1.5 px-3 rounded-lg pointer-events-none whitespace-nowrap transition-opacity z-10 shadow-xl">
                     {day.date}: ₹{day.revenue.toFixed(0)}
                   </div>
                   <div 
-                    className="w-full bg-brand-primary rounded-t-sm transition-all group-hover:bg-brand-secondary" 
-                    style={{ height: `${heightPct}%`, minHeight: '4px' }} 
+                    className="w-full bg-brand-primary/20 rounded-t-lg transition-all group-hover:bg-brand-primary" 
+                    style={{ height: `${heightPct}%`, minHeight: '8px' }} 
                   ></div>
                 </div>
               );
@@ -180,6 +141,7 @@ function RestaurantsTab() {
 
   useEffect(() => {
     fetchRestaurants();
+    // eslint-disable-next-line
   }, [statusFilter]);
 
   const handleAction = async (id: string, action: 'approve' | 'reject' | 'suspend') => {
@@ -191,75 +153,83 @@ function RestaurantsTab() {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-end mb-8">
+    <div className="animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
         <div>
           <h2 className="text-3xl font-black text-gray-900">Restaurants</h2>
-          <p className="text-gray-500 mt-1">Manage restaurant partners and approvals</p>
+          <p className="text-gray-500 font-medium mt-1">Manage restaurant partners and approvals</p>
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="bg-white border border-gray-200 rounded-xl px-4 py-2 font-semibold text-gray-700 outline-none focus:border-brand-primary"
-        >
-          <option value="pending">Pending</option>
-          <option value="active">Active</option>
-          <option value="rejected">Rejected</option>
-          <option value="suspended">Suspended</option>
-          <option value="all">All</option>
-        </select>
+        <div className="bg-white border border-gray-200 rounded-xl p-1 inline-flex shadow-sm">
+          {['pending', 'active', 'rejected', 'suspended', 'all'].map(status => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`px-4 py-2 rounded-lg text-sm font-bold capitalize transition-colors ${
+                statusFilter === status 
+                  ? 'bg-brand-dark text-white shadow-sm' 
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 text-gray-500 text-sm font-semibold uppercase">
-            <tr>
-              <th className="px-6 py-4">Restaurant</th>
-              <th className="px-6 py-4">Location</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {restaurants.map((r) => (
-              <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4">
-                  <p className="font-bold text-gray-900">{r.name}</p>
-                  <p className="text-sm text-gray-500">{r.type} {r.is_pure_veg && '• 🌿 Pure Veg'}</p>
-                </td>
-                <td className="px-6 py-4 text-gray-700">
-                  {r.city}, {r.state}
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                    r.status === 'active' ? 'bg-green-100 text-green-700' :
-                    r.status === 'pending' ? 'bg-orange-100 text-orange-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
-                    {r.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right space-x-2">
-                  {r.status === 'pending' && (
-                    <>
-                      <button onClick={() => handleAction(r.id, 'approve')} className="text-green-600 bg-green-50 px-3 py-1 rounded-lg font-bold text-sm hover:bg-green-100">Approve</button>
-                      <button onClick={() => handleAction(r.id, 'reject')} className="text-red-600 bg-red-50 px-3 py-1 rounded-lg font-bold text-sm hover:bg-red-100">Reject</button>
-                    </>
-                  )}
-                  {r.status === 'active' && (
-                    <button onClick={() => handleAction(r.id, 'suspend')} className="text-orange-600 bg-orange-50 px-3 py-1 rounded-lg font-bold text-sm hover:bg-orange-100">Suspend</button>
-                  )}
-                  {r.status === 'suspended' && (
-                    <button onClick={() => handleAction(r.id, 'approve')} className="text-green-600 bg-green-50 px-3 py-1 rounded-lg font-bold text-sm hover:bg-green-100">Reactivate</button>
-                  )}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50/50 text-gray-500 text-xs font-black uppercase tracking-wider border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-4">Restaurant</th>
+                <th className="px-6 py-4">Location</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
-            ))}
-            {restaurants.length === 0 && (
-              <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500 font-semibold">No restaurants found.</td></tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {restaurants.map((r) => (
+                <tr key={r.id} className="hover:bg-gray-50/50 transition-colors group">
+                  <td className="px-6 py-4">
+                    <p className="font-black text-gray-900 text-base">{r.name}</p>
+                    <p className="text-sm font-medium text-gray-500 mt-0.5">{r.type} {r.is_pure_veg && <span className="text-green-600 ml-1">🌿 Pure Veg</span>}</p>
+                  </td>
+                  <td className="px-6 py-4 text-gray-700 font-medium">
+                    {r.city}, {r.state}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider ${
+                      r.status === 'active' ? 'bg-green-50 text-green-700 border border-green-200' :
+                      r.status === 'pending' ? 'bg-orange-50 text-orange-700 border border-orange-200' :
+                      'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                      {r.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                      {r.status === 'pending' && (
+                        <>
+                          <button onClick={() => handleAction(r.id, 'approve')} className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-green-700 shadow-sm shadow-green-600/20">Approve</button>
+                          <button onClick={() => handleAction(r.id, 'reject')} className="bg-white border-2 border-red-100 text-red-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-red-50">Reject</button>
+                        </>
+                      )}
+                      {r.status === 'active' && (
+                        <button onClick={() => handleAction(r.id, 'suspend')} className="bg-white border-2 border-orange-100 text-orange-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-orange-50">Suspend</button>
+                      )}
+                      {r.status === 'suspended' && (
+                        <button onClick={() => handleAction(r.id, 'approve')} className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-green-700 shadow-sm shadow-green-600/20">Reactivate</button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {restaurants.length === 0 && (
+                <tr><td colSpan={4} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No restaurants found in this category.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -278,6 +248,7 @@ function DeliveryTab() {
 
   useEffect(() => {
     fetchPartners();
+    // eslint-disable-next-line
   }, [statusFilter]);
 
   const handleAction = async (id: string, action: 'approve' | 'reject') => {
@@ -289,69 +260,78 @@ function DeliveryTab() {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-end mb-8">
+    <div className="animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
         <div>
-          <h2 className="text-3xl font-black text-gray-900">Delivery Partners</h2>
-          <p className="text-gray-500 mt-1">Manage delivery fleet approvals</p>
+          <h2 className="text-3xl font-black text-gray-900">Delivery Fleet</h2>
+          <p className="text-gray-500 font-medium mt-1">Manage delivery partner applications</p>
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="bg-white border border-gray-200 rounded-xl px-4 py-2 font-semibold text-gray-700 outline-none focus:border-brand-primary"
-        >
-          <option value="pending">Pending</option>
-          <option value="active">Active</option>
-          <option value="rejected">Rejected</option>
-          <option value="all">All</option>
-        </select>
+        <div className="bg-white border border-gray-200 rounded-xl p-1 inline-flex shadow-sm">
+          {['pending', 'active', 'rejected', 'all'].map(status => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`px-4 py-2 rounded-lg text-sm font-bold capitalize transition-colors ${
+                statusFilter === status 
+                  ? 'bg-brand-dark text-white shadow-sm' 
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 text-gray-500 text-sm font-semibold uppercase">
-            <tr>
-              <th className="px-6 py-4">Partner</th>
-              <th className="px-6 py-4">Vehicle</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {partners.map((p) => (
-              <tr key={p.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4">
-                  <p className="font-bold text-gray-900">{p.name || 'No Name'}</p>
-                  <p className="text-sm text-gray-500">{p.phone}</p>
-                </td>
-                <td className="px-6 py-4 text-gray-700">
-                  <p className="font-semibold uppercase">{p.vehicle_number}</p>
-                  <p className="text-sm text-gray-500 capitalize">{p.vehicle_type}</p>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                    p.status === 'active' ? 'bg-green-100 text-green-700' :
-                    p.status === 'pending' ? 'bg-orange-100 text-orange-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
-                    {p.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right space-x-2">
-                  {p.status === 'pending' && (
-                    <>
-                      <button onClick={() => handleAction(p.id, 'approve')} className="text-green-600 bg-green-50 px-3 py-1 rounded-lg font-bold text-sm hover:bg-green-100">Approve</button>
-                      <button onClick={() => handleAction(p.id, 'reject')} className="text-red-600 bg-red-50 px-3 py-1 rounded-lg font-bold text-sm hover:bg-red-100">Reject</button>
-                    </>
-                  )}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50/50 text-gray-500 text-xs font-black uppercase tracking-wider border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-4">Partner</th>
+                <th className="px-6 py-4">Vehicle Details</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
-            ))}
-            {partners.length === 0 && (
-              <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500 font-semibold">No delivery partners found.</td></tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {partners.map((p) => (
+                <tr key={p.id} className="hover:bg-gray-50/50 transition-colors group">
+                  <td className="px-6 py-4">
+                    <p className="font-black text-gray-900 text-base">{p.name || 'Unnamed Partner'}</p>
+                    <p className="text-sm font-medium text-gray-500 mt-0.5">{p.phone}</p>
+                  </td>
+                  <td className="px-6 py-4 text-gray-700">
+                    <p className="font-bold text-gray-900 uppercase">{p.vehicle_number}</p>
+                    <p className="text-sm font-medium text-gray-500 capitalize">{p.vehicle_type}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider ${
+                      p.status === 'active' ? 'bg-green-50 text-green-700 border border-green-200' :
+                      p.status === 'pending' ? 'bg-orange-50 text-orange-700 border border-orange-200' :
+                      'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                      {p.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                      {p.status === 'pending' && (
+                        <>
+                          <button onClick={() => handleAction(p.id, 'approve')} className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-green-700 shadow-sm shadow-green-600/20">Approve</button>
+                          <button onClick={() => handleAction(p.id, 'reject')} className="bg-white border-2 border-red-100 text-red-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-red-50">Reject</button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {partners.length === 0 && (
+                <tr><td colSpan={4} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No delivery partners found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -368,6 +348,7 @@ function UsersTab() {
 
   useEffect(() => {
     fetchUsers();
+    // eslint-disable-next-line
   }, [search]);
 
   const handleBlock = async (id: string, currentlyBlocked: boolean) => {
@@ -378,65 +359,73 @@ function UsersTab() {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-end mb-8">
+    <div className="animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
         <div>
-          <h2 className="text-3xl font-black text-gray-900">Users</h2>
-          <p className="text-gray-500 mt-1">Manage platform users</p>
+          <h2 className="text-3xl font-black text-gray-900">Platform Users</h2>
+          <p className="text-gray-500 font-medium mt-1">Manage all user accounts globally</p>
         </div>
-        <input
-          type="text"
-          placeholder="Search by name, email, phone..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="bg-white border border-gray-200 rounded-xl px-4 py-2 font-semibold text-gray-700 outline-none focus:border-brand-primary w-64"
-        />
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search users..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full sm:w-64 bg-white border border-gray-200 rounded-xl pl-4 pr-4 py-3 font-medium text-gray-700 outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary shadow-sm"
+          />
+        </div>
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 text-gray-500 text-sm font-semibold uppercase">
-            <tr>
-              <th className="px-6 py-4">User</th>
-              <th className="px-6 py-4">Role</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {users.map((u) => (
-              <tr key={u.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4">
-                  <p className="font-bold text-gray-900">{u.name}</p>
-                  <p className="text-sm text-gray-500">{u.email || u.phone}</p>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-lg text-xs font-bold uppercase">{u.role}</span>
-                </td>
-                <td className="px-6 py-4">
-                  {u.is_active ? (
-                    <span className="text-green-600 font-semibold text-sm">Active</span>
-                  ) : (
-                    <span className="text-red-600 font-semibold text-sm">Blocked</span>
-                  )}
-                </td>
-                <td className="px-6 py-4 text-right">
-                  {u.role !== 'admin' && (
-                    <button
-                      onClick={() => handleBlock(u.id, !u.is_active)}
-                      className={`${u.is_active ? 'text-red-600 bg-red-50 hover:bg-red-100' : 'text-green-600 bg-green-50 hover:bg-green-100'} px-3 py-1 rounded-lg font-bold text-sm`}
-                    >
-                      {u.is_active ? 'Block' : 'Unblock'}
-                    </button>
-                  )}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50/50 text-gray-500 text-xs font-black uppercase tracking-wider border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-4">User</th>
+                <th className="px-6 py-4">Role</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
-            ))}
-            {users.length === 0 && (
-              <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500 font-semibold">No users found.</td></tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {users.map((u) => (
+                <tr key={u.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4">
+                    <p className="font-black text-gray-900 text-base">{u.name}</p>
+                    <p className="text-sm font-medium text-gray-500">{u.email || u.phone}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider">{u.role}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    {u.is_active ? (
+                      <span className="text-green-600 font-bold text-sm bg-green-50 px-3 py-1.5 rounded-lg">Active</span>
+                    ) : (
+                      <span className="text-red-600 font-bold text-sm bg-red-50 px-3 py-1.5 rounded-lg">Blocked</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    {u.role !== 'admin' && (
+                      <button
+                        onClick={() => handleBlock(u.id, !u.is_active)}
+                        className={`px-4 py-2 rounded-xl font-bold text-sm transition-colors ${
+                          u.is_active 
+                            ? 'bg-white border-2 border-red-100 text-red-600 hover:bg-red-50' 
+                            : 'bg-green-600 text-white hover:bg-green-700 shadow-sm shadow-green-600/20'
+                        }`}
+                      >
+                        {u.is_active ? 'Block Access' : 'Unblock Access'}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {users.length === 0 && (
+                <tr><td colSpan={4} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No users found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -453,6 +442,7 @@ function SupportTab() {
 
   useEffect(() => {
     fetchTickets();
+    // eslint-disable-next-line
   }, [statusFilter]);
 
   const handleResolve = async (id: string, orderId: string) => {
@@ -473,73 +463,218 @@ function SupportTab() {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-end mb-8">
+    <div className="animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
         <div>
-          <h2 className="text-3xl font-black text-gray-900">Support Tickets</h2>
-          <p className="text-gray-500 mt-1">Manage customer issues and refunds</p>
+          <h2 className="text-3xl font-black text-gray-900">Support Center</h2>
+          <p className="text-gray-500 font-medium mt-1">Resolve customer issues and manage refunds</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-1 inline-flex shadow-sm">
+          {['open', 'resolved', 'all'].map(status => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`px-4 py-2 rounded-lg text-sm font-bold capitalize transition-colors ${
+                statusFilter === status 
+                  ? 'bg-brand-dark text-white shadow-sm' 
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50/50 text-gray-500 text-xs font-black uppercase tracking-wider border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-4">Ticket details</th>
+                <th className="px-6 py-4">Customer Info</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {tickets.map((t) => (
+                <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4 max-w-sm">
+                    <p className="font-black text-gray-900 uppercase tracking-wide flex items-center gap-2">
+                      <ShieldAlert className="w-4 h-4 text-brand-primary" />
+                      {t.category.replace('_', ' ')}
+                    </p>
+                    <p className="text-sm font-medium text-gray-600 mt-2 line-clamp-2">{t.description}</p>
+                    {t.order_id && <p className="text-xs font-bold text-gray-400 mt-2 bg-gray-100 inline-block px-2 py-0.5 rounded">Order: {t.order_id.split('-')[0].toUpperCase()}</p>}
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="font-bold text-gray-900">{t.customer?.name}</p>
+                    <p className="text-sm font-medium text-gray-500">{t.customer?.phone}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider ${
+                      t.status === 'resolved' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-orange-50 text-orange-700 border border-orange-200'
+                    }`}>
+                      {t.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    {t.status === 'open' ? (
+                      <button
+                        onClick={() => handleResolve(t.id, t.order_id)}
+                        className="bg-brand-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-brand-secondary shadow-sm shadow-brand-primary/20"
+                      >
+                        Resolve Ticket
+                      </button>
+                    ) : (
+                      <div className="text-sm font-medium text-gray-500 bg-gray-50 p-3 rounded-xl border border-gray-100 max-w-[200px] ml-auto text-left">
+                        <span className="font-bold text-gray-900 block mb-1">Resolution:</span>
+                        {t.resolution_notes}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {tickets.length === 0 && (
+                <tr><td colSpan={4} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No support tickets found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── ORDERS TAB ──────────────────────────────────────────────────────────────
+function OrdersTab() {
+  const [orders, setOrders] = useState<any[]>([]);
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const fetchOrders = () => {
+    api.get(`/admin/orders?status=${statusFilter === 'all' ? '' : statusFilter}`).then((res) => {
+      setOrders(res.data.data || []);
+    }).catch(err => console.error(err));
+  };
+
+  useEffect(() => {
+    fetchOrders();
+
+    socketService.setReconnectCallback(fetchOrders);
+
+    const socket = socketService.getSocket();
+    if (socket) {
+      const handleNewOrder = (payload: any) => {
+        setOrders(prev => {
+          if (prev.find(o => o.id === payload.orderId)) return prev;
+          const newOrder = {
+            id: payload.orderId,
+            status: payload.status,
+            created_at: payload.created_at,
+            total_amount: payload.totalAmount,
+            customer: payload.customer,
+            restaurant: payload.restaurant,
+          };
+          return [newOrder, ...prev];
+        });
+      };
+
+      const handleStatusUpdate = (payload: any) => {
+        setOrders(prev => prev.map(o => o.id === payload.orderId ? { ...o, status: payload.status } : o));
+      };
+
+      socket.on('order:created', handleNewOrder);
+      const events = ['order:accepted', 'order:rejected', 'order:preparing', 'order:ready_for_pickup', 'order:delivered', 'order:cancelled'];
+      events.forEach(event => socket.on(event, handleStatusUpdate));
+
+      return () => {
+        socket.off('order:created', handleNewOrder);
+        events.forEach(event => socket.off(event, handleStatusUpdate));
+        socketService.setReconnectCallback(null as any);
+      };
+    }
+    // eslint-disable-next-line
+  }, [statusFilter]);
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+      accepted: 'bg-blue-50 text-blue-700 border-blue-200',
+      preparing: 'bg-purple-50 text-purple-700 border-purple-200',
+      ready_for_pickup: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      delivered: 'bg-green-50 text-green-700 border-green-200',
+      cancelled: 'bg-red-50 text-red-700 border-red-200',
+    };
+    return colors[status?.toLowerCase()] || 'bg-gray-50 text-gray-700 border-gray-200';
+  };
+
+  return (
+    <div className="animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-gray-900 flex items-center">
+            Platform Orders 
+            <RefreshCw className="w-5 h-5 ml-3 text-brand-primary animate-spin-slow" />
+          </h2>
+          <p className="text-gray-500 font-medium mt-1">Live monitoring of all marketplace orders</p>
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="bg-white border border-gray-200 rounded-xl px-4 py-2 font-semibold text-gray-700 outline-none focus:border-brand-primary"
+          className="bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold text-gray-700 outline-none focus:border-brand-primary shadow-sm"
         >
-          <option value="open">Open</option>
-          <option value="resolved">Resolved</option>
-          <option value="all">All</option>
+          <option value="all">All Orders</option>
+          <option value="pending">Pending</option>
+          <option value="accepted">Accepted</option>
+          <option value="preparing">Preparing</option>
+          <option value="ready_for_pickup">Ready for Pickup</option>
+          <option value="delivered">Delivered</option>
+          <option value="cancelled">Cancelled</option>
         </select>
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 text-gray-500 text-sm font-semibold uppercase">
-            <tr>
-              <th className="px-6 py-4">Ticket Info</th>
-              <th className="px-6 py-4">Customer</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {tickets.map((t) => (
-              <tr key={t.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4">
-                  <p className="font-bold text-gray-900 uppercase">{t.category.replace('_', ' ')}</p>
-                  <p className="text-sm text-gray-500 truncate w-64">{t.description}</p>
-                  {t.order_id && <p className="text-xs text-brand mt-1 font-bold">Order #{t.order_id.slice(-6).toUpperCase()}</p>}
-                </td>
-                <td className="px-6 py-4">
-                  <p className="font-semibold text-gray-800">{t.customer.name}</p>
-                  <p className="text-sm text-gray-500">{t.customer.phone}</p>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                    t.status === 'resolved' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                  }`}>
-                    {t.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  {t.status === 'open' ? (
-                    <button
-                      onClick={() => handleResolve(t.id, t.order_id)}
-                      className="text-green-600 bg-green-50 hover:bg-green-100 px-3 py-1 rounded-lg font-bold text-sm"
-                    >
-                      Resolve
-                    </button>
-                  ) : (
-                    <span className="text-gray-400 text-sm font-semibold truncate w-32 inline-block text-right">
-                      {t.resolution_notes}
-                    </span>
-                  )}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50/50 text-gray-500 text-xs font-black uppercase tracking-wider border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-4">Order ID & Time</th>
+                <th className="px-6 py-4">Customer</th>
+                <th className="px-6 py-4">Restaurant</th>
+                <th className="px-6 py-4">Amount</th>
+                <th className="px-6 py-4 text-right">Live Status</th>
               </tr>
-            ))}
-            {tickets.length === 0 && (
-              <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500 font-semibold">No tickets found.</td></tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {orders.map((o) => (
+                <tr key={o.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4">
+                    <p className="font-black text-gray-900">#{o.id?.split('-')[0].toUpperCase()}</p>
+                    <p className="text-sm font-medium text-gray-500 mt-0.5">{new Date(o.created_at).toLocaleString()}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="font-bold text-gray-800">{o.customer?.name}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="font-bold text-gray-800">{o.restaurant?.name}</p>
+                  </td>
+                  <td className="px-6 py-4 font-black text-gray-900 text-lg">
+                    ₹{o.total_amount}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border ${getStatusColor(o.status)}`}>
+                      {o.status?.replace(/_/g, ' ')}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {orders.length === 0 && (
+                <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No orders found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

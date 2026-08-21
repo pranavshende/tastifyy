@@ -6,7 +6,7 @@ let io: SocketIOServer;
 export const initSocket = (server: HttpServer) => {
   io = new SocketIOServer(server, {
     cors: {
-      origin: '*', // For MVP, allow all origins
+      origin: process.env.CORS_ORIGIN,
       methods: ['GET', 'POST']
     }
   });
@@ -18,7 +18,17 @@ export const initSocket = (server: HttpServer) => {
     socket.on('join', (data: { role: string, id: string }) => {
       const room = `${data.role}_${data.id}`;
       socket.join(room);
+      if (data.role === 'admin') {
+        socket.join('admin');
+      }
       console.log(`Socket ${socket.id} joined room ${room}`);
+    });
+
+    // Restaurant partners also join their restaurant-specific room
+    socket.on('join_restaurant', (data: { restaurant_id: string }) => {
+      const room = `restaurant_${data.restaurant_id}`;
+      socket.join(room);
+      console.log(`Socket ${socket.id} joined restaurant room ${room}`);
     });
 
     socket.on('disconnect', () => {

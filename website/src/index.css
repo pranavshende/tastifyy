@@ -4,12 +4,27 @@
   --color-brand-primary: #E86A22;
   --color-brand-secondary: #C1531A;
   --color-brand-dark: #171717;
-  --color-brand-light: #FDFBFA; /* Warm White */
+  --color-brand-light: #F9FAFB; /* Off White / Gray 50 */
   
   --font-sans: 'Inter', 'Roboto', 'Outfit', system-ui, sans-serif;
   
   --animate-fade-in-up: fade-in-up 0.5s ease-out;
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-shimmer: shimmer 2s infinite linear;
+}
+
+@layer utilities {
+  .shadow-card {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  }
+  .shadow-soft {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
 }
 
 @keyframes fade-in-up {

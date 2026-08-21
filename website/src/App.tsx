@@ -14,10 +14,19 @@ import RestaurantLogin from './pages/restaurant/Login';
 import DashboardLayout from './pages/restaurant/DashboardLayout';
 import RestaurantDashboard from './pages/restaurant/Dashboard';
 import MenuManager from './pages/restaurant/MenuManager';
+import DeliveryLogin from './pages/delivery/Login';
 import CustomerOnboarding from './pages/onboarding/CustomerOnboarding';
 import RestaurantOnboarding from './pages/onboarding/RestaurantOnboarding';
 import DeliveryOnboarding from './pages/onboarding/DeliveryOnboarding';
 import StatusScreen from './pages/onboarding/Status';
+
+// New MVP Pages
+import Restaurants from './pages/customer/Restaurants';
+import RestaurantDetails from './pages/customer/RestaurantDetails';
+import Checkout from './pages/customer/Checkout';
+import Orders from './pages/customer/Orders';
+import OrderDetails from './pages/customer/OrderDetails';
+import RestaurantProfile from './pages/restaurant/Profile';
 
 function AppRoutes() {
   const { user } = useAuthStore();
@@ -44,6 +53,10 @@ function AppRoutes() {
         path="/admin"
         element={user ? <Navigate to="/admin/dashboard" replace /> : <AdminLogin />}
       />
+      <Route
+        path="/delivery/login"
+        element={user ? <Navigate to="/delivery/dashboard" replace /> : <DeliveryLogin />}
+      />
 
       {/* Protected Customer Routes */}
       <Route
@@ -51,6 +64,46 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['customer']}>
             <CustomerHome />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/restaurants"
+        element={
+          <ProtectedRoute allowedRoles={['customer']}>
+            <Restaurants />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/restaurants/:id"
+        element={
+          <ProtectedRoute allowedRoles={['customer']}>
+            <RestaurantDetails />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/checkout"
+        element={
+          <ProtectedRoute allowedRoles={['customer']}>
+            <Checkout />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/orders"
+        element={
+          <ProtectedRoute allowedRoles={['customer']}>
+            <Orders />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/orders/:id"
+        element={
+          <ProtectedRoute allowedRoles={['customer']}>
+            <OrderDetails />
           </ProtectedRoute>
         }
       />
@@ -75,6 +128,7 @@ function AppRoutes() {
       >
         <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
         <Route path="/restaurant/menu" element={<MenuManager />} />
+        <Route path="/restaurant/profile" element={<RestaurantProfile />} />
       </Route>
 
       {/* Delivery Routes — placeholder, will be built in Phase H */}

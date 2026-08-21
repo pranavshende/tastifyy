@@ -2,11 +2,13 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { createClient } from '@supabase/supabase-js';
+import pg from 'pg';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL! });
+const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -16,45 +18,52 @@ const supabase = createClient(
 async function main() {
   console.log('🌱 Starting database seed...');
 
-  // --- PHASE 1: SUPABASE CLEANUP ---
+  // --- PHASE 1: SUPABASE & DB CLEANUP ---
   console.log('🧹 Clearing Supabase Auth users...');
   
-  // Note: We need to use listUsers to find them, but the Supabase JS client doesn't 
-  // expose listUsers easily without pagination. For a seed script, it's safer to just 
-  // delete the specific test users we are about to create if they exist.
-  const testEmails = [
-    'admin@tastifyy.com',
-    'customer@tastifyy.com',
-    'partner@tastifyy.com'
-  ];
-
-  // We can fetch users by email, but since we are doing a force reset, 
-  // it's best to fetch all users and delete them all if this is a true dev environment.
-  const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
-  if (listError) {
-    console.error('Failed to list users:', listError);
-  } else {
+  let hasMore = true;
+  let page = 1;
+  let totalDeleted = 0;
+  
+  while (hasMore) {
+    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers({ page, perPage: 100 });
+    if (listError) {
+      console.error('Failed to list users:', listError);
+      break;
+    }
+    
+    if (users.length === 0) {
+      hasMore = false;
+      break;
+    }
+    
     for (const u of users) {
       await supabase.auth.admin.deleteUser(u.id);
+      totalDeleted++;
     }
-    console.log(`✅ Deleted ${users.length} users from Supabase Auth.`);
   }
+  console.log(`✅ Deleted ${totalDeleted} users from Supabase Auth.`);
+
+  console.log('🧹 Truncating Prisma Database...');
+  await prisma.$executeRawUnsafe(`TRUNCATE TABLE users CASCADE;`);
+  console.log(`✅ Truncated Prisma DB.`);
 
   // --- PHASE 2: SUPABASE & PRISMA SEEDING ---
   const seedUsers = [
-    { email: 'admin@tastifyy.com', name: 'Master Admin', phone: '1000000000', role: 'admin' },
-    { email: 'customer@tastifyy.com', name: 'Test Customer', phone: '2000000000', role: 'customer' },
-    { email: 'partner@tastifyy.com', name: 'Test Partner', phone: '3000000000', role: 'restaurant_partner' },
+    { email: 'admin@gmail.com', name: 'Master Admin', phone: '1000000000', role: 'admin' },
+    { email: 'restaurant@gmail.com', name: 'Test Restaurant', phone: '2000000000', role: 'restaurant_partner' },
+    { email: 'delivery@gmail.com', name: 'Test Delivery', phone: '3000000000', role: 'delivery_partner' },
+    { email: 'customer@gmail.com', name: 'Test Customer', phone: '4000000000', role: 'customer' },
   ];
 
-  console.log('👤 Creating standard users...');
+  console.log('👤 Creating standard users with password: Password@123 ...');
   const createdUsers: Record<string, any> = {};
 
   for (const su of seedUsers) {
     // 1. Create in Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: su.email,
-      password: 'Password123!',
+      password: 'Password@123',
       email_confirm: true
     });
 
@@ -82,13 +91,14 @@ async function main() {
   console.log('🍔 Seeding Restaurant & Menu Data...');
   
   if (createdUsers['restaurant_partner']) {
+    const partnerUser = createdUsers['restaurant_partner'];
     const restaurant = await prisma.restaurant.create({
       data: {
         name: 'The Spice Grill',
         type: 'restaurant',
-        owner_name: 'Test Partner',
-        phone: '3000000000',
-        email: 'partner@tastifyy.com',
+        owner_name: partnerUser.name,
+        phone: partnerUser.phone,
+        email: partnerUser.email,
         address_line: '123 Food Street',
         city: 'Mumbai',
         state: 'Maharashtra',
@@ -101,6 +111,14 @@ async function main() {
         commission_rate: 15.5,
         is_pure_veg: false,
         cuisine_tags: ['Indian', 'Tandoor'],
+        partners: {
+          create: {
+            name: partnerUser.name,
+            phone: partnerUser.phone,
+            email: partnerUser.email,
+            role: 'owner'
+          }
+        }
       }
     });
 

@@ -5,9 +5,23 @@ export const getActiveRestaurants = async (req: Request, res: Response): Promise
   try {
     const restaurants = await prisma.restaurant.findMany({
       where: { status: 'active', is_open: true },
-      include: { menu_categories: { include: { menu_items: true } } }
+      include: { 
+        menu_categories: { include: { menu_items: true } },
+        ratings: { select: { restaurant_rating: true } }
+      }
     });
-    res.json(restaurants);
+
+    const formatted = restaurants.map(r => {
+      const totalRatings = r.ratings.length;
+      const avgRating = totalRatings > 0 
+        ? r.ratings.reduce((sum, rating) => sum + rating.restaurant_rating, 0) / totalRatings 
+        : 4.2;
+      
+      const { ratings, ...rest } = r;
+      return { ...rest, rating: Number(avgRating.toFixed(1)) };
+    });
+
+    res.json(formatted);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal server error' });

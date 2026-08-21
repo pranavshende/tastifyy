@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import api from '../api/axios';
 
+import socketService from '../api/socket';
+
 export type UserRole = 'customer' | 'restaurant_partner' | 'delivery_partner' | 'admin';
 
 export interface AuthUser {
@@ -36,11 +38,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setAuth: (user, token) => {
     localStorage.setItem('token', token);
     set({ user, token, initialized: true });
+    socketService.connect(user.role, user.id);
   },
 
   clearAuth: () => {
     localStorage.removeItem('token');
     set({ user: null, token: null, initialized: true });
+    socketService.disconnect();
   },
 
   // Called on every app mount — validates session with backend
@@ -56,6 +60,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const response = await api.get('/auth/me');
       if (response.data.success) {
         set({ user: response.data.user, loading: false, initialized: true });
+        socketService.connect(response.data.user.role, response.data.user.id);
       } else {
         get().clearAuth();
         set({ loading: false });

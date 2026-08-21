@@ -18,14 +18,26 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
   const { restaurant_id, items, payment_method, special_instructions, idempotency_key } = req.body;
 
   try {
-    const address = await prisma.address.findFirst({
+    let address = await prisma.address.findFirst({
       where: { user_id: user.id },
       orderBy: { is_default: 'desc' }
     });
 
     if (!address) {
-      res.status(400).json({ success: false, error: { code: 'NO_ADDRESS', message: 'Please add a delivery address first' } });
-      return;
+      // Auto-create a mock address for MVP if none exists
+      address = await prisma.address.create({
+        data: {
+          user_id: user.id,
+          label: 'home',
+          address_line: '123 Default MVP Street',
+          city: 'MVP City',
+          state: 'MVP State',
+          pincode: '123456',
+          latitude: 0,
+          longitude: 0,
+          is_default: true
+        }
+      });
     }
 
     let item_subtotal = 0;
@@ -53,7 +65,29 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
     const delivery_fee = 40.0;
     const platform_fee = 10.0;
     const tax_amount = item_subtotal * 0.05;
-    const total_amount = item_subtotal + delivery_fee + platform_fee + tax_amount;
+    let total_amount = item_subtotal + delivery_fee + platform_fee + tax_amount;
+    let discount_amount = 0;
+    let valid_coupon_id = null;
+
+    if (req.body.coupon_code) {
+      const coupon = await prisma.coupon.findUnique({ where: { code: req.body.coupon_code } });
+      if (coupon && coupon.is_active && new Date() >= coupon.valid_from && new Date() <= coupon.valid_until && item_subtotal >= Number(coupon.min_order_value)) {
+        if (coupon.discount_type === 'percentage') {
+          discount_amount = item_subtotal * (Number(coupon.discount_value) / 100);
+          if (coupon.max_discount_cap) {
+            discount_amount = Math.min(discount_amount, Number(coupon.max_discount_cap));
+          }
+        } else {
+          discount_amount = Number(coupon.discount_value);
+        }
+        total_amount -= discount_amount;
+        total_amount = Math.max(0, total_amount);
+        valid_coupon_id = coupon.id;
+      } else {
+        res.status(400).json({ success: false, error: { code: 'INVALID_COUPON', message: 'Coupon is invalid, expired, or criteria not met.' } });
+        return;
+      }
+    }
 
     const order = await prisma.order.create({
       data: {
@@ -65,11 +99,13 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
         delivery_fee,
         platform_fee,
         tax_amount,
+        discount_amount,
         total_amount,
         payment_method: payment_method || 'cod',
-        payment_status: payment_method === 'cod' ? 'pending' : 'completed',
+        payment_status: payment_method === 'cod' ? 'pending' : 'success',
         idempotency_key: idempotency_key || randomUUID(),
         special_instructions,
+        coupon_id: valid_coupon_id,
         order_items: {
           create: orderItemsData
         }
@@ -82,12 +118,20 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
     });
 
     const io = getIO();
-    io.to(`restaurant_${restaurant_id}`).emit('new_order', {
+    const orderCreatedPayload = {
       orderId: order.id,
       customerName: user.name,
       totalAmount: total_amount,
-      itemsCount: items.length
-    });
+      itemsCount: items.length,
+      status: 'pending',
+      created_at: order.created_at,
+      restaurant: (order as any).restaurant,
+      customer: { name: user.name, phone: user.phone },
+      order_items: (order as any).order_items
+    };
+
+    io.to(`restaurant_${restaurant_id}`).emit('order:created', orderCreatedPayload);
+    io.to('admin').emit('order:created', orderCreatedPayload);
 
     res.status(201).json({ success: true, data: order });
   } catch (error: any) {
@@ -123,7 +167,7 @@ router.get('/customer/:id', authorizeRole(['customer']), async (req: Request, re
   const user = req.user as any;
   try {
     const order = await prisma.order.findFirst({
-      where: { id: req.params.id, customer_id: user.id },
+      where: { id: req.params.id as string, customer_id: user.id as string },
       include: { restaurant: true, order_items: true, delivery_address: true, delivery_partner: true }
     });
     if (!order) {
@@ -152,7 +196,7 @@ router.get('/restaurant/active', authorizeRole(['restaurant_partner']), async (r
     const orders = await prisma.order.findMany({
       where: { 
         restaurant_id: partner.restaurant_id,
-        status: { in: ['pending', 'accepted', 'preparing', 'ready_for_pickup'] }
+        status: { in: ['pending', 'restaurant_confirmed', 'preparing', 'ready'] as any[] }
       },
       include: { order_items: true, customer: { select: { name: true, phone: true } } },
       orderBy: { created_at: 'asc' }
@@ -172,27 +216,46 @@ router.put('/:id/status', authorizeRole(['restaurant_partner', 'delivery_partner
   const user = req.user as any;
   
   try {
-    const order = await prisma.order.findUnique({ where: { id } });
+    const order = await prisma.order.findUnique({ where: { id: id as string } });
     if (!order) {
       res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found' } });
       return;
     }
 
+    // Restaurant partners can only update orders belonging to their restaurant
+    if (user.role === 'restaurant_partner') {
+      const partner = await prisma.restaurantPartner.findFirst({ where: { phone: user.phone } });
+      if (!partner || partner.restaurant_id !== order.restaurant_id) {
+        res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'You are not authorized to update this order' } });
+        return;
+      }
+    }
+
     const updated = await prisma.order.update({
-      where: { id },
+      where: { id: id as string },
       data: { 
         status, 
         cancellation_reason: cancellation_reason || null,
-        cancelled_by: status === 'cancelled' ? (user.role === 'restaurant_partner' ? 'restaurant' : 'delivery_partner') : null
+        cancelled_by: status === 'cancelled' ? (user.role === 'restaurant_partner' ? 'restaurant' : user.role === 'admin' ? 'admin' : 'customer') : null
       }
     });
 
-    // Emit socket to customer
+    // Determine the correct event name for the customer
+    // When a restaurant cancels a pending order, it's a rejection from the customer's perspective
     const io = getIO();
-    io.to(`customer_${order.customer_id}`).emit('order_status_update', {
-      orderId: order.id,
-      status: updated.status
-    });
+    let customerEventName = `order:${updated.status}`;
+    if (updated.status === 'cancelled' && updated.cancelled_by === 'restaurant' && !order.status.match(/accepted|preparing|ready/)) {
+      customerEventName = 'order:rejected';
+    }
+
+    const payload = {
+      orderId: updated.id,
+      status: updated.status,
+      cancellation_reason: updated.cancellation_reason
+    };
+    
+    io.to(`customer_${order.customer_id}`).emit(customerEventName, payload);
+    io.to('admin').emit(`order:${updated.status}`, payload);
 
     res.json({ success: true, data: updated });
   } catch (error) {

@@ -63,7 +63,12 @@ router.get('/restaurants/:id/menu', async (req: Request, res: Response) => {
       include: {
         menu_items: {
           where: { is_available: true },
-          orderBy: { name: 'asc' }
+          orderBy: { name: 'asc' },
+          include: {
+            customizations: {
+              include: { options: true }
+            }
+          }
         }
       }
     });

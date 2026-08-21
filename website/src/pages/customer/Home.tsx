@@ -1,32 +1,24 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
-
-// Type definitions based on Prisma schema
-interface MenuItem {
-  id: string;
-  name: string;
-  price: number;
-  is_veg: boolean;
-  image_url?: string;
-}
-
-interface MenuCategory {
-  id: string;
-  name: string;
-  menu_items: MenuItem[];
-}
+import Header from '../../components/customer/Header';
+import RestaurantCard from '../../components/customer/RestaurantCard';
+import LoadingSkeleton from '../../components/ui/LoadingSkeleton';
+import { Search, ShoppingBag, Tag, Bike, ArrowRight } from 'lucide-react';
+import { useCartStore } from '../../store/cartStore';
 
 interface Restaurant {
   id: string;
   name: string;
-  type: string;
   city: string;
-  service_radius_km: number;
   is_pure_veg: boolean;
   cuisine_tags: string[];
   cover_image_url?: string;
-  menu_categories?: MenuCategory[];
+  logo_url?: string;
+  is_open: boolean;
+  avg_preparation_time_mins?: number;
+  status: string;
+  rating?: number;
 }
 
 export default function CustomerHome() {
@@ -35,12 +27,15 @@ export default function CustomerHome() {
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   
+  const { items, getTotals, restaurantId } = useCartStore();
+  const totals = getTotals();
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
-        // Assume GET /api/restaurants returns active restaurants
         const response = await api.get('/restaurants');
         setRestaurants(response.data);
       } catch (err: any) {
@@ -54,155 +49,162 @@ export default function CustomerHome() {
     fetchRestaurants();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/customer/login');
-  };
-
-  const filteredRestaurants = restaurants.filter(r => 
-    r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    r.cuisine_tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const cuisines = [
+    { name: 'North Indian', icon: '🍲' },
+    { name: 'Chinese', icon: '🥡' },
+    { name: 'Pizza', icon: '🍕' },
+    { name: 'Biryani', icon: '🥘' },
+    { name: 'More', icon: '•••' }
+  ];
 
   return (
-    <div className="min-h-screen bg-brand-light font-sans text-brand-dark flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/customer/home" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="w-8 h-8 rounded-xl bg-brand-primary text-white flex items-center justify-center font-black shadow-md shadow-brand-primary/20">
-              T
-            </div>
-            <span className="text-xl font-black tracking-tight">Tastifyy</span>
-          </Link>
-          
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
-              <span className="text-sm font-medium text-gray-600">Delivering to: <span className="text-brand-dark font-bold">Mumbai</span></span>
-            </div>
-            <button 
-              onClick={handleLogout}
-              className="text-sm font-bold text-gray-500 hover:text-red-500 transition-colors ml-4"
-            >
-              Log Out
-            </button>
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-brand-secondary to-brand-primary text-white flex items-center justify-center font-bold shadow-md cursor-pointer hover:scale-105 transition-transform">
-              C
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-900 flex flex-col pb-24">
+      <Header 
+        showSearch={false}
+        location="Mumbai"
+      />
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6">
         
-        {/* Hero Section */}
-        <section className="mb-12 animate-fade-in-up">
-          <h1 className="text-4xl md:text-5xl font-black mb-4">
-            What are you craving <span className="bg-gradient-to-r from-brand-primary to-brand-secondary text-transparent bg-clip-text">today?</span>
+        {/* Discovery Hero Section */}
+        <section className="pt-6 pb-6 flex flex-col items-center text-center">
+          <div className="bg-orange-50/80 text-gray-800 px-4 py-1.5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-6 flex items-center gap-2 border border-orange-100/50">
+            <span className="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
+            DELIVERING TO HOME • MUMBAI
+          </div>
+          
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-3 text-gray-900 leading-tight">
+            What are you <br className="sm:hidden" /> craving <span className="text-brand-primary">today?</span>
           </h1>
-          <p className="text-gray-500 text-lg mb-8 max-w-2xl font-medium">
-            Explore the best food spots around you. Freshly prepared and delivered in minutes.
+          <p className="text-gray-500 text-sm mb-6 max-w-sm font-medium">
+            Explore the best food spots around you.
+            <br />
+            Freshly prepared and delivered in minutes.
           </p>
           
-          <div className="relative max-w-2xl shadow-xl shadow-gray-200/40 rounded-2xl">
+          <div className="relative w-full max-w-xl bg-white rounded-xl shadow-sm border border-gray-100 focus-within:border-brand-primary transition-all">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <span className="text-2xl">🔍</span>
+              <Search className="w-4 h-4 text-brand-primary" />
             </div>
             <input
               type="text"
-              className="block w-full pl-12 pr-4 py-4 rounded-2xl border-0 focus:ring-2 focus:ring-brand-primary/50 text-lg font-medium text-gray-900 placeholder-gray-400 bg-white transition-all outline-none"
-              placeholder="Search for restaurants or cuisines..."
+              className="block w-full pl-11 pr-4 py-3.5 rounded-xl bg-transparent focus:outline-none text-sm font-bold text-gray-900 placeholder-gray-400"
+              placeholder="Search for restaurants, cuisines, or dishes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </section>
 
-        {/* Restaurant Grid */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold tracking-tight">Nearby Favourites</h2>
-            <div className="flex gap-2">
-              <span className="px-3 py-1 bg-white rounded-full text-xs font-bold shadow-sm border border-gray-100 cursor-pointer hover:border-brand-primary transition-colors">All</span>
-              <span className="px-3 py-1 bg-white rounded-full text-xs font-bold shadow-sm border border-gray-100 cursor-pointer hover:border-brand-primary transition-colors">Pure Veg</span>
+        {/* Offers Horizontal Scroll */}
+        <section className="py-2">
+          <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div className="snap-start min-w-[240px] sm:min-w-[280px] bg-white rounded-xl p-4 border border-gray-100 flex items-center gap-4 cursor-pointer shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0 text-brand-primary">
+                <Tag className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-gray-900">50% OFF</h3>
+                <p className="text-gray-500 text-xs font-medium mb-1.5">At The Spice Grill</p>
+                <span className="text-[9px] font-bold text-brand-primary bg-orange-50 px-2 py-0.5 rounded border border-orange-100">WELCOME50</span>
+              </div>
+            </div>
+            
+            <div className="snap-start min-w-[240px] sm:min-w-[280px] bg-white rounded-xl p-4 border border-gray-100 flex items-center gap-4 cursor-pointer shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0 text-brand-primary">
+                <Bike className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-gray-900">FREE DELIVERY</h3>
+                <p className="text-gray-500 text-xs font-medium mb-1.5">At Food Valley</p>
+                <span className="text-[9px] font-bold text-brand-primary bg-orange-50 px-2 py-0.5 rounded border border-orange-100">FREEDEL</span>
+              </div>
             </div>
           </div>
-
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="animate-pulse bg-white rounded-3xl h-64 shadow-sm border border-gray-100 p-4 flex flex-col gap-4">
-                  <div className="w-full h-32 bg-gray-100 rounded-2xl"></div>
-                  <div className="h-4 bg-gray-100 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-100 rounded w-1/2"></div>
-                </div>
-              ))}
-            </div>
-          ) : error ? (
-            <div className="bg-red-50 text-red-500 p-6 rounded-2xl font-medium text-center border border-red-100">
-              {error}
-            </div>
-          ) : filteredRestaurants.length === 0 ? (
-            <div className="bg-white p-12 rounded-3xl border border-gray-100 text-center shadow-sm">
-              <div className="text-5xl mb-4">🍽️</div>
-              <h3 className="text-xl font-bold mb-2">No restaurants found</h3>
-              <p className="text-gray-500 font-medium">Try adjusting your search criteria.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredRestaurants.map((restaurant) => (
-                <div key={restaurant.id} className="group bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:shadow-brand-primary/10 transition-all duration-300 border border-gray-100 flex flex-col cursor-pointer">
-                  {/* Card Image */}
-                  <div className="relative h-48 w-full overflow-hidden bg-gray-100">
-                    {/* Placeholder image since we don't have real cover images yet */}
-                    <img 
-                      src={`https://source.unsplash.com/600x400/?food,${restaurant.cuisine_tags[0] || 'meal'}`} 
-                      alt={restaurant.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      onError={(e) => {
-                        // Fallback gradient if unsplash fails
-                        e.currentTarget.style.display = 'none';
-                        e.currentTarget.parentElement!.classList.add('bg-gradient-to-br', 'from-orange-100', 'to-red-100');
-                      }}
-                    />
-                    {restaurant.is_pure_veg && (
-                      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md shadow-sm border border-green-500 flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                        <span className="text-[10px] font-bold text-green-700 uppercase tracking-wider">Pure Veg</span>
-                      </div>
-                    )}
-                    <div className="absolute top-4 right-4 bg-white px-2 py-1 rounded-xl shadow-md font-bold text-sm flex items-center gap-1">
-                      ⭐ 4.5
-                    </div>
-                  </div>
-                  
-                  {/* Card Content */}
-                  <div className="p-5 flex-1 flex flex-col">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-xl font-bold text-gray-900 group-hover:text-brand-primary transition-colors">
-                        {restaurant.name}
-                      </h3>
-                    </div>
-                    <div className="text-sm text-gray-500 font-medium mb-4 flex-1">
-                      {restaurant.cuisine_tags.join(' • ')}
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-sm pt-4 border-t border-gray-50">
-                      <div className="flex items-center gap-1 font-bold text-gray-700">
-                        <span>🕒</span> 30-40 mins
-                      </div>
-                      <div className="flex items-center gap-1 text-gray-500 font-medium">
-                        <span>📍</span> {restaurant.city}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </section>
+
+        {/* Popular Cuisines */}
+        <section className="py-6 border-b border-gray-100">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-sm font-black text-gray-900">Popular Cuisines</h2>
+            <button className="text-xs text-brand-primary font-bold hover:underline">View all</button>
+          </div>
+          <div className="flex gap-6 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 justify-between sm:justify-start">
+            {cuisines.map((cat, idx) => (
+              <div key={idx} className="flex flex-col items-center cursor-pointer min-w-[64px]">
+                <div className="w-14 h-14 rounded-full bg-white border border-gray-100 flex items-center justify-center text-2xl mb-2 shadow-sm hover:border-brand-primary transition-colors">
+                  {cat.name === 'More' ? <span className="text-gray-400 text-sm font-bold tracking-widest">{cat.icon}</span> : cat.icon}
+                </div>
+                <span className="text-[10px] font-bold text-gray-700 whitespace-nowrap">{cat.name}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Top Rated Restaurants */}
+        <section className="py-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-sm font-black text-gray-900 flex items-center gap-1.5">
+              <span className="text-[#FFB800]">🏆</span> Top Rated Restaurants
+            </h2>
+            <button className="text-xs text-brand-primary font-bold hover:underline flex items-center">
+              View all <ArrowRight className="w-3 h-3 ml-0.5" />
+            </button>
+          </div>
+          
+          <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
+            {loading ? (
+              <LoadingSkeleton type="restaurant" count={3} />
+            ) : error ? (
+              <div className="text-sm text-red-500 font-medium">{error}</div>
+            ) : (
+              restaurants.map((restaurant) => (
+                <div key={restaurant.id} className="snap-start min-w-[260px] sm:min-w-[280px] w-[260px] sm:w-[280px] shrink-0">
+                  <RestaurantCard
+                    id={restaurant.id}
+                    name={restaurant.name}
+                    coverImage={restaurant.cover_image_url}
+                    logo={restaurant.logo_url}
+                    cuisineTags={restaurant.cuisine_tags}
+                    isOpen={restaurant.is_open !== false}
+                    isPureVeg={restaurant.is_pure_veg}
+                    city={restaurant.city}
+                    rating={restaurant.rating || 4.2}
+                    prepTime={restaurant.avg_preparation_time_mins}
+                  />
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
       </main>
+
+      {/* Floating Cart Indicator */}
+      {totalItems > 0 && restaurantId && (
+        <div className="fixed bottom-4 left-4 right-4 z-50">
+          <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-lg border border-gray-100 p-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center text-brand-primary relative">
+                <ShoppingBag className="w-5 h-5" />
+                <span className="absolute -top-1.5 -right-1.5 bg-brand-dark text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full border border-white">
+                  {totalItems}
+                </span>
+              </div>
+              <div>
+                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">Your Cart</p>
+                <p className="text-gray-900 font-black text-sm mt-0.5">₹{totals.itemSubtotal}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate(`/customer/restaurants/${restaurantId}`)}
+              className="bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2.5 px-5 rounded-lg transition-all flex items-center gap-2 text-sm"
+            >
+              View Cart <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

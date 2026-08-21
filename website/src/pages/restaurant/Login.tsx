@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../api/axios';
+import { useAuthStore } from '../../store/authStore';
 
 export default function RestaurantLogin() {
+  const { setAuth } = useAuthStore();
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,12 +22,15 @@ export default function RestaurantLogin() {
     try {
       if (isRegister) {
         const res = await api.post('/auth/register', { email, password, name, phone, role: 'restaurant_partner' });
-        localStorage.setItem('token', res.data.token || res.data.session.access_token);
+        const token = res.data.token || res.data.session?.access_token;
+        setAuth(res.data.user, token);
+        navigate('/onboarding/restaurant');
       } else {
         const res = await api.post('/auth/login', { email, password, role: 'restaurant_partner' });
-        localStorage.setItem('token', res.data.token || res.data.session.access_token);
+        const token = res.data.token || res.data.session?.access_token;
+        setAuth(res.data.user, token);
+        navigate('/restaurant/dashboard');
       }
-      navigate('/restaurant/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Authentication failed');
     } finally {

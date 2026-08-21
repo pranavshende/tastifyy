@@ -1,160 +1,266 @@
-import { useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
+import React, { useEffect, useState, useMemo } from 'react';
 import api from '../../api/axios';
+import { Package, Clock, Check, X, ChefHat, TrendingUp, AlertCircle } from 'lucide-react';
+import socketService from '../../api/socket';
 
 export default function RestaurantDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [error, setError] = useState('');
 
-  const fetchActiveOrders = async () => {
+  const fetchOrders = async () => {
     try {
-      const res = await api.get('/orders/restaurant/active');
-      setOrders(res.data.data);
-    } catch (err) {
-      console.error('Failed to fetch active orders', err);
+      const { data } = await api.get('/orders/restaurant/active');
+      if (data.success) {
+        setOrders(data.data);
+      } else {
+        setError('Failed to fetch orders');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error?.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchActiveOrders();
+    fetchOrders();
 
-    const newSocket = io('http://localhost:5000');
-    setSocket(newSocket);
-
-    newSocket.on('connect', () => {
-      // Connect to the partner's restaurant room.
-      // We will need the restaurant ID. Let's fetch it or just broadcast to user ID for now?
-      // Our API route emits to `restaurant_${restaurant_id}`.
-      // So we need to fetch the restaurant ID associated with this partner.
-      api.get('/restaurants/my-restaurants').then(res => {
-        if (res.data && res.data.length > 0) {
-          const restId = res.data[0].id;
-          newSocket.emit('join', { role: 'restaurant', id: restId });
-        }
-      });
+    api.get('/menu/info').then(({ data }) => {
+      if (data.success && data.data.restaurant_id) {
+        socketService.joinRestaurant(data.data.restaurant_id);
+      }
     });
 
-    newSocket.on('new_order', (data) => {
-      // Play a sound (MVP placeholder)
-      console.log('🔔 RING RING! New Order:', data);
-      alert(`🔔 New Order from ${data.customerName}!`);
-      
-      // Refresh the orders list
-      fetchActiveOrders();
-    });
+    socketService.setReconnectCallback(fetchOrders);
 
-    return () => {
-      newSocket.disconnect();
-    };
+    const socket = socketService.getSocket();
+    if (socket) {
+      const handleNewOrder = (payload: any) => {
+        setOrders(prev => {
+          if (prev.find(o => o.id === payload.orderId)) return prev;
+          const newOrder = {
+            id: payload.orderId,
+            status: payload.status,
+            created_at: payload.created_at,
+            total_amount: payload.totalAmount,
+            customer: payload.customer,
+            order_items: payload.order_items,
+          };
+          return [...prev, newOrder];
+        });
+      };
+
+      socket.on('order:created', handleNewOrder);
+      return () => {
+        socket.off('order:created', handleNewOrder);
+        socketService.setReconnectCallback(null as any);
+      };
+    }
   }, []);
 
-  const updateStatus = async (orderId: string, status: string) => {
+  const updateOrderStatus = async (orderId: string, status: string) => {
     try {
-      await api.put(`/orders/${orderId}/status`, { status });
-      // Optimistic update
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
-    } catch (error) {
-      console.error(error);
-      alert('Failed to update status');
-      fetchActiveOrders(); // Revert on failure
+      const { data } = await api.put(`/orders/${orderId}/status`, { status });
+      if (data.success) {
+        const terminalStatuses = ['delivered', 'cancelled'];
+        if (terminalStatuses.includes(status)) {
+          setOrders(prev => prev.filter(o => o.id !== orderId));
+        } else {
+          setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+        }
+      }
+    } catch (err) {
+      alert('Failed to update order status');
     }
   };
 
-  if (loading) {
-    return <div className="p-8 text-center text-gray-500">Loading live orders...</div>;
-  }
+  // Group orders for Kanban board
+  const newOrders = useMemo(() => orders.filter(o => o.status === 'pending' || o.status === 'restaurant_confirmed'), [orders]);
+  const preparingOrders = useMemo(() => orders.filter(o => o.status === 'preparing'), [orders]);
+  const readyOrders = useMemo(() => orders.filter(o => o.status === 'ready' || o.status === 'out_for_delivery'), [orders]);
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Live Orders</h1>
-        <div className="flex items-center space-x-2">
-          <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span>
-          <span className="text-sm font-medium text-green-700">Receiving Orders</span>
+  // Stat calculation
+  const totalActive = orders.length;
+  const totalSales = orders.reduce((sum, order) => sum + Number(order.total_amount), 0);
+
+  const renderOrderCard = (order: any, actionButton: React.ReactNode) => (
+    <div key={order.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 flex flex-col mb-3 hover:shadow-md transition-shadow">
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <div className="text-sm font-black text-gray-900">#{order.id.split('-')[0].toUpperCase()}</div>
+          <div className="flex items-center text-xs font-bold text-gray-500 mt-1">
+            <Clock className="w-3 h-3 mr-1" />
+            {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
+        <div className="bg-gray-100 text-gray-800 px-2 py-1 rounded-md text-xs font-bold">
+          ₹{order.total_amount}
         </div>
       </div>
 
-      {orders.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-          <div className="text-4xl mb-4">🍽️</div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">No Active Orders</h3>
-          <p className="text-gray-500">Waiting for customers to place orders...</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {orders.map(order => (
-            <div key={order.id} className={`bg-white rounded-xl shadow-sm border p-6 ${order.status === 'pending' ? 'border-amber-500 ring-2 ring-amber-500 ring-opacity-20' : 'border-gray-100'}`}>
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">Order #{order.id.slice(-6).toUpperCase()}</h3>
-                  <p className="text-sm text-gray-500">{order.customer.name} • {order.customer.phone}</p>
-                </div>
-                <div className={`px-3 py-1 rounded-md text-sm font-bold uppercase ${
-                  order.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                  order.status === 'accepted' ? 'bg-blue-100 text-blue-700' :
-                  order.status === 'preparing' ? 'bg-indigo-100 text-indigo-700' :
-                  'bg-green-100 text-green-700'
-                }`}>
-                  {order.status.replace('_', ' ')}
-                </div>
-              </div>
-
-              <div className="border-t border-b py-4 my-4 space-y-2">
-                {order.order_items.map((item: any) => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <span className="font-medium text-gray-900">{item.quantity} x {item.name_snapshot}</span>
-                    <span className="text-gray-500">₹{parseFloat(item.subtotal).toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex justify-between items-center mb-6">
-                <span className="font-bold text-gray-600">Total</span>
-                <span className="text-xl font-black text-brand">₹{parseFloat(order.total_amount).toFixed(2)}</span>
-              </div>
-
-              {/* ACTION BUTTONS */}
-              {order.status === 'pending' && (
-                <div className="flex space-x-3">
-                  <button 
-                    onClick={() => updateStatus(order.id, 'cancelled')}
-                    className="flex-1 py-3 px-4 border border-red-500 text-red-500 rounded-lg font-bold hover:bg-red-50 transition-colors"
-                  >
-                    Reject
-                  </button>
-                  <button 
-                    onClick={() => updateStatus(order.id, 'accepted')}
-                    className="flex-2 w-2/3 py-3 px-4 bg-brand text-white rounded-lg font-bold shadow-md hover:bg-brand-dark transition-colors"
-                  >
-                    Accept Order
-                  </button>
-                </div>
-              )}
-
-              {order.status === 'accepted' && (
-                <button 
-                  onClick={() => updateStatus(order.id, 'preparing')}
-                  className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-bold shadow-md hover:bg-blue-700 transition-colors"
-                >
-                  Start Preparing
-                </button>
-              )}
-
-              {order.status === 'preparing' && (
-                <button 
-                  onClick={() => updateStatus(order.id, 'ready_for_pickup')}
-                  className="w-full py-3 px-4 bg-green-500 text-white rounded-lg font-bold shadow-md hover:bg-green-600 transition-colors"
-                >
-                  Mark Ready for Pickup
-                </button>
-              )}
+      <div className="flex-1 mb-4">
+        <div className="font-bold text-gray-900 mb-2 truncate">{order.customer?.name}</div>
+        <div className="bg-gray-50 rounded-xl p-3 text-sm space-y-2 border border-gray-100">
+          {order.order_items?.map((item: any) => (
+            <div key={item.id} className="flex justify-between font-medium text-gray-700">
+              <span className="truncate pr-2"><span className="font-bold text-gray-900">{item.quantity}x</span> {item.name_snapshot}</span>
             </div>
           ))}
         </div>
-      )}
+      </div>
+
+      <div className="border-t border-gray-100 pt-4 flex gap-2">
+        {actionButton}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header & Stats */}
+      <div className="mb-6 shrink-0">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-black text-gray-900">Kitchen Display</h1>
+            <p className="text-gray-500 font-medium text-sm mt-0.5">Manage active orders in real-time</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center">
+              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mr-4">
+                <Package className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-500 uppercase">Active</p>
+                <p className="text-2xl font-black text-gray-900">{totalActive}</p>
+              </div>
+            </div>
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center">
+              <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center mr-3">
+                <ChefHat className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase">Preparing</p>
+                <p className="text-xl font-black text-gray-900">{preparingOrders.length}</p>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center">
+              <div className="w-10 h-10 bg-green-50 text-green-600 rounded-lg flex items-center justify-center mr-3">
+                <Check className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase">Ready</p>
+                <p className="text-xl font-black text-gray-900">{readyOrders.length}</p>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center">
+              <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center mr-3">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase">Value</p>
+                <p className="text-xl font-black text-gray-900">₹{totalSales.toFixed(0)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Kanban Board */}
+        {loading && orders.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 text-red-600 p-6 rounded-2xl border border-red-100 font-bold flex items-center">
+            <AlertCircle className="w-6 h-6 mr-3" /> {error}
+          </div>
+        ) : (
+          <div className="flex-1 flex gap-6 overflow-x-auto pb-4 scrollbar-hide snap-x">
+            
+            {/* Column 1: New / Confirmed */}
+            <div className="bg-gray-100/60 rounded-2xl p-3 flex flex-col min-w-[300px] max-w-[320px] snap-start border border-gray-200">
+              <div className="flex items-center justify-between mb-3 px-1">
+                <h2 className="text-sm font-black text-gray-900 flex items-center">
+                  <div className="w-2.5 h-2.5 bg-blue-500 rounded-full mr-2"></div>
+                  NEW ORDERS
+                </h2>
+                <span className="bg-gray-200 text-gray-700 font-bold px-2 py-0.5 rounded-full text-xs">{newOrders.length}</span>
+              </div>
+              <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide space-y-4">
+                {newOrders.map(order => renderOrderCard(order, 
+                  order.status === 'pending' ? (
+                    <>
+                      <button 
+                        onClick={() => updateOrderStatus(order.id, 'restaurant_confirmed')}
+                        className="flex-1 bg-brand-primary text-white py-2.5 rounded-xl font-bold flex items-center justify-center hover:bg-brand-secondary transition-colors"
+                      >
+                        <Check className="w-4 h-4 mr-1.5" /> Accept
+                      </button>
+                      <button 
+                        onClick={() => updateOrderStatus(order.id, 'cancelled')}
+                        className="px-4 bg-red-50 text-red-600 border border-red-200 rounded-xl font-bold flex items-center justify-center hover:bg-red-100 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <button 
+                      onClick={() => updateOrderStatus(order.id, 'preparing')}
+                      className="w-full bg-purple-600 text-white py-2.5 rounded-xl font-bold flex items-center justify-center hover:bg-purple-700 transition-colors shadow-sm"
+                    >
+                      <ChefHat className="w-4 h-4 mr-2" /> Start Preparing
+                    </button>
+                  )
+                ))}
+              </div>
+            </div>
+
+            {/* Column 2: Preparing */}
+            <div className="bg-gray-100/60 rounded-2xl p-3 flex flex-col min-w-[300px] max-w-[320px] snap-start border border-gray-200">
+              <div className="flex items-center justify-between mb-3 px-1">
+                <h2 className="text-sm font-black text-gray-900 flex items-center">
+                  <div className="w-2.5 h-2.5 bg-purple-500 rounded-full mr-2"></div>
+                  PREPARING
+                </h2>
+                <span className="bg-gray-200 text-gray-700 font-bold px-2 py-0.5 rounded-full text-xs">{preparingOrders.length}</span>
+              </div>
+              <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide space-y-4">
+                {preparingOrders.map(order => renderOrderCard(order, 
+                  <button 
+                    onClick={() => updateOrderStatus(order.id, 'ready')}
+                    className="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-bold flex items-center justify-center hover:bg-indigo-700 transition-colors shadow-sm"
+                  >
+                    <Package className="w-4 h-4 mr-2" /> Mark Ready
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Column 3: Ready */}
+            <div className="bg-gray-100/60 rounded-2xl p-3 flex flex-col min-w-[300px] max-w-[320px] snap-start border border-gray-200">
+              <div className="flex items-center justify-between mb-3 px-1">
+                <h2 className="text-sm font-black text-gray-900 flex items-center">
+                  <div className="w-2.5 h-2.5 bg-green-500 rounded-full mr-2"></div>
+                  READY / PICKUP
+                </h2>
+                <span className="bg-gray-200 text-gray-700 font-bold px-2 py-0.5 rounded-full text-xs">{readyOrders.length}</span>
+              </div>
+              <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide space-y-4">
+                {readyOrders.map(order => renderOrderCard(order, 
+                  <button 
+                    onClick={() => updateOrderStatus(order.id, 'delivered')}
+                    className="w-full bg-green-600 text-white py-2.5 rounded-xl font-bold flex items-center justify-center hover:bg-green-700 transition-colors shadow-sm"
+                  >
+                    <Check className="w-4 h-4 mr-2" /> Complete Order
+                  </button>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        )}
     </div>
   );
 }
