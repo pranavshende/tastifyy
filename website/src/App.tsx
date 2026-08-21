@@ -14,6 +14,8 @@ import RestaurantLogin from './pages/restaurant/Login';
 import DashboardLayout from './pages/restaurant/DashboardLayout';
 import RestaurantDashboard from './pages/restaurant/Dashboard';
 import MenuManager from './pages/restaurant/MenuManager';
+import RestaurantProfile from './pages/restaurant/Profile';
+import RestaurantTransactions from './pages/restaurant/Transactions';
 import DeliveryLogin from './pages/delivery/Login';
 import CustomerOnboarding from './pages/onboarding/CustomerOnboarding';
 import RestaurantOnboarding from './pages/onboarding/RestaurantOnboarding';
@@ -27,7 +29,7 @@ import Checkout from './pages/customer/Checkout';
 import Orders from './pages/customer/Orders';
 import OrderDetails from './pages/customer/OrderDetails';
 import CustomerProfile from './pages/customer/Profile';
-import RestaurantProfile from './pages/restaurant/Profile';
+
 import DeliveryDashboardLayout from './pages/delivery/DashboardLayout';
 import DeliveryProfile from './pages/delivery/Profile';
 
@@ -140,6 +142,7 @@ function AppRoutes() {
         <Route path="/restaurant/dashboard" element={<RestaurantDashboard />} />
         <Route path="/restaurant/menu" element={<MenuManager />} />
         <Route path="/restaurant/profile" element={<RestaurantProfile />} />
+        <Route path="/restaurant/transactions" element={<RestaurantTransactions />} />
       </Route>
 
       {/* Delivery Routes */}

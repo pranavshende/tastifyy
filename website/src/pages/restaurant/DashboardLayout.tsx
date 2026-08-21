@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { LayoutDashboard, UtensilsCrossed, User, LogOut } from 'lucide-react';
+import { LayoutDashboard, UtensilsCrossed, User, LogOut, Wallet } from 'lucide-react';
 import api from '../../api/axios';
 import { getStorageUrl } from '../../lib/supabase';
 
@@ -37,6 +37,7 @@ export default function DashboardLayout() {
   const navItems = [
     { path: '/restaurant/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
     { path: '/restaurant/menu', label: 'Menu Manager', icon: <UtensilsCrossed className="w-5 h-5" /> },
+    { path: '/restaurant/transactions', label: 'Transactions', icon: <Wallet className="w-5 h-5" /> },
     { path: '/restaurant/profile', label: 'Profile', icon: <User className="w-5 h-5" /> },
   ];
 

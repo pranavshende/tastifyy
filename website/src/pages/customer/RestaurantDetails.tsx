@@ -189,27 +189,30 @@ export default function RestaurantDetails() {
             </div>
           )}
           
-          <div className="h-48 sm:h-72 relative bg-gray-100 overflow-hidden">
-            {restaurant.cover_image_url ? (
-              <ImageWithFallback
-                src={restaurant.cover_image_url}
-                alt={restaurant.name}
-                fallbackType="restaurant"
-                className={!isOpen ? 'grayscale opacity-80' : ''}
-              />
-            ) : (
-              <div className={`w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center ${!isOpen ? 'grayscale opacity-80' : ''}`}>
-                <div className="text-center">
-                  <div className="text-5xl mb-2">🍽️</div>
-                  <p className="text-gray-400 font-medium text-sm">No cover photo</p>
+          <div className="h-48 sm:h-72 relative bg-gray-100">
+            <div className="absolute inset-0 overflow-hidden">
+              {restaurant.cover_image_url ? (
+                <ImageWithFallback
+                  src={restaurant.cover_image_url}
+                  alt={restaurant.name}
+                  fallbackType="restaurant"
+                  containerClassName="w-full h-full"
+                  className={!isOpen ? 'grayscale opacity-80' : ''}
+                />
+              ) : (
+                <div className={`w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center ${!isOpen ? 'grayscale opacity-80' : ''}`}>
+                  <div className="text-center">
+                    <div className="text-5xl mb-2">🍽️</div>
+                    <p className="text-gray-400 font-medium text-sm">No cover photo</p>
+                  </div>
                 </div>
-              </div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
+            </div>
             
             {restaurant.logo_url && (
               <div className="absolute -bottom-6 left-6 w-24 h-24 bg-white rounded-2xl p-1.5 shadow-xl border border-gray-100 z-10 hidden sm:block">
-                <ImageWithFallback src={restaurant.logo_url} alt="Logo" className="w-full h-full rounded-xl object-cover" />
+                <ImageWithFallback src={restaurant.logo_url} alt="Logo" containerClassName="w-full h-full" className="rounded-xl object-cover" />
               </div>
             )}
           </div>

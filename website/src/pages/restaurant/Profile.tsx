@@ -31,72 +31,6 @@ function formatTimeFromDB(dateStr: string | null | undefined): string {
   }
 }
 
-// ─── Image Upload Button ──────────────────────────────────────────────────────
-
-function ImageUploadButton({
-  label,
-  currentUrl,
-  onUpload,
-  onDelete,
-  uploading,
-  aspect = 'square',
-}: {
-  label: string;
-  currentUrl?: string | null;
-  onUpload: (file: File) => void;
-  onDelete: () => void;
-  uploading?: boolean;
-  aspect?: 'square' | 'cover';
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) onUpload(file);
-    e.target.value = '';
-  };
-
-  return (
-    <div className={`relative group ${aspect === 'cover' ? 'w-full h-36' : 'w-24 h-24'} cursor-pointer`}
-         onClick={() => inputRef.current?.click()}>
-      <input ref={inputRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp"
-             className="hidden" onChange={handleFileChange} />
-
-      {currentUrl ? (
-        <img src={currentUrl} alt={label}
-             className={`w-full h-full object-cover ${aspect === 'cover' ? 'rounded-xl' : 'rounded-2xl'}`} />
-      ) : (
-        <div className={`w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center ${aspect === 'cover' ? 'rounded-xl' : 'rounded-2xl'}`}>
-          <Camera className="w-6 h-6 text-gray-400 mb-1" />
-          <span className="text-[10px] text-gray-400 font-bold text-center px-1">{label}</span>
-        </div>
-      )}
-
-      {/* Hover overlay */}
-      <div className={`absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity ${aspect === 'cover' ? 'rounded-xl' : 'rounded-2xl'}`}>
-        {uploading ? (
-          <Loader2 className="w-6 h-6 text-white animate-spin" />
-        ) : (
-          <>
-            <Camera className="w-5 h-5 text-white mb-1" />
-            <span className="text-[10px] text-white font-bold">Change</span>
-          </>
-        )}
-      </div>
-
-      {/* Delete button */}
-      {currentUrl && !uploading && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10 hover:bg-red-600"
-        >
-          <Trash2 className="w-3 h-3" />
-        </button>
-      )}
-    </div>
-  );
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function RestaurantProfile() {
@@ -255,15 +189,7 @@ export default function RestaurantProfile() {
     }
   };
 
-  const toggleAcceptingOrders = async () => {
-    const newVal = !form.is_open;
-    setForm(f => ({ ...f, is_open: newVal }));
-    try {
-      await api.patch('/profile/accepting-orders', { is_open: newVal });
-    } catch {
-      setForm(f => ({ ...f, is_open: !newVal }));
-    }
-  };
+
 
   const updateHour = (idx: number, field: string, value: string | boolean) => {
     setHours(prev => prev.map((h, i) => i === idx ? { ...h, [field]: value } : h));
@@ -357,7 +283,7 @@ export default function RestaurantProfile() {
           <div className="px-6 pb-6 pt-0 relative flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6">
             {/* Profile Logo — overlaps cover */}
             <div className="relative -mt-12 shrink-0 z-10">
-              <div className="relative inline-block">
+              <div className="relative inline-block group">
                 <div className="w-24 h-24 rounded-2xl shadow-md border-4 border-white overflow-hidden bg-gray-100 flex items-center justify-center">
                   {logoUrl ? (
                     <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
@@ -371,6 +297,14 @@ export default function RestaurantProfile() {
                 >
                   {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                 </button>
+                {logoUrl && !uploadingLogo && (
+                  <button
+                    onClick={handleLogoDelete}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10 hover:bg-red-600"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                )}
                 <input id="logo-upload-input" type="file" accept="image/jpeg,image/jpg,image/png,image/webp" className="hidden"
                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ''; }} />
               </div>
