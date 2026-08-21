@@ -93,9 +93,19 @@ export default function Landing() {
                 Dashboard
               </Link>
             ) : (
-              <Link to="/customer/login" className="px-5 py-2 rounded-full bg-brand-dark text-white hover:bg-black transition-transform hover:-translate-y-0.5 shadow-md font-bold text-sm">
-                Sign In
-              </Link>
+              <div className="flex items-center bg-gray-100 rounded-full p-1 shadow-inner border border-gray-200">
+                <Link to="/customer/login" className="px-3 py-1.5 md:px-4 md:py-2 rounded-full text-[10px] md:text-sm font-bold text-gray-700 hover:bg-white hover:text-brand-primary hover:shadow-sm transition-all">
+                  Customer
+                </Link>
+                <div className="w-[1px] h-4 bg-gray-300 mx-0.5"></div>
+                <Link to="/restaurant/login" className="px-3 py-1.5 md:px-4 md:py-2 rounded-full text-[10px] md:text-sm font-bold text-gray-700 hover:bg-white hover:text-gray-900 hover:shadow-sm transition-all">
+                  Partner
+                </Link>
+                <div className="w-[1px] h-4 bg-gray-300 mx-0.5"></div>
+                <Link to="/delivery/login" className="px-3 py-1.5 md:px-4 md:py-2 rounded-full text-[10px] md:text-sm font-bold text-gray-700 hover:bg-white hover:text-orange-600 hover:shadow-sm transition-all">
+                  Rider
+                </Link>
+              </div>
             )}
           </div>
         </div>
