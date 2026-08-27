@@ -58,3 +58,17 @@ tastifyy/
 | Unified Web App | Vercel | Static frontend hosting |
 | Unified Mobile App | Expo EAS | Cloud builds & OTA updates |
 | Database | Supabase | Managed Postgres |
+
+## Payment & Money Flow (Razorpay)
+
+### System Structure
+1. **Order Creation (Backend):** When a customer initiates checkout, the backend creates an `Order` in the Supabase database with status `pending`. It calculates the total amount (item subtotal + delivery + platform fee + taxes - discount) and calls the Razorpay API to create a `razorpay_order_id`.
+2. **Client Checkout (Frontend):** The unified web or mobile app uses the `razorpay_order_id` to initialize the Razorpay Checkout SDK. The customer completes the payment directly through Razorpay's secure UI.
+3. **Payment Verification (Backend):** Upon successful payment, Razorpay returns a `razorpay_payment_id` and `razorpay_signature` to the client. The client forwards these to the backend's `/verify-payment` endpoint. The backend validates the HMAC SHA256 signature using the Razorpay API secret and updates the order status to `restaurant_confirmed`.
+
+### Money Flow (Settlements & Payouts)
+1. **Collection:** The customer pays the full `total_amount` via Razorpay. The funds are captured and held in Tastifyy's central Razorpay merchant account (or Nodal account).
+2. **Distribution & Splits:** 
+   - **Restaurant Partner:** Receives `[Item Subtotal] - [Tastifyy Commission %]`. This can be settled automatically via **Razorpay Route** (split payments at the time of transaction) or batched weekly via **RazorpayX** payouts.
+   - **Delivery Partner:** Receives their per-order delivery earnings. This is typically batched and paid out weekly/daily via **RazorpayX** to their registered bank accounts.
+   - **Tastifyy (Platform):** Retains the `Platform Fee`, the `Restaurant Commission`, and any margin kept from the `Delivery Fee`.

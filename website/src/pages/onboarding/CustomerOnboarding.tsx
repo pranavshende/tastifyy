@@ -27,15 +27,42 @@ export default function CustomerOnboarding() {
   };
 
   const handleUseLocation = () => {
-    // Mocking geolocation for MVP
-    setAddress({
-      house: '',
-      street: 'Linking Road',
-      area: 'Bandra West',
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      pincode: '400050',
-    });
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          const data = await res.json();
+
+          if (data && data.address) {
+            setAddress({
+              house: '',
+              street: data.address.road || data.address.suburb || '',
+              area: data.address.suburb || data.address.neighbourhood || data.address.village || '',
+              city: data.address.city || data.address.town || data.address.county || data.address.state_district || '',
+              state: data.address.state || '',
+              pincode: data.address.postcode || '',
+            });
+          }
+        } catch (err) {
+          setError('Failed to fetch address from location.');
+        } finally {
+          setLoading(false);
+        }
+      },
+      (error) => {
+        setError(error.message || 'Failed to get your location.');
+        setLoading(false);
+      },
+      { enableHighAccuracy: true }
+    );
   };
 
   const handleSubmit = async () => {

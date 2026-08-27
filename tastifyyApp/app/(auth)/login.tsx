@@ -162,7 +162,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           {/* Become a Partner link */}
-          <TouchableOpacity style={styles.partnerLink}>
+          <TouchableOpacity style={styles.partnerLink} onPress={() => router.push('/(auth)/register-restaurant' as any)}>
             <Text style={styles.partnerLinkText}>
               Want to list your restaurant?{' '}
               <Text style={styles.partnerLinkHighlight}>Become a Partner →</Text>

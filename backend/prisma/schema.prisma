@@ -206,6 +206,7 @@ model Restaurant {
   commission_rate           Decimal          @db.Decimal(5, 2)
   subscription_plan         SubscriptionPlan @default(starter)
   avg_preparation_time_mins Int?
+  razorpay_account_id       String?
   created_at                DateTime         @default(now()) @db.Timestamptz
   updated_at                DateTime         @default(now()) @updatedAt @db.Timestamptz
 
@@ -337,7 +338,9 @@ model DeliveryPartner {
   license_number      String?          @db.VarChar(50)
   bank_account_number String?
   ifsc_code           String?          @db.VarChar(20)
+  bank_beneficiary_name String?
   upi_id              String?          @db.VarChar(100)
+  razorpay_fund_account_id String?
   availability_type   AvailabilityType @default(full_time)
   is_online           Boolean          @default(false)
   current_latitude    Decimal?         @db.Decimal(10, 8)

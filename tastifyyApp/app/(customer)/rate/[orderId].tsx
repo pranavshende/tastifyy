@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
-import api from '../../api/axios';
+import api from '../../../api/axios';
 import { router, useLocalSearchParams } from 'expo-router';
 
 export default function RateOrderScreen() {

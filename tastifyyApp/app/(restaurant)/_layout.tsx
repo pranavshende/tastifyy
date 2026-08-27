@@ -55,6 +55,13 @@ export default function RestaurantLayout() {
           tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'person' : 'person-outline'} focused={focused} />,
         }}
       />
+      <Tabs.Screen
+        name="transactions"
+        options={{
+          title: 'Earnings',
+          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'wallet' : 'wallet-outline'} focused={focused} />,
+        }}
+      />
     </Tabs>
   );
 }

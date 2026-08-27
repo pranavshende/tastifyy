@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { router } from 'expo-router';
 import api from '../../api/axios';
 import { useCartStore } from '../../store/cartStore';
+import RazorpayCheckout from 'react-native-razorpay';
 
 export default function CartScreen() {
   const [loading, setLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'card'>('card');
   
   const cartItems = useCartStore(state => state.items);
   const restaurantId = useCartStore(state => state.restaurantId);
@@ -22,23 +24,62 @@ export default function CartScreen() {
     if (cartItems.length === 0) return;
     setLoading(true);
     try {
-      await api.post('/orders', {
+      const res = await api.post('/orders', {
         restaurant_id: restaurantId,
-        items: cartItems.map(i => ({ menu_item_id: i.menu_item_id, quantity: i.quantity, name: i.name })),
-        payment_method: 'cod'
+        items: cartItems.map(i => ({ menu_item_id: i.menu_item_id, quantity: i.quantity, name: i.name, price: i.price })),
+        payment_method: paymentMethod
       });
       
-      clearCart();
-      Alert.alert('Success!', 'Your order has been placed successfully.', [
-        { text: 'Track Order', onPress: () => router.replace('/(customer)/orders') }
-      ]);
+      if (res.data.success) {
+        if (paymentMethod === 'cod') {
+          clearCart();
+          Alert.alert('Success!', 'Your order has been placed successfully.', [
+            { text: 'Track Order', onPress: () => router.replace('/(customer)/orders') }
+          ]);
+          setLoading(false);
+        } else if (res.data.data.razorpay_order_id) {
+          const orderData = res.data.data;
+          const options = {
+            description: 'Food Order',
+            currency: 'INR',
+            key: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_mock',
+            amount: Math.round(orderData.total_amount * 100).toString(),
+            name: 'Tastifyy',
+            order_id: orderData.razorpay_order_id,
+            theme: { color: '#E86A22' }
+          };
+
+          RazorpayCheckout.open(options).then(async (data: any) => {
+            try {
+              setLoading(true);
+              const verifyRes = await api.post('/orders/verify-payment', {
+                razorpay_order_id: data.razorpay_order_id,
+                razorpay_payment_id: data.razorpay_payment_id,
+                razorpay_signature: data.razorpay_signature
+              });
+              if (verifyRes.data.success) {
+                clearCart();
+                Alert.alert('Success!', 'Payment verified and order placed.', [
+                  { text: 'Track Order', onPress: () => router.replace('/(customer)/orders') }
+                ]);
+              }
+            } catch (verifyErr) {
+              Alert.alert('Payment Error', 'Payment verification failed on server.');
+            } finally {
+              setLoading(false);
+            }
+          }).catch((error: any) => {
+            Alert.alert('Payment Failed', `${error.code} | ${error.description}`);
+            setLoading(false);
+          });
+        }
+      }
     } catch (error: any) {
       if (error.response?.data?.error?.code === 'NO_ADDRESS') {
         Alert.alert('Address Required', 'Please set a delivery address in your profile.');
       } else {
         Alert.alert('Order Failed', error.response?.data?.error?.message || 'Something went wrong. Please try again.');
       }
-    } finally {
       setLoading(false);
     }
   };
@@ -117,10 +158,25 @@ export default function CartScreen() {
 
         <View style={styles.paymentCard}>
           <Text style={styles.billTitle}>Payment Method</Text>
-          <View style={styles.codRow}>
+          <TouchableOpacity 
+            style={[styles.codRow, paymentMethod === 'card' && styles.radioSelected]} 
+            onPress={() => setPaymentMethod('card')}
+          >
+            <Text style={styles.codText}>💳 Pay Online (Razorpay)</Text>
+            <View style={[styles.radioActive, paymentMethod !== 'card' && styles.radioInactive]}>
+              {paymentMethod === 'card' && <View style={styles.radioInner} />}
+            </View>
+          </TouchableOpacity>
+          <View style={{ height: 12 }} />
+          <TouchableOpacity 
+            style={[styles.codRow, paymentMethod === 'cod' && styles.radioSelected]} 
+            onPress={() => setPaymentMethod('cod')}
+          >
             <Text style={styles.codText}>💵 Cash on Delivery (COD)</Text>
-            <View style={styles.radioActive}><View style={styles.radioInner} /></View>
-          </View>
+            <View style={[styles.radioActive, paymentMethod !== 'cod' && styles.radioInactive]}>
+              {paymentMethod === 'cod' && <View style={styles.radioInner} />}
+            </View>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -187,9 +243,11 @@ const styles = StyleSheet.create({
   totalValue: { fontSize: 18, color: '#E86A22', fontWeight: '900' },
 
   paymentCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 8, elevation: 2 },
-  codRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F9F9F9', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#E86A22' },
+  codRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F9F9F9', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#F0F0F0' },
+  radioSelected: { borderColor: '#E86A22', backgroundColor: '#FFF5E6' },
   codText: { fontSize: 15, fontWeight: '700', color: '#171717' },
   radioActive: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: '#E86A22', alignItems: 'center', justifyContent: 'center' },
+  radioInactive: { borderColor: '#ccc' },
   radioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#E86A22' },
 
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', padding: 20, paddingBottom: 36, borderTopWidth: 1, borderTopColor: '#F0F0F0', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 16, elevation: 10 },

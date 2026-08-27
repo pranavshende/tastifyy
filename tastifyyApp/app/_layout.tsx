@@ -15,8 +15,8 @@ export default function RootLayout() {
     if (!initialized) return;
 
     if (!user) {
-      // Not authenticated — send to universal login
-      router.replace('/(auth)/login');
+      // Not authenticated — send to universal landing page
+      router.replace('/');
       return;
     }
 
@@ -55,6 +55,7 @@ export default function RootLayout() {
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(customer)" />
         <Stack.Screen name="(restaurant)" />

@@ -68,6 +68,7 @@
 | `commission_rate` | DECIMAL(5,2) | NOT NULL | Admin-configurable per restaurant |
 | `subscription_plan` | ENUM | DEFAULT `starter` | `starter`, `growth`, `pro` |
 | `avg_preparation_time_mins` | INT | NULLABLE | |
+| `razorpay_account_id` | TEXT | NULLABLE | For Razorpay Route splits |
 | `created_at` | TIMESTAMPTZ | DEFAULT now() | |
 | `updated_at` | TIMESTAMPTZ | DEFAULT now() | |
 
@@ -177,6 +178,8 @@
 | `vehicle_number` | VARCHAR(50) | NULLABLE | |
 | `bank_account_number` | TEXT | NULLABLE | Encrypted at rest |
 | `bank_ifsc` | VARCHAR(20) | NULLABLE | |
+| `bank_beneficiary_name` | VARCHAR(255) | NULLABLE | For payouts |
+| `razorpay_fund_account_id` | TEXT | NULLABLE | For RazorpayX payouts |
 | `availability_type` | ENUM | NOT NULL | `full_time`, `part_time` |
 | `is_online` | BOOLEAN | DEFAULT false | |
 | `current_latitude` | DECIMAL(10,8) | NULLABLE | Updated in realtime |

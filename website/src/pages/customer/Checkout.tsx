@@ -60,7 +60,6 @@ export default function Checkout() {
           name: i.name,
           quantity: i.quantity,
           price: i.price,
-          // Customizations not sent in MVP backend yet, but UI is prepared
         })),
         payment_method: paymentMethod,
         special_instructions: '',
@@ -68,13 +67,61 @@ export default function Checkout() {
       });
 
       if (data.success) {
-        cart.clearCart();
-        setPlacedOrderId(data.data.id);
-        setOrderPlaced(true);
+        if (data.data.razorpay_order_id) {
+          const options = {
+            key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_mock',
+            amount: data.data.total_amount * 100,
+            currency: 'INR',
+            name: 'Tastifyy',
+            description: 'Food Order',
+            order_id: data.data.razorpay_order_id,
+            prefill: {
+              method: paymentMethod === 'upi' ? 'upi' : undefined
+            },
+            handler: async function (response: any) {
+              try {
+                setLoading(true);
+                const verifyRes = await api.post('/orders/verify-payment', {
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature
+                });
+                
+                if (verifyRes.data.success) {
+                  cart.clearCart();
+                  setPlacedOrderId(data.data.id);
+                  setOrderPlaced(true);
+                }
+              } catch (verifyErr: any) {
+                setError(verifyErr.response?.data?.error?.message || 'Payment verification failed');
+              } finally {
+                setLoading(false);
+              }
+            },
+            theme: { color: '#E86A22' },
+            modal: {
+              ondismiss: function() {
+                setLoading(false);
+              }
+            }
+          };
+          const rzp = new (window as any).Razorpay(options);
+          rzp.on('payment.failed', function (response: any) {
+            setError(response.error.description);
+          });
+          rzp.open();
+        } else if (paymentMethod === 'cod') {
+          cart.clearCart();
+          setPlacedOrderId(data.data.id);
+          setOrderPlaced(true);
+          setLoading(false);
+        } else {
+          setError('Failed to initiate payment gateway');
+          setLoading(false);
+        }
       }
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Failed to place order');
-    } finally {
       setLoading(false);
     }
   };

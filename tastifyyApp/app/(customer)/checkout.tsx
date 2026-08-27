@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { useCartStore } from '../../store/cartStore';
 import api from '../../api/axios';
 import { router } from 'expo-router';
+import RazorpayCheckout from 'react-native-razorpay';
 
 export default function CheckoutScreen() {
   const items = useCartStore(state => state.items);
@@ -17,38 +18,54 @@ export default function CheckoutScreen() {
     setLoading(true);
     
     try {
-      // 1. Send checkout request to our backend
-      const res = await api.post('/orders/checkout', {
+      const res = await api.post('/orders', {
         restaurant_id: restaurantId,
-        // Mocking address ID for MVP since we haven't built the address selection UI yet
-        delivery_address_id: '00000000-0000-0000-0000-000000000001', 
-        items: items.map(i => ({ menu_item_id: i.menu_item_id, quantity: i.quantity, name: i.name })),
+        payment_method: 'card', // Forcing card to trigger razorpay for now
+        items: items.map(i => ({ menu_item_id: i.menu_item_id, quantity: i.quantity, name: i.name, price: i.price })),
       });
       
-      const { order, rzpOrder } = res.data;
-      
-      // 2. Here we would normally open Razorpay Checkout SDK
-      // e.g. RazorpayCheckout.open({ key: '...', order_id: rzpOrder.id })
-      // For MVP without native linking, we will simulate a successful payment instantly:
-      alert('Mocking Razorpay Gateway... Payment Success!');
+      if (res.data.success && res.data.data.razorpay_order_id) {
+        const orderData = res.data.data;
+        const options = {
+          description: 'Food Order',
+          currency: 'INR',
+          key: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_mock',
+          amount: Math.round(orderData.total_amount * 100).toString(),
+          name: 'Tastifyy',
+          order_id: orderData.razorpay_order_id,
+          theme: { color: '#E86A22' }
+        };
 
-      // 3. Verify Payment
-      await api.post('/orders/verify-payment', {
-        razorpay_order_id: rzpOrder.id,
-        razorpay_payment_id: 'pay_mock123',
-        razorpay_signature: 'mock_signature' // this will fail backend verify if crypto is checked, so we need to mock it carefully or let backend handle mock
-      });
-      
-      clearCart();
-      router.push('/(customer)/home');
-      
+        RazorpayCheckout.open(options).then(async (data: any) => {
+          try {
+            setLoading(true);
+            const verifyRes = await api.post('/orders/verify-payment', {
+              razorpay_order_id: data.razorpay_order_id,
+              razorpay_payment_id: data.razorpay_payment_id,
+              razorpay_signature: data.razorpay_signature
+            });
+            if (verifyRes.data.success) {
+              clearCart();
+              router.push('/(customer)/home');
+            }
+          } catch (verifyErr) {
+            alert('Payment verification failed on server.');
+          } finally {
+            setLoading(false);
+          }
+        }).catch((error: any) => {
+          alert(`Payment Failed: ${error.code} | ${error.description}`);
+          setLoading(false);
+        });
+      } else {
+        alert('Order placed successfully (COD)');
+        clearCart();
+        router.push('/(customer)/home');
+        setLoading(false);
+      }
     } catch (err: any) {
       console.error(err);
-      // Even if verify fails because of our mock, we just want to clear cart for now
-      alert('Order Placed! (Signature verification bypassed for MVP mock)');
-      clearCart();
-      router.push('/(customer)/home');
-    } finally {
+      alert('Failed to place order.');
       setLoading(false);
     }
   };

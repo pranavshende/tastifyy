@@ -3,7 +3,13 @@ import { authenticate, authorizeRole } from '../middlewares/auth.js';
 import { prisma } from '../utils/prisma.js';
 import { getIO } from '../socket.js';
 import type { Request, Response } from 'express';
-import { randomUUID } from 'crypto';
+import crypto, { randomUUID } from 'crypto';
+import Razorpay from 'razorpay';
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_mock',
+});
 
 const router = Router();
 
@@ -89,6 +95,39 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
       }
     }
 
+    let razorpay_order_id = null;
+
+    if (payment_method && payment_method !== 'cod') {
+      const restaurant = await prisma.restaurant.findUnique({ where: { id: restaurant_id } });
+      const transfers: any[] = [];
+      if (restaurant?.razorpay_account_id) {
+        const commissionRate = Number(restaurant.commission_rate || 0);
+        const commissionAmount = item_subtotal * (commissionRate / 100);
+        const payoutAmount = item_subtotal - commissionAmount;
+        if (payoutAmount > 0) {
+          transfers.push({
+            account: restaurant.razorpay_account_id,
+            amount: Math.round(payoutAmount * 100),
+            currency: 'INR',
+            notes: { type: 'restaurant_payout' },
+            linked_account_notes: ['type'],
+            on_hold: 1
+          });
+        }
+      }
+      if (process.env.RAZORPAY_KEY_ID === 'rzp_test_mock' || !process.env.RAZORPAY_KEY_ID) {
+        razorpay_order_id = `order_mock_${Date.now()}`;
+      } else {
+        const rzpOrder: any = await razorpay.orders.create({
+          amount: Math.round(total_amount * 100),
+          currency: 'INR',
+          receipt: `rcpt_${randomUUID().substring(0, 8)}`,
+          transfers: transfers.length > 0 ? transfers : undefined
+        });
+        razorpay_order_id = rzpOrder.id;
+      }
+    }
+
     const order = await prisma.order.create({
       data: {
         customer_id: user.id,
@@ -102,7 +141,8 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
         discount_amount,
         total_amount,
         payment_method: payment_method || 'cod',
-        payment_status: payment_method === 'cod' ? 'pending' : 'success',
+        payment_status: payment_method === 'cod' ? 'pending' : 'processing',
+        razorpay_order_id,
         idempotency_key: idempotency_key || randomUUID(),
         special_instructions,
         coupon_id: valid_coupon_id,
@@ -135,11 +175,72 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
 
     res.status(201).json({ success: true, data: order });
   } catch (error: any) {
+    console.error('Order Creation Error:', error);
     if (error.code === 'P2002') { 
       res.status(409).json({ success: false, error: { code: 'DUPLICATE_ORDER', message: 'Order already exists' } });
       return;
     }
-    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to create order' } });
+    const message = error.error?.description || error.message || 'Failed to create order';
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message } });
+  }
+});
+
+// POST /api/orders/verify-payment
+router.post('/verify-payment', authorizeRole(['customer']), async (req: Request, res: Response) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+  const user = req.user as any;
+
+  try {
+    let isValid = false;
+    
+    if (razorpay_order_id.startsWith('order_mock_')) {
+      // Bypass signature verification for mock testing flow
+      isValid = true;
+    } else {
+      const sign = razorpay_order_id + "|" + razorpay_payment_id;
+      const expectedSign = crypto
+        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_mock')
+        .update(sign.toString())
+        .digest("hex");
+      isValid = (razorpay_signature === expectedSign);
+    }
+
+    if (isValid) {
+      const order = await prisma.order.findFirst({ 
+        where: { razorpay_order_id, customer_id: user.id },
+        include: { restaurant: true, order_items: true, customer: true }
+      });
+      
+      if (!order) {
+        res.status(404).json({ success: false, error: { message: "Order not found" }});
+        return;
+      }
+
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { 
+          payment_status: 'success', 
+          razorpay_payment_id, 
+          status: 'restaurant_confirmed' 
+        }
+      });
+
+      // Emit confirmed events
+      const io = getIO();
+      const payload = {
+        orderId: order.id,
+        status: 'restaurant_confirmed'
+      };
+      
+      io.to(`restaurant_${order.restaurant_id}`).emit('order:restaurant_confirmed', payload);
+      io.to('admin').emit('order:restaurant_confirmed', payload);
+
+      res.json({ success: true, message: "Payment verified successfully" });
+    } else {
+      res.status(400).json({ success: false, error: { message: "Invalid signature" }});
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: 'Internal server error' }});
   }
 });
 
