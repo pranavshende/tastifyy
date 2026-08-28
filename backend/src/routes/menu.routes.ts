@@ -181,7 +181,7 @@ router.get('/items', async (req: Request, res: Response) => {
 // POST /api/menu/items — multipart form with optional image
 router.post('/items', upload.single('image'), async (req: Request, res: Response) => {
   const restaurant_id = (req as any).restaurant_id;
-  const { category_id, name, description, price, is_veg, is_available, preparation_time_mins } = req.body;
+  const { category_id, name, description, price, is_veg, is_available, preparation_time_mins, stock_quantity } = req.body;
   const file = req.file;
 
   try {
@@ -213,6 +213,11 @@ router.post('/items', upload.single('image'), async (req: Request, res: Response
       category: { connect: { id: category_id } },
     };
     if (preparation_time_mins) createData.preparation_time_mins = parseInt(preparation_time_mins);
+    if (stock_quantity !== undefined && stock_quantity !== '') {
+      createData.stock_quantity = parseInt(stock_quantity);
+    } else {
+      createData.stock_quantity = null;
+    }
 
     const item = await prisma.menuItem.create({ data: createData });
 
@@ -239,7 +244,7 @@ router.post('/items', upload.single('image'), async (req: Request, res: Response
 router.put('/items/:id', upload.single('image'), async (req: Request, res: Response) => {
   const restaurant_id = (req as any).restaurant_id;
   const { id } = req.params;
-  const { category_id, name, description, price, is_veg, is_available, preparation_time_mins } = req.body;
+  const { category_id, name, description, price, is_veg, is_available, preparation_time_mins, stock_quantity } = req.body;
   const file = req.file;
 
   try {
@@ -266,18 +271,24 @@ router.put('/items/:id', upload.single('image'), async (req: Request, res: Respo
       imagePath = path;
     }
 
+    const updateData: any = {
+      ...(category_id !== undefined && { category_id }),
+      ...(name !== undefined && { name }),
+      ...(description !== undefined && { description }),
+      ...(price !== undefined && { price: parseFloat(price) }),
+      ...(is_veg !== undefined && { is_veg: is_veg === 'true' || is_veg === true }),
+      ...(is_available !== undefined && { is_available: is_available === 'true' || is_available === true }),
+      ...(preparation_time_mins !== undefined && { preparation_time_mins: parseInt(preparation_time_mins) }),
+      image_url: imagePath,
+    };
+
+    if (stock_quantity !== undefined) {
+      updateData.stock_quantity = stock_quantity === '' ? null : parseInt(stock_quantity);
+    }
+
     const item = await prisma.menuItem.update({
       where: { id: id as string },
-      data: {
-        ...(category_id !== undefined && { category_id }),
-        ...(name !== undefined && { name }),
-        ...(description !== undefined && { description }),
-        ...(price !== undefined && { price: parseFloat(price) }),
-        ...(is_veg !== undefined && { is_veg: is_veg === 'true' || is_veg === true }),
-        ...(is_available !== undefined && { is_available: is_available === 'true' || is_available === true }),
-        ...(preparation_time_mins !== undefined && { preparation_time_mins: parseInt(preparation_time_mins) }),
-        image_url: imagePath,
-      }
+      data: updateData
     });
     res.json({ success: true, data: formatItemWithUrl(item) });
   } catch (error) {

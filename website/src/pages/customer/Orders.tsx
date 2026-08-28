@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/axios';
-import { Clock, ChevronRight, ArrowLeft, ReceiptText } from 'lucide-react';
+import { Clock, ChevronRight, ArrowLeft, ReceiptText, Star } from 'lucide-react';
 import socketService from '../../api/socket';
 import ImageWithFallback from '../../components/ui/ImageWithFallback';
 
@@ -177,9 +177,22 @@ export default function Orders() {
 
                 <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-50">
                   <span className="font-bold text-gray-900">₹{order.total_amount}</span>
-                  <div className="flex items-center text-sm font-medium text-brand-primary">
-                    View Details
-                    <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                  <div className="flex items-center gap-3">
+                    {order.status === 'delivered' && (
+                      order.rating ? (
+                        <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded flex items-center gap-1">
+                          <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" /> Rated
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-brand-primary bg-brand-primary/10 px-2 py-1 rounded">
+                          Rate Order
+                        </span>
+                      )
+                    )}
+                    <div className="flex items-center text-sm font-medium text-brand-primary">
+                      View Details
+                      <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                    </div>
                   </div>
                 </div>
               </Link>

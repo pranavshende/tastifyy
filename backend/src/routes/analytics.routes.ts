@@ -54,7 +54,27 @@ router.get('/admin', async (_req: Request, res: Response) => {
       };
     });
 
-    res.json({ success: true, data: chartData });
+    const totalRevenue = recentOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+    const totalOrders = recentOrders.length;
+    const aov = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    
+    // Estimate platform commission (default 10% if config not applied historically)
+    const platformConfig = await prisma.adminConfig.findUnique({ where: { key: 'PLATFORM_FEE_PERCENT' } });
+    const feePercent = platformConfig ? Number(platformConfig.value) : 10;
+    const estCommission = totalRevenue * (feePercent / 100);
+
+    res.json({ 
+      success: true, 
+      data: {
+        chartData,
+        kpis: {
+          totalRevenue,
+          totalOrders,
+          aov,
+          estCommission
+        }
+      } 
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch analytics' } });
   }

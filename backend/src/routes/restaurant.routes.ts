@@ -1,11 +1,12 @@
 import { Router } from 'express';
-import { getActiveRestaurants, registerRestaurant, updateRestaurant, getNearbyRestaurants, getRestaurantMenu } from '../controllers/restaurant.controller.js';
+import { getActiveRestaurants, registerRestaurant, updateRestaurant, getNearbyRestaurants, getRestaurantMenu, searchRestaurants } from '../controllers/restaurant.controller.js';
 import { authenticate } from '../middlewares/auth.js';
 
 const router = Router();
 
 // Public / Customer routes
 router.get('/nearby', getNearbyRestaurants);
+router.get('/search', searchRestaurants);
 router.get('/:id/menu', getRestaurantMenu);
 router.get('/', getActiveRestaurants);
 

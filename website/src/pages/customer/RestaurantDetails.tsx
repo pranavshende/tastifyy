@@ -133,7 +133,7 @@ export default function RestaurantDetails() {
   if (loading) {
     return (
       <div className="min-h-screen bg-brand-light flex flex-col">
-        <Header location="Mumbai" showSearch={false} />
+        <Header showSearch={false} />
         <main className="max-w-3xl mx-auto w-full p-4 sm:p-6">
           <LoadingSkeleton type="restaurant" count={1} className="mb-8" />
           <LoadingSkeleton type="text" count={1} className="w-48 mb-6 h-8" />
@@ -146,7 +146,7 @@ export default function RestaurantDetails() {
   if (error || !restaurant) {
     return (
       <div className="min-h-screen bg-brand-light flex flex-col">
-        <Header location="Mumbai" showSearch={false} />
+        <Header showSearch={false} />
         <main className="max-w-3xl mx-auto w-full p-4 sm:p-6 flex items-center justify-center min-h-[60vh]">
           <EmptyState 
             title="Restaurant not found" 

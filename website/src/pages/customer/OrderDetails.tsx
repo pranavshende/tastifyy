@@ -20,6 +20,13 @@ export default function OrderDetails() {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [ticketSubmitted, setTicketSubmitted] = useState(false);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  
+  // Rating State
+  const [foodRating, setFoodRating] = useState(0);
+  const [restaurantRating, setRestaurantRating] = useState(0);
+  const [deliveryRating, setDeliveryRating] = useState(0);
+  const [reviewText, setReviewText] = useState('');
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -66,7 +73,7 @@ export default function OrderDetails() {
   if (loading && !order) {
     return (
       <div className="min-h-screen bg-brand-light flex flex-col">
-        <Header location="Mumbai" showSearch={false} />
+        <Header showSearch={false} />
         <main className="max-w-3xl mx-auto w-full p-6 space-y-6">
           <LoadingSkeleton type="card" />
           <LoadingSkeleton type="card" />
@@ -79,7 +86,7 @@ export default function OrderDetails() {
   if (error || !order) {
     return (
       <div className="min-h-screen bg-brand-light flex flex-col">
-        <Header location="Mumbai" showSearch={false} />
+        <Header showSearch={false} />
         <main className="flex-1 flex items-center justify-center p-6">
           <EmptyState 
             title="Order not found" 
@@ -111,18 +118,35 @@ export default function OrderDetails() {
     }, 500);
   };
 
-  const handleRatingSubmit = (e: React.FormEvent) => {
+  const handleRatingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In MVP, just mock success
-    setTimeout(() => {
-      setShowRatingModal(false);
-      setRatingSubmitted(true);
-    }, 500);
+    setIsSubmittingRating(true);
+    try {
+      const { data } = await api.post(`/orders/${id}/rate`, {
+        food_rating: foodRating || 5,
+        restaurant_rating: restaurantRating || 5,
+        delivery_rating: order.delivery_partner_id ? (deliveryRating || 5) : null,
+        review_text: reviewText
+      });
+      if (data.success) {
+        setShowRatingModal(false);
+        setRatingSubmitted(true);
+        setOrder({ ...order, rating: data.data });
+      } else {
+        setToast('Failed to submit rating');
+        setTimeout(() => setToast(''), 3000);
+      }
+    } catch (err) {
+      setToast('Something went wrong submitting rating');
+      setTimeout(() => setToast(''), 3000);
+    } finally {
+      setIsSubmittingRating(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-brand-light pb-20 font-sans text-brand-dark flex flex-col">
-      <Header location="Mumbai" showSearch={false} />
+      <Header showSearch={false} />
       
       {/* Sticky Top Bar for Navigation */}
       <div className="bg-white/90 backdrop-blur-md sticky top-16 z-20 shadow-sm border-b border-gray-100">
@@ -226,19 +250,19 @@ export default function OrderDetails() {
           
           <button 
             onClick={() => setShowRatingModal(true)}
-            disabled={order.status !== 'delivered'}
+            disabled={order.status !== 'delivered' || !!order.rating}
             className={`p-4 rounded-xl flex items-center gap-4 text-left transition-colors shadow-sm ${
-              order.status === 'delivered' 
+              order.status === 'delivered' && !order.rating
                 ? 'bg-white border border-brand-primary/30 hover:border-brand-primary cursor-pointer' 
-                : 'bg-gray-50 border border-gray-200 opacity-60 cursor-not-allowed'
+                : 'bg-gray-50 border border-gray-200 opacity-80 cursor-not-allowed'
             }`}
           >
-            <div className={`p-2.5 rounded-xl ${order.status === 'delivered' ? 'bg-orange-50 text-brand-primary' : 'bg-gray-100 text-gray-400'}`}>
-              <Star className="w-5 h-5" />
+            <div className={`p-2.5 rounded-xl ${order.status === 'delivered' && !order.rating ? 'bg-orange-50 text-brand-primary' : 'bg-gray-100 text-gray-400'}`}>
+              <Star className={`w-5 h-5 ${order.rating ? 'fill-gray-400 text-gray-400' : ''}`} />
             </div>
             <div>
-              <h4 className="font-bold text-gray-900">Rate Order</h4>
-              <p className="text-sm text-gray-500 font-medium">Share your experience</p>
+              <h4 className="font-bold text-gray-900">{order.rating ? 'Rated' : 'Rate Order'}</h4>
+              <p className="text-sm text-gray-500 font-medium">{order.rating ? `${order.rating.food_rating} Stars Given` : 'Share your experience'}</p>
             </div>
           </button>
         </div>
@@ -389,27 +413,52 @@ export default function OrderDetails() {
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleRatingSubmit} className="space-y-6">
+              <form onSubmit={handleRatingSubmit} className="space-y-6 text-left">
                 <div>
-                  <h2 className="text-2xl font-black mb-2">How was your food?</h2>
-                  <p className="text-gray-500 font-medium">Rate your experience with {order.restaurant?.name}</p>
-                </div>
-                
-                <div className="flex justify-center gap-2 py-4">
-                  {[1,2,3,4,5].map((star) => (
-                    <button type="button" key={star} className="text-4xl text-gray-200 hover:text-yellow-400 hover:scale-110 transition-all focus:text-yellow-400">
-                      ★
-                    </button>
-                  ))}
+                  <h2 className="text-2xl font-black mb-2 text-center">How was your food?</h2>
+                  <p className="text-gray-500 font-medium text-center mb-6">Rate your experience with {order.restaurant?.name}</p>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-gray-700">Food Quality</span>
+                      <div className="flex gap-1">
+                        {[1,2,3,4,5].map((star) => (
+                          <button type="button" key={`food-${star}`} onClick={() => setFoodRating(star)} className={`text-2xl hover:scale-110 transition-all ${foodRating >= star ? 'text-yellow-400' : 'text-gray-200'}`}>★</button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-gray-700">Restaurant</span>
+                      <div className="flex gap-1">
+                        {[1,2,3,4,5].map((star) => (
+                          <button type="button" key={`rest-${star}`} onClick={() => setRestaurantRating(star)} className={`text-2xl hover:scale-110 transition-all ${restaurantRating >= star ? 'text-yellow-400' : 'text-gray-200'}`}>★</button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {order.delivery_partner_id && (
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-gray-700">Delivery Partner</span>
+                        <div className="flex gap-1">
+                          {[1,2,3,4,5].map((star) => (
+                            <button type="button" key={`del-${star}`} onClick={() => setDeliveryRating(star)} className={`text-2xl hover:scale-110 transition-all ${deliveryRating >= star ? 'text-yellow-400' : 'text-gray-200'}`}>★</button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
-                  <textarea rows={3} className="w-full border border-gray-200 rounded-xl p-3 bg-gray-50 focus:ring-2 focus:ring-brand-primary outline-none resize-none font-medium" placeholder="Write a review (optional)..."></textarea>
+                  <textarea rows={3} value={reviewText} onChange={e => setReviewText(e.target.value)} className="w-full border border-gray-200 rounded-xl p-3 bg-gray-50 focus:ring-2 focus:ring-brand-primary outline-none resize-none font-medium text-sm" placeholder="Write a review (optional)..."></textarea>
                 </div>
 
                 <div className="pt-2 flex gap-3">
                   <button type="button" onClick={() => setShowRatingModal(false)} className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200">Skip</button>
-                  <button type="submit" className="flex-1 py-3 bg-brand-primary text-white rounded-xl font-bold hover:bg-brand-secondary shadow-lg shadow-brand-primary/20">Submit Rating</button>
+                  <button type="submit" disabled={isSubmittingRating || !foodRating || !restaurantRating || (order.delivery_partner_id && !deliveryRating)} className="flex-1 py-3 bg-brand-primary text-white rounded-xl font-bold hover:bg-brand-secondary shadow-lg shadow-brand-primary/20 disabled:opacity-50">
+                    {isSubmittingRating ? 'Submitting...' : 'Submit Rating'}
+                  </button>
                 </div>
               </form>
             )}

@@ -28,3 +28,9 @@ The acceptance criteria in `prd.md` Sections 65 and 74.23 serve as the literal b
 - **Iteration 4 (Checkout, Payments & Coupons)**: `IMPLEMENTED — NOT VERIFIED`
 - **Iteration 5 (Real-time Order Management & Delivery)**: `IMPLEMENTED — NOT VERIFIED`
 - **Iteration 6 (Notifications & Reviews)**: `IMPLEMENTED — NOT VERIFIED`
+
+### Test Infrastructure (2026-08-29)
+- **Jest + ts-jest ESM pipeline**: `CONFIGURED` — `tsconfig.test.json` created, `jest.config.js` updated to reference it.
+- **Language server Jest types**: `CONFIGURED` — `tests/tsconfig.json` (standalone) created so the TS language server resolves `@types/jest` globals for all test files.
+- **`setup.ts` mock types**: `FIXED` — `jest.fn<() => Promise<...>>()` generics added to Supabase mocks; `never` errors resolved.
+- **Phase test files (A–P, e2e)**: `READY TO RUN` — no known TypeScript errors in test infrastructure. Functional pass/fail not yet verified.

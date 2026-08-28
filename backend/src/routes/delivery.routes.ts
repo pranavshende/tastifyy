@@ -118,6 +118,35 @@ router.delete('/profile/photo', async (req: Request, res: Response) => {
   }
 });
 
+// ─── LOCATION ROUTES ──────────────────────────────────────────────────────────
+
+// POST /delivery/location — update current coordinates
+router.post('/location', async (req: Request, res: Response) => {
+  const { latitude, longitude } = req.body;
+  if (!latitude || !longitude) {
+    res.status(400).json({ success: false, error: { code: 'INVALID_INPUT', message: 'Latitude and longitude required' } });
+    return;
+  }
+  
+  try {
+    const partner = await getPartner((req.user as any).id);
+    if (!partner) return res.status(403).json({ success: false, error: { code: 'FORBIDDEN' } });
+
+    await prisma.deliveryPartner.update({
+      where: { id: partner.id },
+      data: {
+        current_latitude: latitude,
+        current_longitude: longitude,
+        is_online: true // optionally auto-set them online if they ping location
+      }
+    });
+
+    res.json({ success: true, message: 'Location updated' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to update location' } });
+  }
+});
+
 // ─── ORDER ROUTES ───────────────────────────────────────────────────────────
 
 // GET /delivery/orders/available — fetch orders needing a rider
@@ -154,7 +183,7 @@ router.get('/orders/active', async (req: Request, res: Response) => {
     const order = await prisma.order.findFirst({
       where: {
         delivery_partner_id: partnerId,
-        status: { in: ['ready', 'out_for_delivery'] }
+        status: { in: ['restaurant_confirmed', 'preparing', 'ready', 'out_for_delivery'] }
       },
       include: {
         restaurant: { select: { name: true, address_line: true, city: true, phone: true } },
@@ -209,7 +238,7 @@ router.post('/orders/:id/accept', async (req: Request, res: Response) => {
 // PATCH /delivery/orders/:id/status — update active order status
 router.patch('/orders/:id/status', async (req: Request, res: Response) => {
   try {
-    const { status } = req.body;
+    const { status, otp } = req.body;
     const id = req.params.id as string;
     const partner = await getPartner((req.user as any).id);
     
@@ -222,6 +251,12 @@ router.patch('/orders/:id/status', async (req: Request, res: Response) => {
 
     if (!order) {
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found or not assigned to you' } });
+    }
+
+    if (status === 'delivered') {
+      if (!otp || String(otp) !== order.delivery_otp) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_OTP', message: 'Invalid or missing delivery OTP' } });
+      }
     }
 
     const updatedOrder = await prisma.order.update({

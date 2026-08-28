@@ -157,7 +157,7 @@ export default function Checkout() {
   if (cart.items.length === 0) {
     return (
       <div className="min-h-screen bg-brand-light flex flex-col">
-        <Header location="Mumbai" showSearch={false} />
+        <Header showSearch={false} />
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           <div className="text-6xl mb-4">🛒</div>
           <h2 className="text-2xl font-black text-gray-900 mb-2">Your cart is empty</h2>
@@ -172,7 +172,7 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen bg-brand-light font-sans text-brand-dark flex flex-col pb-32">
-      <Header location="Mumbai" showSearch={false} />
+      <Header showSearch={false} />
       
       <main className="max-w-5xl mx-auto px-4 sm:px-6 w-full py-8">
         <h1 className="text-2xl font-black text-gray-900 mb-6">Checkout</h1>

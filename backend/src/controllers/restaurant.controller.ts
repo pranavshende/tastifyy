@@ -82,6 +82,20 @@ export const updateRestaurant = async (req: Request, res: Response): Promise<voi
   const updates = req.body;
 
   try {
+    const existingRestaurant = await prisma.restaurant.findUnique({ where: { id } });
+    if (!existingRestaurant) {
+      res.status(404).json({ error: 'Restaurant not found' });
+      return;
+    }
+    const user = req.user as any;
+    if (user.role !== 'admin') {
+      const partner = await prisma.restaurantPartner.findFirst({ where: { phone: user.phone } });
+      if (!partner || partner.restaurant_id !== id) {
+        res.status(403).json({ error: 'Forbidden: You do not own this restaurant' });
+        return;
+      }
+    }
+
     const restaurant = await prisma.restaurant.update({
       where: { id },
       data: updates
@@ -167,6 +181,96 @@ export const getRestaurantMenu = async (req: Request, res: Response): Promise<vo
     res.json(result);
   } catch (error) {
     console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const searchRestaurants = async (req: Request, res: Response): Promise<void> => {
+  const { q } = req.query;
+  if (!q || typeof q !== 'string') {
+    res.status(400).json({ error: 'Search query is required' });
+    return;
+  }
+
+  const queryStr = q.toLowerCase();
+
+  try {
+    // 1. Search Restaurants (Name or Tags)
+    const restaurantMatches = await prisma.restaurant.findMany({
+      where: {
+        status: 'active',
+        is_open: true,
+        OR: [
+          { name: { contains: queryStr, mode: 'insensitive' } },
+          { cuisine_tags: { has: queryStr } } // Wait, has is strict. Let's stick to array match or name match.
+          // In Postgres, we can't easily ILIKE inside an array using Prisma natively without raw.
+          // So we will just use a raw query if we really want to match tags partially, 
+          // or we can fetch all and filter in memory if it's small.
+          // Let's just do name contains for now.
+        ]
+      },
+      take: 10
+    });
+
+    // Let's improve the Restaurant query to also match if query is exactly in tags
+    const restaurantTagMatches = await prisma.restaurant.findMany({
+      where: {
+        status: 'active',
+        is_open: true,
+        cuisine_tags: { has: queryStr }
+      },
+      take: 5
+    });
+
+    // Merge and dedupe restaurants
+    const combinedRestaurants = [...restaurantMatches, ...restaurantTagMatches];
+    const uniqueRestaurantsMap = new Map();
+    combinedRestaurants.forEach(r => uniqueRestaurantsMap.set(r.id, r));
+    const finalRestaurants = Array.from(uniqueRestaurantsMap.values()).map(formatRestaurant);
+
+    // 2. Search Menu Items (Name or Description)
+    const menuMatches = await prisma.menuItem.findMany({
+      where: {
+        is_available: true,
+        restaurant: {
+          status: 'active',
+          is_open: true
+        },
+        OR: [
+          { name: { contains: queryStr, mode: 'insensitive' } },
+          { description: { contains: queryStr, mode: 'insensitive' } }
+        ]
+      },
+      include: {
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            logo_url: true,
+            city: true
+          }
+        }
+      },
+      take: 20
+    });
+
+    const finalMenuItems = menuMatches.map(m => ({
+      ...formatMenuItem(m),
+      restaurant: m.restaurant ? {
+        ...m.restaurant,
+        logo_url: getPublicUrl(m.restaurant.logo_url)
+      } : null
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        restaurants: finalRestaurants,
+        menuItems: finalMenuItems
+      }
+    });
+  } catch (error) {
+    console.error('Search error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

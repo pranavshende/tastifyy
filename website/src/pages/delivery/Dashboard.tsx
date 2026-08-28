@@ -14,6 +14,8 @@ export default function DeliveryDashboard() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'available' | 'active'>('available');
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otp, setOtp] = useState('');
 
   const fetchData = async () => {
     try {
@@ -77,12 +79,20 @@ export default function DeliveryDashboard() {
     }
   };
 
-  const updateOrderStatus = async (status: string) => {
+  const updateOrderStatus = async (status: string, overrideOtp?: string) => {
     if (!activeOrder) return;
     setActionLoading(true);
     try {
-      await api.patch(`/delivery/orders/${activeOrder.id}/status`, { status });
+      const payload: any = { status };
+      if (overrideOtp) {
+        payload.otp = overrideOtp;
+      }
+      await api.patch(`/delivery/orders/${activeOrder.id}/status`, payload);
       await fetchData();
+      if (status === 'delivered') {
+        setShowOtpModal(false);
+        setOtp('');
+      }
     } catch (err: any) {
       alert(err.response?.data?.error?.message || 'Failed to update status');
     } finally {
@@ -281,7 +291,7 @@ export default function DeliveryDashboard() {
                     
                     {activeOrder.status === 'out_for_delivery' && (
                       <button 
-                        onClick={() => updateOrderStatus('delivered')}
+                        onClick={() => setShowOtpModal(true)}
                         disabled={actionLoading}
                         className="w-full bg-green-500 hover:bg-green-600 text-white font-black py-4 rounded-xl text-lg shadow-lg disabled:opacity-50"
                       >
@@ -296,6 +306,33 @@ export default function DeliveryDashboard() {
           </div>
         )}
       </div>
+      
+      {showOtpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+            <h3 className="text-xl font-black mb-2 text-center text-gray-900">Enter Delivery OTP</h3>
+            <p className="text-sm text-center text-gray-500 mb-6">Ask the customer for the 4-digit code they received via SMS.</p>
+            <input 
+              type="text"
+              maxLength={4}
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+              placeholder="0000"
+              className="w-full text-center text-3xl font-mono font-black tracking-[0.5em] bg-gray-50 border border-gray-200 rounded-xl py-4 focus:outline-none focus:ring-2 focus:ring-brand-primary mb-6"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => { setShowOtpModal(false); setOtp(''); }} className="flex-1 font-bold text-gray-500 hover:text-gray-700 py-3 rounded-xl border border-gray-200">Cancel</button>
+              <button 
+                onClick={() => updateOrderStatus('delivered', otp)} 
+                disabled={otp.length !== 4 || actionLoading}
+                className="flex-1 bg-brand-primary text-white font-black py-3 rounded-xl hover:bg-brand-secondary disabled:opacity-50"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

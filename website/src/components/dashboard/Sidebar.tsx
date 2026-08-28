@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { LogOut, User, LayoutDashboard, UtensilsCrossed, Settings, Users, Store, Bike, LifeBuoy } from 'lucide-react';
+import { LogOut, User, LayoutDashboard, UtensilsCrossed, Settings, Users, Store, Bike, LifeBuoy, Shield } from 'lucide-react';
 
 export interface SidebarProps {
   role?: 'admin' | 'restaurant' | 'delivery';
@@ -45,6 +45,8 @@ export default function Sidebar({ role, activeTab, onTabChange, title, items, ba
           { name: 'Delivery Fleet', id: 'delivery', path: '#', icon: <Bike className="w-5 h-5" /> },
           { name: 'Platform Users', id: 'users', path: '#', icon: <Users className="w-5 h-5" /> },
           { name: 'Support', id: 'support', path: '#', icon: <LifeBuoy className="w-5 h-5" /> },
+          { name: 'Audit Logs', id: 'audit', path: '#', icon: <Shield className="w-5 h-5" /> },
+          { name: 'Config', id: 'config', path: '#', icon: <Settings className="w-5 h-5" /> },
           { name: 'Profile', id: 'profile', path: '#', icon: <User className="w-5 h-5" /> },
         ]
       };

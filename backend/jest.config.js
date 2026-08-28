@@ -10,9 +10,11 @@ export default {
       'ts-jest',
       {
         useESM: true,
+        tsconfig: './tsconfig.test.json',
       },
     ],
   },
   roots: ['<rootDir>/tests'],
   testMatch: ['**/*.test.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
 };

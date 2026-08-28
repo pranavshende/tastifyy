@@ -5,6 +5,9 @@ import { getIO } from '../socket.js';
 import type { Request, Response } from 'express';
 import crypto, { randomUUID } from 'crypto';
 import Razorpay from 'razorpay';
+import { sendDeliveryOTP } from '../services/sms.service.js';
+import { assignDeliveryPartner } from '../services/assignment.service.js';
+import { sendPushNotification } from '../services/notification.service.js';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
@@ -56,13 +59,35 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
         return;
       }
       
-      const sub = Number(dbItem.price) * item.quantity;
+      if (dbItem.stock_quantity !== null && dbItem.stock_quantity < item.quantity) {
+        res.status(400).json({ success: false, error: { code: 'INSUFFICIENT_STOCK', message: `Not enough stock for ${dbItem.name}. Only ${dbItem.stock_quantity} left.` } });
+        return;
+      }
+      
+      let customizationsCost = 0;
+      let customizationsSnapshot = null;
+      
+      if (item.customizations && Array.isArray(item.customizations) && item.customizations.length > 0) {
+        const optionIds = item.customizations.map((c: any) => typeof c === 'string' ? c : c.option_id);
+        const options = await prisma.menuItemCustomizationOption.findMany({
+          where: { id: { in: optionIds } }
+        });
+        
+        customizationsCost = options.reduce((sum, opt) => sum + Number(opt.additional_price || 0), 0);
+        customizationsSnapshot = options.map(opt => ({
+          name: opt.label,
+          price: Number(opt.additional_price || 0)
+        }));
+      }
+
+      const sub = (Number(dbItem.price) + customizationsCost) * item.quantity;
       item_subtotal += sub;
 
       orderItemsData.push({
         menu_item_id: dbItem.id,
         name_snapshot: dbItem.name,
         price_snapshot: dbItem.price,
+        customizations_snapshot: customizationsSnapshot,
         quantity: item.quantity,
         subtotal: sub
       });
@@ -146,6 +171,7 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
         idempotency_key: idempotency_key || randomUUID(),
         special_instructions,
         coupon_id: valid_coupon_id,
+        delivery_otp: Math.floor(1000 + Math.random() * 9000).toString(),
         order_items: {
           create: orderItemsData
         }
@@ -156,6 +182,19 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
         delivery_address: true,
       }
     });
+
+    // Auto-decrement stock for ordered items
+    for (const item of items) {
+      await prisma.menuItem.updateMany({
+        where: { 
+          id: item.menu_item_id,
+          stock_quantity: { not: null }
+        },
+        data: {
+          stock_quantity: { decrement: item.quantity }
+        }
+      });
+    }
 
     const io = getIO();
     const orderCreatedPayload = {
@@ -253,7 +292,8 @@ router.get('/my-orders', authorizeRole(['customer']), async (req: Request, res: 
       include: {
         restaurant: { select: { name: true, logo_url: true, cover_image_url: true, phone: true } },
         order_items: true,
-        delivery_partner: { select: { name: true, phone: true } }
+        delivery_partner: { select: { name: true, phone: true } },
+        ratings: true
       },
       orderBy: { created_at: 'desc' }
     });
@@ -269,7 +309,7 @@ router.get('/customer/:id', authorizeRole(['customer']), async (req: Request, re
   try {
     const order = await prisma.order.findFirst({
       where: { id: req.params.id as string, customer_id: user.id as string },
-      include: { restaurant: true, order_items: true, delivery_address: true, delivery_partner: true }
+      include: { restaurant: true, order_items: true, delivery_address: true, delivery_partner: true, ratings: true }
     });
     if (!order) {
       res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found' } });
@@ -278,6 +318,53 @@ router.get('/customer/:id', authorizeRole(['customer']), async (req: Request, re
     res.json({ success: true, data: order });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch order' } });
+  }
+});
+
+// POST /api/orders/:id/rate
+router.post('/:id/rate', authorizeRole(['customer']), async (req: Request, res: Response) => {
+  const user = req.user as any;
+  const { id } = req.params;
+  const { food_rating, restaurant_rating, delivery_rating, review_text } = req.body;
+  
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: id as string },
+      include: { ratings: true }
+    });
+
+    if (!order || order.customer_id !== user.id) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found' } });
+      return;
+    }
+
+    if (order.status !== 'delivered') {
+      res.status(400).json({ success: false, error: { code: 'INVALID_STATE', message: 'Can only rate delivered orders' } });
+      return;
+    }
+
+    if (order.ratings) {
+      res.status(400).json({ success: false, error: { code: 'ALREADY_RATED', message: 'Order already rated' } });
+      return;
+    }
+
+    const rating = await prisma.rating.create({
+      data: {
+        order_id: order.id,
+        customer_id: user.id,
+        restaurant_id: order.restaurant_id,
+        delivery_partner_id: order.delivery_partner_id,
+        food_rating: parseInt(food_rating) || 5,
+        restaurant_rating: parseInt(restaurant_rating) || 5,
+        delivery_rating: delivery_rating ? parseInt(delivery_rating) : null,
+        review_text: review_text || null
+      }
+    });
+
+    res.json({ success: true, data: rating });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to submit rating' } });
   }
 });
 
@@ -382,7 +469,10 @@ router.put('/:id/status', authorizeRole(['restaurant_partner', 'delivery_partner
   const user = req.user as any;
   
   try {
-    const order = await prisma.order.findUnique({ where: { id: id as string } });
+    const order = await prisma.order.findUnique({ 
+      where: { id: id as string },
+      include: { customer: true, order_items: true }
+    });
     if (!order) {
       res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found' } });
       return;
@@ -397,6 +487,24 @@ router.put('/:id/status', authorizeRole(['restaurant_partner', 'delivery_partner
       }
     }
 
+    // Delivery partners can only update orders assigned to them
+    if (user.role === 'delivery_partner') {
+      const partner = await prisma.deliveryPartner.findUnique({ where: { user_id: user.id } });
+      if (!partner || partner.id !== order.delivery_partner_id) {
+        res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'You are not authorized to update this order' } });
+        return;
+      }
+    }
+
+    // Delivery OTP Enforcement
+    if (status === 'delivered') {
+      const { otp } = req.body;
+      if (!otp || String(otp) !== order.delivery_otp) {
+        res.status(400).json({ success: false, error: { code: 'INVALID_OTP', message: 'Invalid or missing delivery OTP' } });
+        return;
+      }
+    }
+
     const updated = await prisma.order.update({
       where: { id: id as string },
       data: { 
@@ -405,6 +513,75 @@ router.put('/:id/status', authorizeRole(['restaurant_partner', 'delivery_partner
         cancelled_by: status === 'cancelled' ? (user.role === 'restaurant_partner' ? 'restaurant' : user.role === 'admin' ? 'admin' : 'customer') : null
       }
     });
+
+    // Send SMS when out for delivery
+    if (status === 'out_for_delivery' && order.status !== 'out_for_delivery') {
+      if (order.customer?.phone && order.delivery_otp) {
+        // Run asynchronously so it doesn't block the response
+        sendDeliveryOTP(order.customer.phone, order.delivery_otp).catch(err => console.error('Failed to send OTP SMS', err));
+      }
+    }
+
+    // Assign Delivery Partner automatically when accepted by restaurant
+    if ((status === 'restaurant_confirmed' || status === 'preparing') && !order.delivery_partner_id) {
+      assignDeliveryPartner(order.id).catch(err => console.error('Assignment Error:', err));
+    }
+
+    // Push Notifications for Customers
+    if (status === 'picked_up' && order.status !== 'picked_up') {
+      sendPushNotification(order.customer_id, 'Order on the way!', 'Your delivery partner has picked up your food.').catch(console.error);
+    }
+    if (status === 'delivered' && order.status !== 'delivered') {
+      sendPushNotification(order.customer_id, 'Food arrived!', 'Enjoy your meal from Tastifyy!').catch(console.error);
+    }
+
+    // Restore stock if cancelled
+    if (status === 'cancelled' && order.status !== 'cancelled') {
+      for (const item of order.order_items) {
+        await prisma.menuItem.updateMany({
+          where: { 
+            id: item.menu_item_id,
+            stock_quantity: { not: null }
+          },
+          data: {
+            stock_quantity: { increment: item.quantity }
+          }
+        });
+      }
+    }
+
+    // Trigger Real Refund if Cancelled and already paid online
+    if (status === 'cancelled' && updated.payment_status === 'success' && updated.razorpay_payment_id) {
+      try {
+        await razorpay.payments.refund(updated.razorpay_payment_id, {
+          amount: Math.round(Number(updated.total_amount) * 100)
+        });
+        await prisma.order.update({
+          where: { id: updated.id },
+          data: { payment_status: 'refunded' }
+        });
+        updated.payment_status = 'refunded';
+      } catch (refundError) {
+        console.error('Razorpay Refund Failed in order routes:', refundError);
+        // Note: we still allow the cancellation to succeed in DB, but log the refund failure
+      }
+    }
+
+    if (status === 'cancelled' && user.role === 'admin') {
+      try {
+        await prisma.adminAuditLog.create({
+          data: {
+            admin_id: user.id,
+            action: updated.payment_status === 'refunded' ? 'REFUND_PROCESSED' : 'ORDER_CANCELLED',
+            target_type: 'Order',
+            target_id: updated.id,
+            details: { reason: cancellation_reason, payment_status: updated.payment_status }
+          }
+        });
+      } catch (e) {
+        console.error('Failed to write audit log', e);
+      }
+    }
 
     // Determine the correct event name for the customer
     // When a restaurant cancels a pending order, it's a rejection from the customer's perspective

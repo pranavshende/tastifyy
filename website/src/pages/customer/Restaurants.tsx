@@ -79,7 +79,7 @@ export default function Restaurants() {
 
   return (
     <div className="min-h-screen bg-brand-light font-sans text-brand-dark flex flex-col pb-20">
-      <Header location="Mumbai" showSearch={false} />
+      <Header showSearch={false} />
 
       {/* Sticky Filter Bar */}
       <div className="sticky top-16 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm py-4">

@@ -4,7 +4,12 @@ import { prisma } from '../utils/prisma.js';
 import { getPublicUrl, uploadFile, deleteFile, validateFile, generateFilename } from '../services/storage.service.js';
 import multer from 'multer';
 import type { Request, Response } from 'express';
+import Razorpay from 'razorpay';
 
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_mock',
+});
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
@@ -102,6 +107,55 @@ router.delete('/profile/photo', async (req: Request, res: Response) => {
     res.json({ success: true, message: 'Photo deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to delete photo' } });
+  }
+});
+
+// ─── PLATFORM CONFIG ────────────────────────────────────────────────────────
+
+// GET /admin/config
+router.get('/config', async (_req: Request, res: Response) => {
+  try {
+    const configs = await prisma.adminConfig.findMany();
+    res.json({ success: true, data: configs });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch config' } });
+  }
+});
+
+// PUT /admin/config
+router.put('/config', async (req: Request, res: Response) => {
+  const adminId = (req.user as any).id;
+  const { configs } = req.body as { configs: Array<{ key: string, value: string, description?: string }> };
+  
+  if (!Array.isArray(configs)) {
+    res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'configs must be an array' } });
+    return;
+  }
+
+  try {
+    // Upsert each config
+    const updated = await Promise.all(configs.map(c => 
+      prisma.adminConfig.upsert({
+        where: { key: c.key },
+        update: { value: String(c.value), updated_by: adminId },
+        create: { key: c.key, value: String(c.value), description: c.description || '', updated_by: adminId }
+      })
+    ));
+    
+    // Log it
+    await prisma.adminAuditLog.create({
+      data: {
+        admin_id: adminId,
+        action: 'UPDATE_CONFIG',
+        target_type: 'Platform',
+        details: { keys_updated: configs.map(c => c.key) }
+      }
+    });
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Update config error:', error);
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to update config' } });
   }
 });
 
@@ -341,18 +395,78 @@ router.patch('/support/:id/resolve', async (req: Request, res: Response) => {
       include: { order: true }
     });
 
-    // Handle Mock Refund if requested
+    // Handle True Refund if requested
     if (issue_refund && ticket.order_id) {
-      await prisma.order.update({
-        where: { id: ticket.order_id },
-        data: { status: 'cancelled', payment_status: 'refunded' }
-      });
-      // Optionally notify user via socket
+      if (ticket.order?.payment_status === 'success' && ticket.order?.razorpay_payment_id) {
+        try {
+          await razorpay.payments.refund(ticket.order.razorpay_payment_id, {
+            amount: Math.round(Number(ticket.order.total_amount) * 100)
+          });
+          await prisma.order.update({
+            where: { id: ticket.order_id },
+            data: { status: 'cancelled', payment_status: 'refunded' }
+          });
+
+          await prisma.adminAuditLog.create({
+            data: {
+              admin_id: (req.user as any).id,
+              action: 'REFUND_PROCESSED',
+              target_type: 'Order',
+              target_id: ticket.order_id,
+              details: { amount: Number(ticket.order.total_amount), reason: resolution_notes }
+            }
+          });
+        } catch (error) {
+          console.error('Razorpay Admin Refund Failed:', error);
+          // If Razorpay fails, we don't mark as refunded in DB to prevent state mismatch
+        }
+      } else {
+        // Just cancel if not paid online
+        await prisma.order.update({
+          where: { id: ticket.order_id },
+          data: { status: 'cancelled' }
+        });
+
+        await prisma.adminAuditLog.create({
+          data: {
+            admin_id: (req.user as any).id,
+            action: 'ORDER_CANCELLED',
+            target_type: 'Order',
+            target_id: ticket.order_id,
+            details: { reason: resolution_notes }
+          }
+        });
+      }
     }
 
     res.json({ success: true, data: ticket });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to resolve ticket' } });
+  }
+});
+
+// GET /admin/audit-logs
+router.get('/audit-logs', async (req: Request, res: Response) => {
+  const page = (req.query.page as string) || '1';
+  const limit = (req.query.limit as string) || '20';
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const action = req.query.action as string | undefined;
+
+  try {
+    const where = action ? { action } : {};
+    const [logs, total] = await Promise.all([
+      prisma.adminAuditLog.findMany({
+        where,
+        skip,
+        take: parseInt(limit),
+        include: { admin: { select: { name: true, email: true } } },
+        orderBy: { created_at: 'desc' }
+      }),
+      prisma.adminAuditLog.count({ where })
+    ]);
+    res.json({ success: true, data: logs, total, page: parseInt(page) });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch audit logs' } });
   }
 });
 

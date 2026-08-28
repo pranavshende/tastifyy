@@ -9,7 +9,7 @@
     // See also https://aka.ms/tsconfig/module
     "module": "nodenext",
     "target": "esnext",
-    "types": [],
+    "types": ["node", "jest"],
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],
@@ -42,5 +42,6 @@
     "skipLibCheck": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "tests", "prisma", "*.config.ts"]
+  "exclude": ["node_modules", "tests", "prisma", "*.config.ts"],
+  "references": [{ "path": "./tsconfig.test.json" }]
 }

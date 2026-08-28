@@ -23,8 +23,8 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     
     const user = await prisma.user.findUnique({ where: { id: supabaseUser.id } });
     
-    if (!user) {
-      res.status(401).json({ error: 'Unauthorized: User not found in database' });
+    if (!user || !user.is_active) {
+      res.status(401).json({ error: 'Unauthorized: User not found or account deactivated' });
       return;
     }
     

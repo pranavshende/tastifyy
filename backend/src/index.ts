@@ -44,6 +44,11 @@ if (process.env.CORS_ORIGIN && !allowedOrigins.includes('https://tastifyy.pranav
 app.use(cors({
   origin: allowedOrigins,
 }));
+
+// Webhook MUST be parsed as raw buffer for cryptographic signature validation
+import { handleRazorpayWebhook } from './controllers/payment.controller.js';
+app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), handleRazorpayWebhook);
+
 app.use(express.json());
 
 // Security Middleware

@@ -61,7 +61,7 @@ export default function CustomerHome() {
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900 flex flex-col pb-24">
       <Header 
         showSearch={false}
-        location="Mumbai"
+
       />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6">
@@ -86,12 +86,17 @@ export default function CustomerHome() {
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <Search className="w-4 h-4 text-brand-primary" />
             </div>
-            <input
+              <input
               type="text"
               className="block w-full pl-11 pr-4 py-3.5 rounded-xl bg-transparent focus:outline-none text-sm font-bold text-gray-900 placeholder-gray-400"
               placeholder="Search for restaurants, cuisines, or dishes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && searchQuery.trim()) {
+                  navigate(`/customer/search?q=${encodeURIComponent(searchQuery)}`);
+                }
+              }}
             />
           </div>
         </section>

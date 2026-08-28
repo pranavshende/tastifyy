@@ -12,8 +12,11 @@ export default function RestaurantDashboard() {
   const fetchProfileStatus = async () => {
     try {
       const { data } = await api.get('/profile');
-      if (data.success) {
+      if (data.success && data.data) {
         setIsOpen(data.data.is_open);
+        if (data.data.id) {
+          socketService.joinRestaurant(data.data.id);
+        }
       }
     } catch (e) {}
   };
@@ -47,11 +50,7 @@ export default function RestaurantDashboard() {
     fetchOrders();
     fetchProfileStatus();
 
-    api.get('/menu/info').then(({ data }) => {
-      if (data.success && data.data.restaurant_id) {
-        socketService.joinRestaurant(data.data.restaurant_id);
-      }
-    });
+    // WebSocket room is now joined inside fetchProfileStatus
 
     socketService.setReconnectCallback(fetchOrders);
 

@@ -36,6 +36,7 @@ function ItemModal({ isOpen, onClose, onSave, categories, existingItem, defaultC
     is_veg: true,
     is_available: true,
     preparation_time_mins: '',
+    stock_quantity: '',
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -55,6 +56,7 @@ function ItemModal({ isOpen, onClose, onSave, categories, existingItem, defaultC
         is_veg: existingItem.is_veg ?? true,
         is_available: existingItem.is_available ?? true,
         preparation_time_mins: existingItem.preparation_time_mins?.toString() || '',
+        stock_quantity: existingItem.stock_quantity?.toString() || '',
       });
       setImagePreview(getStorageUrl(existingItem.image_url) || null);
       setDeleteExistingImage(false);
@@ -68,6 +70,7 @@ function ItemModal({ isOpen, onClose, onSave, categories, existingItem, defaultC
         is_veg: true,
         is_available: true,
         preparation_time_mins: '',
+        stock_quantity: '',
       });
       setImagePreview(null);
       setDeleteExistingImage(false);
@@ -126,6 +129,7 @@ function ItemModal({ isOpen, onClose, onSave, categories, existingItem, defaultC
       formData.append('is_veg', String(form.is_veg));
       formData.append('is_available', String(form.is_available));
       if (form.preparation_time_mins) formData.append('preparation_time_mins', form.preparation_time_mins);
+      formData.append('stock_quantity', form.stock_quantity);
       if (imageFile) formData.append('image', imageFile);
 
       if (existingItem) {
@@ -217,7 +221,8 @@ function ItemModal({ isOpen, onClose, onSave, categories, existingItem, defaultC
           </div>
 
           {/* Price + Prep Time */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Price, Prep Time, Stock */}
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1.5">Price (₹) <span className="text-red-500">*</span></label>
               <input type="number" required min="0" step="0.01" placeholder="0.00"
@@ -225,9 +230,15 @@ function ItemModal({ isOpen, onClose, onSave, categories, existingItem, defaultC
                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium focus:outline-none focus:border-brand-primary" />
             </div>
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1.5">Prep Time (mins)</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">Prep (mins)</label>
               <input type="number" min="0" placeholder="e.g. 20"
                      value={form.preparation_time_mins} onChange={e => setForm(f => ({ ...f, preparation_time_mins: e.target.value }))}
+                     className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium focus:outline-none focus:border-brand-primary" />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">Stock <span className="text-gray-400 font-normal">(Infinite)</span></label>
+              <input type="number" min="0" placeholder="e.g. 50"
+                     value={form.stock_quantity} onChange={e => setForm(f => ({ ...f, stock_quantity: e.target.value }))}
                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium focus:outline-none focus:border-brand-primary" />
             </div>
           </div>

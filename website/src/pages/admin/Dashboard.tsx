@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { ImageUploadButton } from '../../components/ui/ImageUploadButton';
 
-type Tab = 'overview' | 'restaurants' | 'orders' | 'delivery' | 'users' | 'support' | 'profile';
+type Tab = 'overview' | 'restaurants' | 'orders' | 'delivery' | 'users' | 'support' | 'audit' | 'config' | 'profile';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -25,6 +25,8 @@ export default function AdminDashboard() {
           {activeTab === 'delivery' && <DeliveryTab />}
           {activeTab === 'users' && <UsersTab />}
           {activeTab === 'support' && <SupportTab />}
+          {activeTab === 'audit' && <AuditTab />}
+          {activeTab === 'config' && <ConfigTab />}
           {activeTab === 'profile' && <ProfileTab />}
         </div>
       </main>
@@ -36,7 +38,7 @@ export default function AdminDashboard() {
 function OverviewTab() {
   const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [analytics, setAnalytics] = useState<any[]>([]);
+  const [analytics, setAnalytics] = useState<any>({ chartData: [], kpis: null });
 
   useEffect(() => {
     Promise.all([
@@ -63,12 +65,14 @@ function OverviewTab() {
   const cards = [
     { title: 'Total Users', value: metrics?.totalUsers || 0, icon: <Users />, color: 'bg-blue-50 text-blue-600 border-blue-100' },
     { title: 'Active Restaurants', value: metrics?.activeRestaurants || 0, icon: <Store />, color: 'bg-green-50 text-green-600 border-green-100' },
-    { title: 'Pending Partners', value: metrics?.pendingRestaurants || 0, icon: <AlertCircle />, color: 'bg-orange-50 text-orange-600 border-orange-100' },
     { title: 'Delivery Fleet', value: metrics?.totalDeliveryPartners || 0, icon: <Bike />, color: 'bg-purple-50 text-purple-600 border-purple-100' },
     { title: 'Total Orders', value: metrics?.totalOrders || 0, icon: <ShoppingBag />, color: 'bg-brand-primary/10 text-brand-primary border-brand-primary/20' },
+    { title: 'Avg Order Value', value: `₹${analytics.kpis?.aov?.toFixed(0) || 0}`, icon: <TrendingUp />, color: 'bg-indigo-50 text-indigo-600 border-indigo-100' },
+    { title: 'Platform Revenue', value: `₹${analytics.kpis?.estCommission?.toFixed(0) || 0}`, icon: <TrendingUp />, color: 'bg-yellow-50 text-yellow-600 border-yellow-100' },
   ];
 
-  const maxRevenue = Math.max(...analytics.map(a => a.revenue), 1);
+  const chartData = analytics.chartData || [];
+  const maxRevenue = Math.max(...chartData.map((a: any) => a.revenue), 1);
 
   return (
     <div className="animate-fade-in-up">
@@ -77,7 +81,7 @@ function OverviewTab() {
         <p className="text-gray-500 font-medium mt-1">Real-time marketplace analytics and health</p>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
         {cards.map((c, i) => (
           <div key={i} className={`p-6 rounded-3xl border shadow-sm flex flex-col ${c.color}`}>
             <div className="w-12 h-12 rounded-2xl bg-white/60 flex items-center justify-center mb-4 shadow-sm">
@@ -100,7 +104,7 @@ function OverviewTab() {
           </div>
         </div>
         
-        {analytics.length === 0 ? (
+        {chartData.length === 0 ? (
           <div className="bg-gray-50 rounded-2xl border border-dashed border-gray-200 h-64 flex items-center justify-center">
             <div className="text-gray-400 font-bold text-center">
               <TrendingUp className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -109,7 +113,7 @@ function OverviewTab() {
           </div>
         ) : (
           <div className="flex items-end h-64 gap-2 px-2">
-            {analytics.map((day, idx) => {
+            {chartData.map((day: any, idx: number) => {
               const heightPct = (day.revenue / maxRevenue) * 100;
               return (
                 <div key={idx} className="flex-1 flex flex-col justify-end items-center group relative h-full pt-10">
@@ -869,3 +873,216 @@ function ProfileTab() {
   );
 }
 
+// ─── AUDIT LOGS TAB ─────────────────────────────────────────────────────────
+function AuditTab() {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [actionFilter, setActionFilter] = useState('');
+  const limit = 20;
+
+  useEffect(() => {
+    api.get(`/admin/audit-logs?page=${page}&limit=${limit}${actionFilter ? `&action=${actionFilter}` : ''}`)
+      .then(res => {
+        setLogs(res.data.data || []);
+        setTotal(res.data.total || 0);
+      })
+      .catch(console.error);
+  }, [page, actionFilter]);
+
+  const totalPages = Math.ceil(total / limit) || 1;
+
+  return (
+    <div className="animate-fade-in-up">
+      <div className="flex justify-between items-end mb-8">
+        <div>
+          <h2 className="text-3xl font-black text-gray-900">System Audit Logs</h2>
+          <p className="text-gray-500 font-medium mt-1">Immutable record of critical administrative actions.</p>
+        </div>
+        <div className="flex gap-4">
+          <select 
+            value={actionFilter} 
+            onChange={(e) => { setActionFilter(e.target.value); setPage(1); }}
+            className="bg-white border border-gray-200 rounded-xl px-4 py-2 font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+          >
+            <option value="">All Actions</option>
+            <option value="REFUND_PROCESSED">Refunds</option>
+            <option value="ORDER_CANCELLED">Cancellations</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-wider">Timestamp</th>
+                <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-wider">Admin</th>
+                <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-wider">Action</th>
+                <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-wider">Target</th>
+                <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-wider">Details</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {logs.map((log) => (
+                <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-500">
+                    {new Date(log.created_at).toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="font-bold text-gray-900">{log.admin?.name || 'System'}</p>
+                    <p className="text-xs font-medium text-gray-500">{log.admin?.email}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${
+                      log.action === 'REFUND_PROCESSED' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                      {log.action}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="text-sm font-bold text-gray-700">{log.target_type}</p>
+                    <p className="text-xs font-medium text-gray-500 truncate max-w-[120px]" title={log.target_id}>{log.target_id}</p>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600 font-medium">
+                    <pre className="bg-gray-50 p-2 rounded-lg text-xs overflow-x-auto border border-gray-100">
+                      {JSON.stringify(log.details, null, 2)}
+                    </pre>
+                  </td>
+                </tr>
+              ))}
+              {logs.length === 0 && (
+                <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No audit logs found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Pagination Controls */}
+        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
+          <p className="text-sm font-medium text-gray-500">
+            Showing <span className="font-bold text-gray-900">{total === 0 ? 0 : (page - 1) * limit + 1}</span> to <span className="font-bold text-gray-900">{Math.min(page * limit, total)}</span> of <span className="font-bold text-gray-900">{total}</span> entries
+          </p>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-4 py-2 rounded-lg text-sm font-bold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              Previous
+            </button>
+            <button 
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages || total === 0}
+              className="px-4 py-2 rounded-lg text-sm font-bold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── CONFIG TAB ──────────────────────────────────────────────────────────────
+function ConfigTab() {
+  const [configs, setConfigs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState('');
+
+  const fetchConfigs = () => {
+    setLoading(true);
+    api.get('/admin/config').then(res => {
+      const defaultKeys = [
+        { key: 'PLATFORM_FEE_PERCENT', value: '10', description: 'Percentage cut platform takes from each order' },
+        { key: 'BASE_DELIVERY_FEE', value: '30', description: 'Base flat fee charged for delivery' },
+        { key: 'MAX_DELIVERY_RADIUS_KM', value: '10', description: 'Maximum distance allowed for delivery (in km)' }
+      ];
+      const fetched = res.data.data || [];
+      const merged = defaultKeys.map(dk => {
+        const found = fetched.find((f: any) => f.key === dk.key);
+        return found ? found : dk;
+      });
+      setConfigs(merged);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  };
+
+  useEffect(() => { fetchConfigs(); }, []);
+
+  const handleChange = (key: string, value: string) => {
+    setConfigs(configs.map(c => c.key === key ? { ...c, value } : c));
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.put('/admin/config', { configs });
+      setToast('Configuration saved successfully');
+      setTimeout(() => setToast(''), 3000);
+      fetchConfigs();
+    } catch (error) {
+      setToast('Failed to save configuration');
+      setTimeout(() => setToast(''), 3000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-brand-primary" /></div>;
+  }
+
+  return (
+    <div className="animate-fade-in-up">
+      <div className="mb-8">
+        <h1 className="text-3xl font-black text-gray-900">Platform Configuration</h1>
+        <p className="text-gray-500 font-medium mt-1">Adjust core economic and operational variables</p>
+      </div>
+
+      {toast && (
+        <div className="mb-6 p-4 bg-gray-900 text-white rounded-xl shadow-lg flex items-center gap-3">
+          <div className="w-2 h-2 bg-brand-primary rounded-full animate-pulse"></div>
+          <span className="font-bold">{toast}</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSave} className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm max-w-2xl">
+        <div className="space-y-6">
+          {configs.map(config => (
+            <div key={config.key} className="pb-6 border-b border-gray-100 last:border-0 last:pb-0">
+              <label className="block text-sm font-black text-gray-900 mb-1">{config.key.replace(/_/g, ' ')}</label>
+              <p className="text-xs text-gray-500 font-medium mb-3">{config.description}</p>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={config.value}
+                onChange={e => handleChange(config.key, e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-bold focus:ring-2 focus:ring-brand-primary focus:outline-none transition-all"
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-gray-100">
+          <button 
+            type="submit" 
+            disabled={saving}
+            className="w-full py-4 bg-brand-primary text-white rounded-xl font-bold hover:bg-brand-secondary transition-all shadow-lg shadow-brand-primary/20 flex justify-center items-center gap-2"
+          >
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+            {saving ? 'Saving...' : 'Save Configuration'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}

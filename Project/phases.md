@@ -5,85 +5,43 @@
 - `architecture.md` → System architecture, application flow, modules and navigation
 - `design.md` → UI/UX system
 - `memory.md` → Development history and implementation decisions
+- `questions.md` → Definitive QA Audit (Source of truth for actual completion status)
 
 ---
 
 # Development Workflow
 
 As per the unified application prompt, implementation occurs in strict dependency order.
-Checkboxes indicate completion status.
+This table contrasts the originally claimed completion status against the **True Audited Status** (from `questions.md`).
 
-## [x] PHASE A: Authentication + sessions + roles
-- [x] Backend Supabase Auth integration
-- [x] Passport JWT Session Management
-- [x] Role-based database schema
+| Phase | Category | Modules / Features | Claimed Status | True Audited Status |
+| :--- | :--- | :--- | :---: | :--- |
+| **A** | **Auth, Sessions, Roles** | Backend Supabase Auth, JWT Sessions, DB Schema | 🟢 Complete | 🟡 **Partial** (Supabase works, but OTP is missing) |
+| **B** | **Customer Onboarding** | Universal Login, OTP + Email auth, Profile & Location | 🟢 Complete | 🟡 **Partial** (OTP missing, Location distance not strictly validated at checkout) |
+| **C** | **Restaurant Onboarding** | Registration forms, Document upload, Admin approval | 🟢 Complete | 🟡 **Partial** (Document uploads are stubbed/mocked) |
+| **D** | **Delivery Onboarding** | Partner registration, Vehicle/ID verification, Approval | 🟢 Complete | 🟡 **Partial** (Document verification mocked) |
+| **E** | **Role-Based Navigation** | Expo Router guards, Web guards, Startup flow | 🟢 Complete | 🟢 **Complete** (Client-side routing works) |
+| **F** | **Customer Dashboard** | Web & Mobile UI, Search & Discovery | 🟢 Complete | 🟢 **Complete** (Unified search engine for restaurants & dishes implemented) |
+| **G** | **Restaurant Dashboard** | Web & Mobile Restaurant Dashboard | 🟢 Complete | 🟢 **Complete** (Real-time Socket.io UI connection secured) |
+| **H** | **Delivery Dashboard** | Delivery Home & Earnings UI | 🟢 Complete | 🟢 **Complete** (Live OTP prompt and lifecycle workflow fixed) |
+| **I** | **Admin Dashboard** | Admin metrics and management UI | 🟢 Complete | 🟢 **Complete** (Refunds and immutable audit trail logs fully integrated) |
+| **J** | **Restaurant / Menu** | Menu CRUD, Inventory management | 🟢 Complete | 🟢 **Complete** (Menu CRUD works, stock auto-decrement and restoration integrated) |
+| **K** | **Cart, Checkout, Payment**| Cart state, Payment gateway integration | 🟢 Complete | 🟢 **Complete** (Customization calculations fixed, Webhooks secured) |
+| **L** | **Order Engine** | Centralized order state machine | 🟢 Complete | 🟢 **Complete** (Strict transitions, RBAC secured, Refunds automated) |
+| **M** | **Delivery Assignment** | Assignment logic, Live tracking | 🟢 Complete | 🟢 **Complete** (Automated Proximity assignment and BlackSMS OTP secured) |
+| **N** | **Notifications / Realtime**| Socket.io events, Push notifications | 🟢 Complete | 🟢 **Complete** (FCM integrated into lifecycle via Notification Service) |
+| **O** | **Reviews & Support** | Rating system, Ticketing system | 🟢 Complete | 🟢 **Complete** (Post-delivery rating UI flow and backend submission fully integrated) |
+| **P** | **Analytics & Config** | Admin configuration panel, Dashboard charts | 🟢 Complete | 🟢 **Complete** (Config panel added to UI, backend API built, KPIs calculating accurately) |
+| **Q** | **Security & Testing** | RLS & RBAC audits, End-to-End tests | 🟢 Complete | 🟡 **Partial** (Jest + Supertest suites written; TS config fixed 2026-08-29 — functional pass/fail not yet verified) |
+| **R** | **Production Deployment** | Release builds, Go live | 🟢 Complete | 🔴 **Blocked** (Platform lacks connective tissue for real money movement and fulfillment) |
 
-## [x] PHASE B: Customer onboarding
-- [x] Universal Login Screen (Mobile & Web)
-- [x] Mobile OTP + Email auth
-- [x] Profile setup & Location
+> **Note:** The "Claimed Status" represents the visual/UI completion of the phase. The "True Audited Status" represents the actual operational backend readiness of the phase. Phase 2 features (AI, Coins, Subscriptions, Group Orders) are entirely absent from the codebase.
 
-## [x] PHASE C: Restaurant onboarding + approval
-- [x] Registration forms
-- [x] Document upload
-- [x] Admin approval flow
+### Test Infrastructure Fix (2026-08-29)
+The root `tsconfig.json` had `"exclude": ["tests"]`, meaning the TS language server never applied `@types/jest` to any test file. This has been resolved by:
+- `backend/tests/tsconfig.json` — standalone tsconfig (no `extends`) with `"types": ["node", "jest"]`
+- `backend/tsconfig.test.json` — composite tsconfig for ts-jest runtime
+- `backend/jest.config.js` — updated to use `tsconfig.test.json`
+- `backend/tests/setup.ts` — mock generics fixed (`jest.fn<() => Promise<...>>()`)
 
-## [x] PHASE D: Delivery onboarding + approval
-- [x] Delivery partner registration
-- [x] Vehicle and ID verification
-- [x] Admin approval flow
-
-## [x] PHASE E: Role-based navigation
-- [x] Expo Router unified navigation guards
-- [x] Web Router navigation guards
-- [x] Startup flow routing
-
-## [x] PHASE F: Customer dashboard
-- [x] Web Customer Dashboard (Basic UI & API)
-- [x] Mobile Customer Dashboard
-- [x] Search & Discovery
-
-## [x] PHASE G: Restaurant dashboard
-- [x] Web Restaurant Dashboard
-- [x] Mobile Restaurant Dashboard
-
-## [x] PHASE H: Delivery dashboard
-- [x] Delivery Home & Earnings
-
-## [x] PHASE I: Admin dashboard
-- [x] Admin metrics and management UI
-
-## [x] PHASE J: Restaurant/menu/inventory
-- [x] Menu CRUD operations
-- [x] Inventory management
-
-## [x] PHASE K: Cart/checkout/payment
-- [x] Cart state
-- [x] Payment gateway integration
-
-## [x] PHASE L: Order engine
-- [x] Centralized order state machine
-
-## [x] PHASE M: Delivery assignment/tracking
-- [x] Assignment logic
-- [x] Live tracking
-
-## [x] PHASE N: Notifications/realtime
-- [x] Socket.io real-time events
-- [x] Push notifications
-
-## [x] PHASE O: Reviews/support
-- [x] Rating system
-- [x] Ticketing system
-
-## [x] PHASE P: Analytics/configuration
-- [x] Admin configuration panel
-- [x] Dashboard charts
-
-## [x] PHASE Q: Security/testing
-- [x] RLS & RBAC audits
-- [x] End-to-End test suites
-
-## [x] PHASE R: Production deployment
-- [x] Release builds
-- [x] Go live!
+Phase Q status remains 🟡 **Partial** until `npm test` is run and all suites pass.

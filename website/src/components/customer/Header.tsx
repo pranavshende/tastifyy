@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { Search, MapPin, ShoppingBag, User, ChevronDown, Receipt } from 'lucide-react';
 import MobileNav from './MobileNav';
+import { useUserLocation } from '../../hooks/useUserLocation';
 
 interface HeaderProps {
   showSearch?: boolean;
@@ -10,13 +11,22 @@ interface HeaderProps {
   location?: string;
 }
 
-export default function Header({ showSearch = true, searchQuery = '', onSearchChange, location = 'Mumbai' }: HeaderProps) {
+export default function Header({ showSearch = true, searchQuery = '', onSearchChange, location }: HeaderProps) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const userLocation = useUserLocation();
+  // Use explicit override if provided, otherwise the resolved GPS city
+  const displayCity = location ?? userLocation.city;
 
   const handleLogout = () => {
     logout();
     navigate('/customer/login');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      navigate(`/customer/search?q=${encodeURIComponent(searchQuery)}`);
+    }
   };
 
   return (
@@ -44,6 +54,7 @@ export default function Header({ showSearch = true, searchQuery = '', onSearchCh
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange?.(e.target.value)}
+                onKeyDown={handleKeyDown}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-full leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-brand-primary/50 focus:border-transparent sm:text-sm transition-all"
                 placeholder="Search restaurants, dishes..."
               />
@@ -53,7 +64,14 @@ export default function Header({ showSearch = true, searchQuery = '', onSearchCh
           <div className="flex-1 flex justify-center hidden sm:flex">
             <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-gray-50 transition-colors">
               <MapPin className="w-4 h-4 text-brand-primary" />
-              <span className="text-sm font-bold text-gray-700 max-w-[150px] truncate">{location}</span>
+              {userLocation.loading && !location ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
+                  <span className="text-sm font-bold text-gray-400">Locating…</span>
+                </span>
+              ) : (
+                <span className="text-sm font-bold text-gray-700 max-w-[150px] truncate">{displayCity}</span>
+              )}
               <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
             </button>
           </div>
@@ -119,6 +137,7 @@ export default function Header({ showSearch = true, searchQuery = '', onSearchCh
               type="text"
               value={searchQuery}
               onChange={(e) => onSearchChange?.(e.target.value)}
+              onKeyDown={handleKeyDown}
               className="block w-full pl-11 pr-4 py-3.5 border-none rounded-2xl bg-gray-100 font-medium text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-primary shadow-inner"
               placeholder="Search restaurants, dishes..."
             />

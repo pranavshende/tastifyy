@@ -1,5 +1,18 @@
 # Memory / Changelog
 
+## 2026-08-29 — Entry 19
+- **What changed**: Fixed TypeScript configuration for the test suite and resolved frontend build errors.
+- **Why**: The IDE was reporting `describe`, `it`, `expect`, `beforeAll`, `afterEach` as unknown names across all phase test files. The root `tsconfig.json` excluded the `tests/` directory, so `@types/jest` globals were never applied by the language server. Separately, two unused imports were breaking the production website build.
+- **Details**:
+  - Created `backend/tests/tsconfig.json` as a fully standalone (non-extending) tsconfig with `"types": ["node", "jest"]` and `"include": ["./**/*", "../src/**/*"]`. The TS language server resolves the nearest tsconfig first, so this guarantees every test file gets Jest types without relying on project references.
+  - Created `backend/tsconfig.test.json` (extends root, adds `"composite": true`) and added `"references": [{ "path": "./tsconfig.test.json" }]` to `backend/tsconfig.json` so ts-jest uses the correct config at runtime.
+  - Updated `backend/jest.config.js` to point ts-jest at `tsconfig.test.json` via `tsconfig: './tsconfig.test.json'`.
+  - Fixed `backend/tests/setup.ts`: `jest.fn().mockResolvedValue(...)` was typed as `never` because no generic was provided. Changed to `jest.fn<() => Promise<...>>()` so `mockResolvedValue` resolves to the correct type.
+  - Removed unused `Settings` import from `website/src/pages/admin/Dashboard.tsx`.
+  - Removed unused `useCartStore` import from `website/src/pages/customer/Search.tsx`. Both were causing `tsc -b` to fail with TS6133 errors, blocking the production build.
+- **Files touched**: `backend/tsconfig.json`, `backend/tsconfig.test.json` (new), `backend/tests/tsconfig.json` (new), `backend/jest.config.js`, `backend/tests/setup.ts`, `website/src/pages/admin/Dashboard.tsx`, `website/src/pages/customer/Search.tsx`
+
+---
 ## 2026-08-16 — Entry 18
 - **What changed**: Built the Web Customer Portal Dashboard.
 - **Why**: The user explicitly requested to start building the customer portal dashboard.

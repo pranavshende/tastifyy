@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { prisma } from '../utils/prisma.js';
 import Razorpay from 'razorpay';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHmac } from 'crypto';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
@@ -61,5 +61,89 @@ export const triggerPayout = async (req: Request, res: Response): Promise<void> 
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, error: 'Failed to trigger payout' });
+  }
+};
+
+export const handleRazorpayWebhook = async (req: Request, res: Response): Promise<void> => {
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET || 'rzp_webhook_secret_mock';
+  const signature = req.headers['x-razorpay-signature'] as string;
+  
+  if (!signature) {
+    res.status(400).send('Missing signature');
+    return;
+  }
+
+  try {
+    // Verify signature using the raw Buffer body
+    const expected = createHmac('sha256', secret).update(req.body).digest('hex');
+
+    if (expected !== signature) {
+      res.status(400).send('Invalid signature');
+      return;
+    }
+
+    const payload = JSON.parse(req.body.toString());
+    const event = payload.event;
+    
+    const paymentEntity = payload.payload?.payment?.entity;
+    if (!paymentEntity) {
+      res.status(400).send('Invalid payload structure');
+      return;
+    }
+
+    const razorpay_order_id = paymentEntity.order_id;
+    const razorpay_payment_id = paymentEntity.id;
+
+    if (!razorpay_order_id) {
+       res.status(200).send('OK');
+       return;
+    }
+
+    const order = await prisma.order.findFirst({
+      where: { razorpay_order_id }
+    });
+
+    if (!order) {
+      res.status(404).send('Order not found');
+      return;
+    }
+
+    if (event === 'payment.captured' || event === 'order.paid') {
+      if (order.payment_status !== 'success') {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { 
+            payment_status: 'success', 
+            razorpay_payment_id,
+            status: 'restaurant_confirmed'
+          }
+        });
+
+        // Use dynamic import for socket to avoid circular deps or missing imports
+        const { getIO } = await import('../socket.js');
+        const io = getIO();
+        io.to(`restaurant_${order.restaurant_id}`).emit('order:status_update', {
+          orderId: order.id,
+          status: 'restaurant_confirmed',
+          payment_status: 'success'
+        });
+      }
+    } else if (event === 'payment.failed') {
+      if (order.payment_status !== 'success') {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { 
+            payment_status: 'failed', 
+            status: 'cancelled',
+            cancellation_reason: 'Payment failed'
+          }
+        });
+      }
+    }
+    
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('Webhook Error:', error);
+    res.status(500).send('Internal Server Error');
   }
 };
