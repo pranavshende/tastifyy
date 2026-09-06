@@ -1,16 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCartStore } from '../../store/cartStore';
 import api from '../../api/axios';
 import Header from '../../components/customer/Header';
-import { CreditCard, Banknote, MapPin, Receipt, CheckCircle, Tag, Wallet, Landmark } from 'lucide-react';
+import { CreditCard, Banknote, MapPin, Receipt, CheckCircle, Tag, Wallet, Landmark, Plus, Check } from 'lucide-react';
 
 export default function Checkout() {
   const navigate = useNavigate();
   const cart = useCartStore();
   
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
   
   // Checkout State
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'card' | 'upi' | 'net_banking' | 'wallet'>('cod');
@@ -21,6 +21,40 @@ export default function Checkout() {
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
 
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    fetchAddresses();
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const res = await api.get('/customer/profile');
+      setProfile(res.data.data);
+    } catch (err) {
+      console.error('Failed to load profile', err);
+    }
+  };
+
+  const fetchAddresses = async () => {
+    try {
+      const res = await api.get('/customer/addresses');
+      const data = res.data.data;
+      setAddresses(data);
+      if (data.length > 0) {
+        const defaultAddr = data.find((a: any) => a.is_default) || data[0];
+        setSelectedAddressId(defaultAddr.id);
+      }
+    } catch (err) {
+      console.error('Failed to load addresses', err);
+    }
+  };
+
   const totals = cart.getTotals();
   const grandTotal = Math.max(0, totals.totalAmount - (appliedCoupon?.discountAmount || 0));
 
@@ -28,10 +62,6 @@ export default function Checkout() {
     if (!couponCode) return;
     setCouponError('');
     try {
-      // In a real scenario, there'd be a /validate-coupon endpoint. 
-      // For MVP, we pass it to the order creation and it validates there, 
-      // but to show it on UI first, let's mock validation here.
-      // We will pretend COUPON50 gives 50 rs off, and WELCOME gives 10%.
       if (couponCode.toUpperCase() === 'COUPON50') {
         setAppliedCoupon({ code: 'COUPON50', discountAmount: 50 });
       } else if (couponCode.toUpperCase() === 'WELCOME') {
@@ -50,11 +80,18 @@ export default function Checkout() {
       return;
     }
     setLoading(true);
-    setError('');
+    setError(null);
+      
+    if (!selectedAddressId) {
+      setError('Please select a delivery address.');
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data } = await api.post('/orders', {
         restaurant_id: cart.restaurantId,
+        delivery_address_id: selectedAddressId,
         items: cart.items.map(i => ({
           menu_item_id: i.menu_item_id,
           name: i.name,
@@ -68,14 +105,17 @@ export default function Checkout() {
 
       if (data.success) {
         if (data.data.razorpay_order_id) {
+          // Real Razorpay flow
           const options = {
-            key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_mock',
+            key: import.meta.env.VITE_RAZORPAY_KEY_ID,
             amount: data.data.total_amount * 100,
             currency: 'INR',
             name: 'Tastifyy',
             description: 'Food Order',
             order_id: data.data.razorpay_order_id,
             prefill: {
+              contact: profile?.phone || '',
+              email: profile?.email || '',
               method: paymentMethod === 'upi' ? 'upi' : undefined
             },
             handler: async function (response: any) {
@@ -199,14 +239,31 @@ export default function Checkout() {
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
                     <h2 className="text-xl font-bold text-gray-900">Delivery Address</h2>
-                    <button className="text-sm font-bold text-brand-primary hover:underline">Change</button>
+                    {addresses.length > 0 && (
+                      <button onClick={() => setShowAddressModal(true)} className="text-sm font-bold text-brand-primary hover:underline">Change</button>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md uppercase">Home</span>
-                  </div>
-                  <p className="text-gray-600 font-medium leading-relaxed">
-                    123 Tastifyy Street, Food Valley, Mumbai, Maharashtra 400001
-                  </p>
+                  {addresses.length > 0 && selectedAddressId ? (() => {
+                    const addr = addresses.find(a => a.id === selectedAddressId);
+                    if (!addr) return null;
+                    return (
+                      <>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md uppercase">{addr.label}</span>
+                        </div>
+                        <p className="text-gray-600 font-medium leading-relaxed">
+                          {addr.address_line}, {addr.city}, {addr.state} - {addr.pincode}
+                        </p>
+                      </>
+                    );
+                  })() : (
+                    <div className="mt-3">
+                      <p className="text-red-500 font-medium text-sm mb-3">No delivery address found.</p>
+                      <Link to="/customer/profile" className="inline-flex items-center gap-2 text-sm font-bold text-white bg-gray-900 px-4 py-2 rounded-lg hover:bg-black transition-colors">
+                        <Plus className="w-4 h-4" /> Add Address
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -384,6 +441,43 @@ export default function Checkout() {
           </button>
         </div>
       </div>
+
+      {/* Address Selection Modal */}
+      {showAddressModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-gray-900">Select Delivery Address</h3>
+              <button onClick={() => setShowAddressModal(false)} className="text-gray-400 hover:text-gray-600 font-bold text-xl leading-none">&times;</button>
+            </div>
+            <div className="p-4 max-h-[60vh] overflow-y-auto bg-gray-50/50 space-y-3">
+              {addresses.map((address) => (
+                <div 
+                  key={address.id} 
+                  onClick={() => { setSelectedAddressId(address.id); setShowAddressModal(false); }}
+                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${selectedAddressId === address.id ? 'border-brand-primary bg-orange-50/30' : 'border-gray-100 bg-white hover:border-brand-primary/30'}`}
+                >
+                  <div className="flex justify-between items-start mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded uppercase text-[10px] tracking-wider">{address.label}</span>
+                      {address.is_default && <span className="text-[10px] font-bold text-white bg-green-500 px-2 py-0.5 rounded uppercase tracking-wider">Default</span>}
+                    </div>
+                    {selectedAddressId === address.id && <Check className="w-5 h-5 text-brand-primary" />}
+                  </div>
+                  <p className="text-gray-600 font-medium text-sm leading-relaxed mt-2 pr-4">
+                    {address.address_line}, {address.city}, {address.state} - {address.pincode}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div className="p-4 border-t border-gray-100 bg-white">
+              <Link to="/customer/profile" className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-brand-primary border-2 border-brand-primary/20 hover:bg-orange-50 transition-colors">
+                <Plus className="w-5 h-5" /> Add New Address
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

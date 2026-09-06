@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
-// Removed unused import
 
 export default function RestaurantOnboarding() {
 
@@ -21,6 +20,11 @@ export default function RestaurantOnboarding() {
     avg_preparation_time_mins: 30,
     is_pure_veg: false,
     description: '',
+    // Payment Setup Fields
+    pan_number: '',
+    bank_account_number: '',
+    ifsc_code: '',
+    bank_beneficiary_name: '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -34,7 +38,6 @@ export default function RestaurantOnboarding() {
     setError('');
 
     try {
-      // Save progress
       await api.post('/onboarding/restaurant', { ...formData, onboarding_step: step + 1 });
       setStep(step + 1);
     } catch (err: any) {
@@ -50,12 +53,30 @@ export default function RestaurantOnboarding() {
     setError('');
 
     try {
-      // Final save and submit
+      // 1. Submit final base form
       await api.post('/onboarding/restaurant', { ...formData, onboarding_step: 'complete' });
       await api.post('/onboarding/restaurant/submit');
+
+      // 2. Perform 3-step Route Onboarding
+      // Step A: Linked Account
+      await api.post('/payments/linked-account', {
+        pan_number: formData.pan_number,
+        business_name: formData.name
+      });
+      // Step B: Stakeholder
+      await api.post('/payments/stakeholder', {
+        pan_number: formData.pan_number
+      });
+      // Step C: Product Config
+      await api.post('/payments/product-config', {
+        account_number: formData.bank_account_number,
+        ifsc_code: formData.ifsc_code,
+        beneficiary_name: formData.bank_beneficiary_name
+      });
+
       navigate('/onboarding/status');
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Failed to submit application');
+      setError(err.response?.data?.error || err.response?.data?.error?.message || 'Failed to submit application');
     } finally {
       setLoading(false);
     }
@@ -67,7 +88,7 @@ export default function RestaurantOnboarding() {
         <div className="flex justify-between items-center mb-8 border-b border-gray-100 pb-6">
           <div>
             <h1 className="text-3xl font-black text-brand-dark mb-2">Restaurant Partner Onboarding</h1>
-            <p className="text-gray-500">Step {step} of 2</p>
+            <p className="text-gray-500">Step {step} of 3</p>
           </div>
           <div className="w-16 h-16 bg-brand-primary/10 rounded-full flex items-center justify-center">
             <span className="text-2xl">🏪</span>
@@ -76,7 +97,7 @@ export default function RestaurantOnboarding() {
 
         {error && <div className="bg-red-50 text-red-500 p-4 rounded-xl mb-6">{error}</div>}
 
-        {step === 1 ? (
+        {step === 1 && (
           <form onSubmit={handleNext} className="space-y-6">
             <h3 className="text-xl font-bold text-gray-800">Basic Information</h3>
             
@@ -142,8 +163,10 @@ export default function RestaurantOnboarding() {
               {loading ? 'Saving...' : 'Next Step →'}
             </button>
           </form>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
+        )}
+
+        {step === 2 && (
+          <form onSubmit={handleNext} className="space-y-6">
             <h3 className="text-xl font-bold text-gray-800">Location & Operations</h3>
 
             <div>
@@ -233,7 +256,86 @@ export default function RestaurantOnboarding() {
                 disabled={loading}
                 className="w-2/3 bg-brand-primary text-white font-bold py-4 rounded-xl shadow-lg hover:-translate-y-1 transition-all disabled:opacity-50"
               >
-                {loading ? 'Submitting...' : 'Submit Application'}
+                {loading ? 'Saving...' : 'Next Step →'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {step === 3 && (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <h3 className="text-xl font-bold text-gray-800">Payment Setup</h3>
+            <p className="text-gray-500 text-sm mb-4">Provide your PAN and bank details to receive payouts. This creates your verified merchant account.</p>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Business PAN Number</label>
+              <input
+                type="text"
+                name="pan_number"
+                required
+                value={formData.pan_number}
+                onChange={handleChange}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-primary outline-none transition-all uppercase"
+                placeholder="ABCDE1234F"
+                maxLength={10}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Bank Beneficiary Name</label>
+              <input
+                type="text"
+                name="bank_beneficiary_name"
+                required
+                value={formData.bank_beneficiary_name}
+                onChange={handleChange}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-primary outline-none transition-all"
+                placeholder="As per bank records"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Bank Account Number</label>
+                <input
+                  type="text"
+                  name="bank_account_number"
+                  required
+                  value={formData.bank_account_number}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-primary outline-none transition-all"
+                  placeholder="Account Number"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">IFSC Code</label>
+                <input
+                  type="text"
+                  name="ifsc_code"
+                  required
+                  value={formData.ifsc_code}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-primary outline-none transition-all uppercase"
+                  placeholder="e.g. HDFC0001234"
+                  maxLength={11}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-4 pt-4">
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="w-1/3 bg-gray-100 text-gray-700 font-bold py-4 rounded-xl hover:bg-gray-200 transition-all"
+              >
+                ← Back
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-2/3 bg-brand-primary text-white font-bold py-4 rounded-xl shadow-lg hover:-translate-y-1 transition-all disabled:opacity-50"
+              >
+                {loading ? 'Submitting...' : 'Complete Setup'}
               </button>
             </div>
           </form>

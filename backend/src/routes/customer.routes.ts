@@ -107,6 +107,105 @@ router.delete('/profile/photo', async (req: Request, res: Response) => {
   }
 });
 
+// ─── ADDRESS ROUTES ───────────────────────────────────────────────────────────
+
+router.get('/addresses', async (req: Request, res: Response) => {
+  try {
+    const user_id = (req.user as any).id;
+    const addresses = await prisma.address.findMany({
+      where: { user_id, is_deleted: false },
+      orderBy: [
+        { is_default: 'desc' },
+        { created_at: 'desc' }
+      ]
+    });
+    res.json({ success: true, data: addresses });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch addresses' } });
+  }
+});
+
+router.post('/addresses', async (req: Request, res: Response) => {
+  const { label, address_line, city, state, pincode, is_default, latitude, longitude } = req.body;
+  
+  if (!address_line || !city || !state || !pincode) {
+    res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Missing required address fields' } });
+    return;
+  }
+  
+  try {
+    const user_id = (req.user as any).id;
+    
+    // If setting as default, unset others
+    if (is_default) {
+      await prisma.address.updateMany({
+        where: { user_id },
+        data: { is_default: false }
+      });
+    }
+    
+    // If it's the first address, make it default automatically
+    const count = await prisma.address.count({ where: { user_id } });
+    const shouldBeDefault = is_default || count === 0;
+
+    const address = await prisma.address.create({
+      data: {
+        user_id,
+        label: (label ? label.toLowerCase() : 'home') as any,
+        address_line,
+        city,
+        state,
+        pincode,
+        latitude: latitude ? Number(latitude) : 0,
+        longitude: longitude ? Number(longitude) : 0,
+        is_default: shouldBeDefault
+      }
+    });
+    
+    res.status(201).json({ success: true, data: address });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to create address' } });
+  }
+});
+
+router.delete('/addresses/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const user_id = (req.user as any).id;
+  
+  try {
+    const address = await prisma.address.findFirst({
+      where: { id: id as string, user_id, is_deleted: false }
+    });
+    
+    if (!address) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Address not found' } });
+      return;
+    }
+    
+    await prisma.address.update({
+      where: { id: id as string },
+      data: { is_deleted: true }
+    });
+    
+    // If we deleted the default, set another one as default if it exists
+    if (address.is_default) {
+      const nextAddress = await prisma.address.findFirst({
+        where: { user_id, is_deleted: false }
+      });
+      if (nextAddress) {
+        await prisma.address.update({
+          where: { id: nextAddress.id },
+          data: { is_default: true }
+        });
+      }
+    }
+    
+    res.json({ success: true, message: 'Address deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to delete address' } });
+  }
+});
+
 // ─── RESTAURANT & MENU ROUTES ───────────────────────────────────────────────
 
 // GET /api/customer/restaurants

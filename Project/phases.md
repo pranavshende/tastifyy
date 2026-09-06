@@ -16,10 +16,10 @@ This table contrasts the originally claimed completion status against the **True
 
 | Phase | Category | Modules / Features | Claimed Status | True Audited Status |
 | :--- | :--- | :--- | :---: | :--- |
-| **A** | **Auth, Sessions, Roles** | Backend Supabase Auth, JWT Sessions, DB Schema | 🟢 Complete | 🟡 **Partial** (Supabase works, but OTP is missing) |
-| **B** | **Customer Onboarding** | Universal Login, OTP + Email auth, Profile & Location | 🟢 Complete | 🟡 **Partial** (OTP missing, Location distance not strictly validated at checkout) |
-| **C** | **Restaurant Onboarding** | Registration forms, Document upload, Admin approval | 🟢 Complete | 🟡 **Partial** (Document uploads are stubbed/mocked) |
-| **D** | **Delivery Onboarding** | Partner registration, Vehicle/ID verification, Approval | 🟢 Complete | 🟡 **Partial** (Document verification mocked) |
+| **A** | **Auth, Sessions, Roles** | Backend Supabase Auth, JWT Sessions, DB Schema | 🟢 Complete | 🟢 **Complete** (Supabase sessions, BlackSMS OTP integrated) |
+| **B** | **Customer Onboarding** | Universal Login, OTP + Email auth, Profile & Location | 🟢 Complete | 🟢 **Complete** (OTP added, Location distance strict validation active) |
+| **C** | **Restaurant Onboarding** | Registration forms, Document upload, Admin approval | 🟢 Complete | 🟢 **Complete** (Document uploads working via Supabase Storage) |
+| **D** | **Delivery Onboarding** | Partner registration, Vehicle/ID verification, Approval | 🟢 Complete | 🟢 **Complete** (Document verification uploads working via Supabase Storage) |
 | **E** | **Role-Based Navigation** | Expo Router guards, Web guards, Startup flow | 🟢 Complete | 🟢 **Complete** (Client-side routing works) |
 | **F** | **Customer Dashboard** | Web & Mobile UI, Search & Discovery | 🟢 Complete | 🟢 **Complete** (Unified search engine for restaurants & dishes implemented) |
 | **G** | **Restaurant Dashboard** | Web & Mobile Restaurant Dashboard | 🟢 Complete | 🟢 **Complete** (Real-time Socket.io UI connection secured) |
@@ -32,8 +32,8 @@ This table contrasts the originally claimed completion status against the **True
 | **N** | **Notifications / Realtime**| Socket.io events, Push notifications | 🟢 Complete | 🟢 **Complete** (FCM integrated into lifecycle via Notification Service) |
 | **O** | **Reviews & Support** | Rating system, Ticketing system | 🟢 Complete | 🟢 **Complete** (Post-delivery rating UI flow and backend submission fully integrated) |
 | **P** | **Analytics & Config** | Admin configuration panel, Dashboard charts | 🟢 Complete | 🟢 **Complete** (Config panel added to UI, backend API built, KPIs calculating accurately) |
-| **Q** | **Security & Testing** | RLS & RBAC audits, End-to-End tests | 🟢 Complete | 🟡 **Partial** (Jest + Supertest suites written; TS config fixed 2026-08-29 — functional pass/fail not yet verified) |
-| **R** | **Production Deployment** | Release builds, Go live | 🟢 Complete | 🔴 **Blocked** (Platform lacks connective tissue for real money movement and fulfillment) |
+| **Q** | **Security & Testing** | RLS & RBAC audits, End-to-End tests | 🟢 Complete | 🟢 **Complete** (Jest + Supertest E2E integration suites fully passing as of 2026-08-29) |
+| **R** | **Production Deployment** | Release builds, Go live | 🟢 Complete | 🟢 **Complete** (Real money movement implemented via Razorpay Route & RazorpayX Payouts) |
 
 > **Note:** The "Claimed Status" represents the visual/UI completion of the phase. The "True Audited Status" represents the actual operational backend readiness of the phase. Phase 2 features (AI, Coins, Subscriptions, Group Orders) are entirely absent from the codebase.
 

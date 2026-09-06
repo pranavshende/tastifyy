@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { ImageUploadButton } from '../../components/ui/ImageUploadButton';
 
-type Tab = 'overview' | 'restaurants' | 'orders' | 'delivery' | 'users' | 'support' | 'audit' | 'config' | 'profile';
+type Tab = 'overview' | 'restaurants' | 'orders' | 'delivery' | 'users' | 'payouts' | 'support' | 'audit' | 'config' | 'profile';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -24,6 +24,7 @@ export default function AdminDashboard() {
           {activeTab === 'restaurants' && <RestaurantsTab />}
           {activeTab === 'delivery' && <DeliveryTab />}
           {activeTab === 'users' && <UsersTab />}
+          {activeTab === 'payouts' && <PayoutsTab />}
           {activeTab === 'support' && <SupportTab />}
           {activeTab === 'audit' && <AuditTab />}
           {activeTab === 'config' && <ConfigTab />}
@@ -1083,6 +1084,124 @@ function ConfigTab() {
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+// ─── PAYOUTS TAB ─────────────────────────────────────────────────────────────
+function PayoutsTab() {
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [statusFilter, setStatusFilter] = useState('pending');
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const fetchPayouts = () => {
+    api.get(`/admin/payouts?status=${statusFilter === 'all' ? '' : statusFilter}`).then((res) => {
+      setAssignments(res.data.data);
+    });
+  };
+
+  useEffect(() => {
+    fetchPayouts();
+    // eslint-disable-next-line
+  }, [statusFilter]);
+
+  const handlePay = async (assignmentId: string) => {
+    if (!window.confirm('Are you sure you want to trigger payout for this assignment?')) return;
+    setProcessingId(assignmentId);
+    try {
+      await api.post('/payment/payout', { assignment_id: assignmentId });
+      alert('Payout triggered successfully');
+      fetchPayouts();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to trigger payout');
+      fetchPayouts(); // refresh state in case of duplicate click
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  return (
+    <div className="animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-gray-900">Partner Payouts</h2>
+          <p className="text-gray-500 font-medium mt-1">Manage and disburse delivery partner earnings</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-1 inline-flex shadow-sm">
+          {['pending', 'processing', 'success', 'failed', 'all'].map(status => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`px-4 py-2 rounded-lg text-sm font-bold capitalize transition-colors ${
+                statusFilter === status 
+                  ? 'bg-brand-dark text-white shadow-sm' 
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50/50 text-gray-500 text-xs font-black uppercase tracking-wider border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-4">Delivery Partner</th>
+                <th className="px-6 py-4">Order & Time</th>
+                <th className="px-6 py-4">Earnings</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {assignments.map((a) => (
+                <tr key={a.id} className="hover:bg-gray-50/50 transition-colors group">
+                  <td className="px-6 py-4">
+                    <p className="font-black text-gray-900 text-base">{a.partner?.name || 'Unknown'}</p>
+                    <p className="text-sm font-medium text-gray-500 mt-0.5">{a.partner?.phone}</p>
+                  </td>
+                  <td className="px-6 py-4 text-gray-700">
+                    <p className="font-bold text-gray-900">#{a.order?.id?.split('-')[0].toUpperCase()}</p>
+                    <p className="text-sm font-medium text-gray-500">{new Date(a.created_at).toLocaleString()}</p>
+                  </td>
+                  <td className="px-6 py-4 text-gray-700">
+                    <p className="font-black text-gray-900 text-lg">₹{a.earning_amount}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider ${
+                      a.payout_status === 'success' ? 'bg-green-50 text-green-700 border border-green-200' :
+                      a.payout_status === 'processing' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                      a.payout_status === 'failed' ? 'bg-red-50 text-red-700 border border-red-200' :
+                      'bg-orange-50 text-orange-700 border border-orange-200'
+                    }`}>
+                      {a.payout_status || 'unpaid'}
+                    </span>
+                    {a.payout_reference_id && <p className="text-xs text-gray-400 mt-1">{a.payout_reference_id}</p>}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    {(a.payout_status === 'pending' || a.payout_status === 'failed' || !a.payout_status) && (
+                      <button 
+                        onClick={() => handlePay(a.id)}
+                        disabled={processingId === a.id}
+                        className="bg-brand-primary text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-brand-secondary shadow-sm shadow-brand-primary/20 disabled:opacity-50 flex items-center justify-center gap-2 ml-auto"
+                      >
+                        {processingId === a.id ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        Pay Partner
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {assignments.length === 0 && (
+                <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No payout records found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

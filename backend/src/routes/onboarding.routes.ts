@@ -2,8 +2,16 @@ import { Router } from 'express';
 import { authenticate } from '../middlewares/auth.js';
 import { prisma } from '../utils/prisma.js';
 import type { Request, Response } from 'express';
+import multer from 'multer';
+import { uploadFile } from '../utils/storage.js';
 
 const router = Router();
+
+// Configure Multer for in-memory storage (5MB limit)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
 
 // All onboarding routes require authentication
 router.use(authenticate);
@@ -236,6 +244,106 @@ router.get('/delivery/status', async (req: Request, res: Response) => {
     res.json({ success: true, data: partner });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch status' } });
+  }
+});
+
+// POST /onboarding/restaurant/documents — upload documents
+router.post('/restaurant/documents', upload.fields([
+  { name: 'fssai_certificate', maxCount: 1 },
+  { name: 'pan_card', maxCount: 1 },
+  { name: 'cover_image', maxCount: 1 },
+  { name: 'logo', maxCount: 1 }
+]), async (req: Request, res: Response) => {
+  const user = req.user as any;
+  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+
+  try {
+    const partner = await prisma.restaurantPartner.findFirst({ where: { phone: user.phone } });
+    if (!partner) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Restaurant onboarding not started' } });
+      return;
+    }
+
+    const updates: any = {};
+    const timestamp = Date.now();
+
+    for (const field of ['fssai_certificate', 'pan_card', 'cover_image', 'logo']) {
+      if (files && files[field] && files[field]!.length > 0) {
+        const file = files[field]![0];
+        if (file) {
+          const ext = file.originalname.split('.').pop() || 'jpg';
+          const filename = `restaurants/${partner.restaurant_id}/${field}_${timestamp}.${ext}`;
+          
+          const url = await uploadFile(file.buffer, 'documents', filename, file.mimetype);
+          
+          if (field === 'cover_image') updates.cover_image_url = url;
+          else if (field === 'logo') updates.logo_url = url;
+          else if (field === 'fssai_certificate') updates.fssai_license_url = url;
+          else if (field === 'pan_card') updates.pan_card_url = url;
+        }
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await prisma.restaurant.update({
+        where: { id: partner.restaurant_id },
+        data: updates
+      });
+    }
+
+    res.json({ success: true, message: 'Documents uploaded successfully', urls: updates });
+  } catch (error: any) {
+    console.error('Restaurant document upload error:', error);
+    res.status(500).json({ success: false, error: { code: 'UPLOAD_FAILED', message: 'Failed to upload documents', details: error.message } });
+  }
+});
+
+// POST /onboarding/delivery/documents
+router.post('/delivery/documents', upload.fields([
+  { name: 'id_proof', maxCount: 1 },
+  { name: 'driving_license', maxCount: 1 },
+  { name: 'vehicle_rc', maxCount: 1 }
+]), async (req: Request, res: Response) => {
+  const user = req.user as any;
+  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+
+  try {
+    const partner = await prisma.deliveryPartner.findFirst({ where: { user_id: user.id } });
+    if (!partner) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Delivery onboarding not started' } });
+      return;
+    }
+
+    const updates: any = {};
+    const timestamp = Date.now();
+
+    for (const field of ['id_proof', 'driving_license', 'vehicle_rc']) {
+      if (files && files[field] && files[field]!.length > 0) {
+        const file = files[field]![0];
+        if (file) {
+          const ext = file.originalname.split('.').pop() || 'jpg';
+          const filename = `delivery/${partner.id}/${field}_${timestamp}.${ext}`;
+          
+          const url = await uploadFile(file.buffer, 'documents', filename, file.mimetype);
+          
+          if (field === 'id_proof') updates.id_proof_url = url;
+          else if (field === 'driving_license') updates.driving_license_url = url;
+          else if (field === 'vehicle_rc') updates.vehicle_rc_url = url;
+        }
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await prisma.deliveryPartner.update({
+        where: { id: partner.id },
+        data: updates
+      });
+    }
+
+    res.json({ success: true, message: 'Documents uploaded successfully', urls: updates });
+  } catch (error: any) {
+    console.error('Delivery document upload error:', error);
+    res.status(500).json({ success: false, error: { code: 'UPLOAD_FAILED', message: 'Failed to upload documents', details: error.message } });
   }
 });
 

@@ -18,6 +18,7 @@
 | `role` | ENUM | NOT NULL | `customer`, `admin`, `delivery_partner`, `restaurant_partner` |
 | `profile_photo_url` | TEXT | NULLABLE | |
 | `dob` | DATE | NULLABLE | For birthday offers (Phase 2) |
+| `fcm_token` | VARCHAR(500) | NULLABLE | For push notifications |
 | `is_active` | BOOLEAN | DEFAULT true | |
 | `created_at` | TIMESTAMPTZ | DEFAULT now() | |
 | `updated_at` | TIMESTAMPTZ | DEFAULT now() | |
@@ -237,6 +238,7 @@
 | `special_instructions` | TEXT | NULLABLE | |
 | `cancelled_by` | ENUM | NULLABLE | `customer`, `restaurant`, `admin` |
 | `cancellation_reason` | TEXT | NULLABLE | |
+| `delivery_otp` | VARCHAR(4) | NULLABLE | |
 | `created_at` | TIMESTAMPTZ | DEFAULT now() | |
 | `updated_at` | TIMESTAMPTZ | DEFAULT now() | |
 
@@ -359,6 +361,23 @@
 | `target_id` | UUID | NULLABLE | |
 | `details` | JSONB | NULLABLE | Before/after values |
 | `created_at` | TIMESTAMPTZ | DEFAULT now() | |
+
+---
+
+### `delivery_assignments`
+| Column | Type | Constraints | Notes |
+| :--- | :--- | :--- | :--- |
+| `id` | UUID | PK | |
+| `order_id` | UUID | FK → orders.id, UNIQUE | |
+| `partner_id` | UUID | FK → delivery_partners.id | |
+| `status` | VARCHAR(50) | NOT NULL | `accepted`, `picked_up`, `delivered`, `rejected` |
+| `earning_amount` | DECIMAL(10,2) | NULLABLE | |
+| `pickup_distance_km` | DECIMAL(6,2) | NULLABLE | |
+| `delivery_distance_km` | DECIMAL(6,2) | NULLABLE | |
+| `payout_status` | ENUM | NULLABLE | `pending`, `processing`, `success`, `failed`, `refunded` |
+| `payout_reference_id` | TEXT | NULLABLE | |
+| `assigned_at` | TIMESTAMPTZ | DEFAULT now() | |
+| `updated_at` | TIMESTAMPTZ | DEFAULT now() | |
 
 ---
 

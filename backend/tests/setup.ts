@@ -20,6 +20,16 @@ jest.unstable_mockModule('../src/utils/supabase.js', () => ({
             session: { access_token: 'fake-token' } 
           }, 
           error: null 
+        }),
+      getUser: jest.fn<() => Promise<{ data: { user: { id: string } | null }; error: null }>>()
+        .mockImplementation(async (token?: string) => {
+          if (token === 'fake-admin-token') {
+            return { data: { user: { id: 'admin-user-id' } }, error: null };
+          }
+          if (token === 'fake-delivery-token') {
+            return { data: { user: { id: 'delivery-user-id' } }, error: null };
+          }
+          return { data: { user: null }, error: { message: 'Invalid token' } as any };
         })
     }
   }

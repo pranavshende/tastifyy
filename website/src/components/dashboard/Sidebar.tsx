@@ -44,6 +44,7 @@ export default function Sidebar({ role, activeTab, onTabChange, title, items, ba
           { name: 'Orders', id: 'orders', path: '#', icon: <UtensilsCrossed className="w-5 h-5" /> },
           { name: 'Delivery Fleet', id: 'delivery', path: '#', icon: <Bike className="w-5 h-5" /> },
           { name: 'Platform Users', id: 'users', path: '#', icon: <Users className="w-5 h-5" /> },
+          { name: 'Payouts', id: 'payouts', path: '#', icon: <UtensilsCrossed className="w-5 h-5" /> },
           { name: 'Support', id: 'support', path: '#', icon: <LifeBuoy className="w-5 h-5" /> },
           { name: 'Audit Logs', id: 'audit', path: '#', icon: <Shield className="w-5 h-5" /> },
           { name: 'Config', id: 'config', path: '#', icon: <Settings className="w-5 h-5" /> },

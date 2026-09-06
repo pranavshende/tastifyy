@@ -6,6 +6,7 @@ import RestaurantCard from '../components/customer/RestaurantCard';
 import MobileBottomNav from '../components/customer/MobileBottomNav';
 import LoadingSkeleton from '../components/ui/LoadingSkeleton';
 import { useAuthStore } from '../store/authStore';
+import { useUserLocation } from '../hooks/useUserLocation';
 
 interface Restaurant {
   id: string;
@@ -27,6 +28,7 @@ export default function Landing() {
   const [searchQuery, setSearchQuery] = useState('');
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const userLocation = useUserLocation();
 
   useEffect(() => {
     const fetchRestaurants = async () => {
@@ -78,8 +80,9 @@ export default function Landing() {
 
             <div className="hidden md:flex items-center gap-2 text-sm text-gray-600 hover:text-brand-primary transition-colors cursor-pointer group">
               <MapPin className="w-4 h-4 text-brand-primary group-hover:animate-bounce" />
-              <span className="font-bold border-b border-dashed border-gray-300">Mumbai</span>
-              <span className="text-gray-400">Maharashtra</span>
+              <span className="font-bold border-b border-dashed border-gray-300">
+                {userLocation.loading ? 'Locating...' : userLocation.city}
+              </span>
             </div>
           </div>
 

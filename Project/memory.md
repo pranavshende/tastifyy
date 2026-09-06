@@ -1,5 +1,15 @@
 # Memory / Changelog
 
+## 2026-09-05 — Entry 20
+- **What changed**: Synced `database.md` with the latest `schema.prisma`.
+- **Why**: To maintain the single source of truth for database schemas and keep documentation up to date with recent Prisma changes.
+- **Details**:
+  - Added `fcm_token` to `users` table.
+  - Added `delivery_otp` to `orders` table.
+  - Added `delivery_assignments` table to document order assignments, earnings, and payout status.
+- **Files touched**: `Project/database.md`
+
+---
 ## 2026-08-29 — Entry 19
 - **What changed**: Fixed TypeScript configuration for the test suite and resolved frontend build errors.
 - **Why**: The IDE was reporting `describe`, `it`, `expect`, `beforeAll`, `afterEach` as unknown names across all phase test files. The root `tsconfig.json` excluded the `tests/` directory, so `@types/jest` globals were never applied by the language server. Separately, two unused imports were breaking the production website build.

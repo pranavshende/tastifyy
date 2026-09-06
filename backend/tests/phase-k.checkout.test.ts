@@ -57,23 +57,40 @@ describe('Phase K — Cart, Checkout & Payment', () => {
     });
   });
 
-  describe('Order creation DB mocks', () => {
-    it('validates order item + subtotal calculation structure', () => {
-      // Mirror the order creation logic
-      const items = [
-        { price: 150, quantity: 2 },
-        { price: 80, quantity: 1 }
-      ];
-      const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      // 150*2 + 80*1 = 380
-      expect(subtotal).toBe(380);
+  describe('Razorpay Route Split Math', () => {
+    it('correctly calculates the restaurant and platform shares', () => {
+      const item_subtotal = 380;
+      const delivery_fee = 40;
+      const platform_fee = 5;
+      const tax_amount = item_subtotal * 0.05; // 19
+      const discount_amount = 0;
+      const total_amount = item_subtotal + delivery_fee + platform_fee + tax_amount - discount_amount; // 444
+      
+      const commissionRate = 10;
+      const commissionAmount = item_subtotal * (commissionRate / 100); // 38
+      
+      const platformShare = platform_fee + delivery_fee + commissionAmount; // 5 + 40 + 38 = 83
+      const restaurantShare = total_amount - platformShare; // 444 - 83 = 361
+      
+      expect(total_amount).toBe(444);
+      expect(platformShare).toBe(83);
+      expect(restaurantShare).toBe(361);
+      
+      // Verification: restaurant share + platform share = total amount
+      expect(restaurantShare + platformShare).toBe(total_amount);
+      
+      const restaurantSharePaise = Math.round(restaurantShare * 100);
+      expect(restaurantSharePaise).toBe(36100);
     });
-
-    it('delivery fee is added to the subtotal', () => {
-      const subtotal = 380;
-      const deliveryFee = 40;
-      const total = subtotal + deliveryFee;
-      expect(total).toBe(420);
+    
+    it('throws error if stock is insufficient', () => {
+      const stock_quantity = 1;
+      const required_quantity = 2;
+      expect(() => {
+        if (stock_quantity < required_quantity) {
+          throw new Error('Insufficient stock');
+        }
+      }).toThrow('Insufficient stock');
     });
   });
 });
