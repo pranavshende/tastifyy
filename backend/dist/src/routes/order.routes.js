@@ -7,6 +7,7 @@ import Razorpay from 'razorpay';
 import { sendDeliveryOTP } from '../services/sms.service.js';
 import { assignDeliveryPartner } from '../services/assignment.service.js';
 import { sendPushNotification } from '../services/notification.service.js';
+import { processRefund } from '../controllers/payment.controller.js';
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
     key_secret: process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_mock',
@@ -20,11 +21,19 @@ router.post('/', authorizeRole(['customer']), async (req, res) => {
     const user = req.user;
     const { restaurant_id, items, payment_method, special_instructions, idempotency_key } = req.body;
     try {
-        let address = await prisma.address.findFirst({
-            where: { user_id: user.id },
-            orderBy: { is_default: 'desc' }
-        });
-        if (!address || (Number(address.latitude) === 0 && Number(address.longitude) === 0)) {
+        let address;
+        if (req.body.delivery_address_id) {
+            address = await prisma.address.findUnique({
+                where: { id: req.body.delivery_address_id, user_id: user.id }
+            });
+        }
+        else {
+            address = await prisma.address.findFirst({
+                where: { user_id: user.id },
+                orderBy: { is_default: 'desc' }
+            });
+        }
+        if (!address) {
             res.status(400).json({ success: false, error: { code: 'NO_ADDRESS', message: 'A valid delivery address is required before checking out.' } });
             return;
         }
@@ -40,18 +49,20 @@ router.post('/', authorizeRole(['customer']), async (req, res) => {
             res.status(400).json({ success: false, error: { code: 'INVALID_RESTAURANT', message: 'Restaurant not found' } });
             return;
         }
-        // Haversine Distance Check
-        const R = 6371; // Earth radius in km
-        const dLat = (Number(restaurant.latitude) - Number(address.latitude)) * Math.PI / 180;
-        const dLon = (Number(restaurant.longitude) - Number(address.longitude)) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(Number(address.latitude) * Math.PI / 180) * Math.cos(Number(restaurant.latitude) * Math.PI / 180) *
-                Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const distanceKm = R * c;
-        if (distanceKm > Number(restaurant.service_radius_km || 5)) {
-            res.status(400).json({ success: false, error: { code: 'OUT_OF_RANGE', message: `Delivery address is ${distanceKm.toFixed(1)}km away, which exceeds the restaurant's ${restaurant.service_radius_km}km service radius.` } });
-            return;
+        // Haversine Distance Check (only if coordinates are present)
+        if (Number(address.latitude) !== 0 || Number(address.longitude) !== 0) {
+            const R = 6371; // Earth radius in km
+            const dLat = (Number(restaurant.latitude) - Number(address.latitude)) * Math.PI / 180;
+            const dLon = (Number(restaurant.longitude) - Number(address.longitude)) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(Number(address.latitude) * Math.PI / 180) * Math.cos(Number(restaurant.latitude) * Math.PI / 180) *
+                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distanceKm = R * c;
+            if (distanceKm > Number(restaurant.service_radius_km || 5)) {
+                res.status(400).json({ success: false, error: { code: 'OUT_OF_RANGE', message: `Delivery address is ${distanceKm.toFixed(1)}km away, which exceeds the restaurant's ${restaurant.service_radius_km}km service radius.` } });
+                return;
+            }
         }
         for (const item of items) {
             const dbItem = await prisma.menuItem.findUnique({ where: { id: item.menu_item_id } });
@@ -118,7 +129,25 @@ router.post('/', authorizeRole(['customer']), async (req, res) => {
         if (payment_method && payment_method !== 'cod') {
             const restaurant = await prisma.restaurant.findUnique({ where: { id: restaurant_id } });
             const transfers = [];
+            let isTransferReady = false;
+            // Check if restaurant is activated and 24h cooling period has passed
             if (restaurant?.razorpay_account_id) {
+                if (restaurant.route_account_status === 'active') {
+                    isTransferReady = true;
+                }
+                else if (restaurant.route_account_status === 'activated' && restaurant.route_activated_at) {
+                    const coolingPeriodMs = 24 * 60 * 60 * 1000;
+                    if (Date.now() >= restaurant.route_activated_at.getTime() + coolingPeriodMs) {
+                        isTransferReady = true;
+                        // Promote to active
+                        await prisma.restaurant.update({
+                            where: { id: restaurant.id },
+                            data: { route_account_status: 'active' }
+                        });
+                    }
+                }
+            }
+            if (isTransferReady) {
                 const commissionRate = Number(restaurant.commission_rate || 0);
                 const commissionAmount = item_subtotal * (commissionRate / 100);
                 const payoutAmount = item_subtotal - commissionAmount;
@@ -133,60 +162,68 @@ router.post('/', authorizeRole(['customer']), async (req, res) => {
                     });
                 }
             }
-            if (process.env.RAZORPAY_KEY_ID === 'rzp_test_mock' || !process.env.RAZORPAY_KEY_ID) {
-                razorpay_order_id = `order_mock_${Date.now()}`;
+            if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+                throw new Error('Razorpay keys are not configured. Cannot process online payment.');
             }
-            else {
-                const rzpOrder = await razorpay.orders.create({
-                    amount: Math.round(total_amount * 100),
-                    currency: 'INR',
-                    receipt: `rcpt_${randomUUID().substring(0, 8)}`,
-                    transfers: transfers.length > 0 ? transfers : undefined
-                });
-                razorpay_order_id = rzpOrder.id;
-            }
+            const rzpOrder = await razorpay.orders.create({
+                amount: Math.round(total_amount * 100),
+                currency: 'INR',
+                receipt: `rcpt_${randomUUID().substring(0, 8)}`,
+                partial_payment: false,
+                transfers: transfers.length > 0 ? transfers : undefined
+            });
+            razorpay_order_id = rzpOrder.id;
         }
-        const order = await prisma.order.create({
-            data: {
-                customer_id: user.id,
-                restaurant_id,
-                delivery_address_id: address.id,
-                status: 'pending',
-                item_subtotal,
-                delivery_fee,
-                platform_fee,
-                tax_amount,
-                discount_amount,
-                total_amount,
-                payment_method: payment_method || 'cod',
-                payment_status: payment_method === 'cod' ? 'pending' : 'processing',
-                razorpay_order_id,
-                idempotency_key: idempotency_key || randomUUID(),
-                special_instructions,
-                coupon_id: valid_coupon_id,
-                delivery_otp: Math.floor(1000 + Math.random() * 9000).toString(),
-                order_items: {
-                    create: orderItemsData
+        const order = await prisma.$transaction(async (tx) => {
+            // 1. Auto-decrement stock for ordered items
+            for (const item of items) {
+                const dbItem = await tx.menuItem.findUnique({ where: { id: item.menu_item_id } });
+                if (dbItem?.stock_quantity !== null) {
+                    const updateRes = await tx.menuItem.updateMany({
+                        where: {
+                            id: item.menu_item_id,
+                            stock_quantity: { gte: item.quantity }
+                        },
+                        data: {
+                            stock_quantity: { decrement: item.quantity }
+                        }
+                    });
+                    if (updateRes.count === 0) {
+                        throw new Error(`Insufficient stock for ${dbItem?.name || 'an item'} during checkout.`);
+                    }
                 }
-            },
-            include: {
-                restaurant: true,
-                order_items: true,
-                delivery_address: true,
             }
-        });
-        // Auto-decrement stock for ordered items
-        for (const item of items) {
-            await prisma.menuItem.updateMany({
-                where: {
-                    id: item.menu_item_id,
-                    stock_quantity: { not: null }
-                },
+            // 2. Create the order
+            return await tx.order.create({
                 data: {
-                    stock_quantity: { decrement: item.quantity }
+                    customer_id: user.id,
+                    restaurant_id,
+                    delivery_address_id: address.id,
+                    status: 'pending',
+                    item_subtotal,
+                    delivery_fee,
+                    platform_fee,
+                    tax_amount,
+                    discount_amount,
+                    total_amount,
+                    payment_method: payment_method || 'cod',
+                    payment_status: payment_method === 'cod' ? 'pending' : 'processing',
+                    razorpay_order_id,
+                    idempotency_key: idempotency_key || randomUUID(),
+                    special_instructions,
+                    coupon_id: valid_coupon_id,
+                    delivery_otp: Math.floor(1000 + Math.random() * 9000).toString(),
+                    order_items: {
+                        create: orderItemsData
+                    }
+                },
+                include: {
+                    restaurant: true,
+                    order_items: true,
+                    delivery_address: true,
                 }
             });
-        }
+        });
         const io = getIO();
         const orderCreatedPayload = {
             orderId: order.id,
@@ -219,18 +256,16 @@ router.post('/verify-payment', authorizeRole(['customer']), async (req, res) => 
     const user = req.user;
     try {
         let isValid = false;
-        if (razorpay_order_id.startsWith('order_mock_')) {
-            // Bypass signature verification for mock testing flow
-            isValid = true;
+        if (!process.env.RAZORPAY_KEY_SECRET) {
+            res.status(500).json({ success: false, error: { message: "Payment configuration error on server" } });
+            return;
         }
-        else {
-            const sign = razorpay_order_id + "|" + razorpay_payment_id;
-            const expectedSign = crypto
-                .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_mock')
-                .update(sign.toString())
-                .digest("hex");
-            isValid = (razorpay_signature === expectedSign);
-        }
+        const sign = razorpay_order_id + "|" + razorpay_payment_id;
+        const expectedSign = crypto
+            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+            .update(sign.toString())
+            .digest("hex");
+        isValid = (razorpay_signature === expectedSign);
         if (isValid) {
             const order = await prisma.order.findFirst({
                 where: { razorpay_order_id, customer_id: user.id },
@@ -310,11 +345,11 @@ router.post('/:id/rate', authorizeRole(['customer']), async (req, res) => {
     const { id } = req.params;
     const { food_rating, restaurant_rating, delivery_rating, review_text } = req.body;
     try {
-        const order = await prisma.order.findUnique({
-            where: { id: id },
+        const order = await prisma.order.findFirst({
+            where: { id: id, customer_id: user.id },
             include: { ratings: true }
         });
-        if (!order || order.customer_id !== user.id) {
+        if (!order) {
             res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found' } });
             return;
         }
@@ -436,29 +471,66 @@ router.put('/:id/status', authorizeRole(['restaurant_partner', 'delivery_partner
     const { status, cancellation_reason } = req.body;
     const user = req.user;
     try {
-        const order = await prisma.order.findUnique({
-            where: { id: id },
+        // BUG-001 Fix: Database-level ownership authorization
+        let whereClause = { id: id };
+        if (user.role === 'restaurant_partner') {
+            const partner = await prisma.restaurantPartner.findFirst({ where: { phone: user.phone } });
+            if (!partner) {
+                res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not a valid restaurant partner' } });
+                return;
+            }
+            whereClause.restaurant_id = partner.restaurant_id;
+        }
+        else if (user.role === 'delivery_partner') {
+            const partner = await prisma.deliveryPartner.findUnique({ where: { user_id: user.id } });
+            if (!partner) {
+                res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not a valid delivery partner' } });
+                return;
+            }
+            whereClause.delivery_partner_id = partner.id;
+        }
+        const order = await prisma.order.findFirst({
+            where: whereClause,
             include: { customer: true, order_items: true }
         });
         if (!order) {
-            res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found' } });
+            res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found or unauthorized' } });
             return;
         }
-        // Restaurant partners can only update orders belonging to their restaurant
-        if (user.role === 'restaurant_partner') {
-            const partner = await prisma.restaurantPartner.findFirst({ where: { phone: user.phone } });
-            if (!partner || partner.restaurant_id !== order.restaurant_id) {
-                res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'You are not authorized to update this order' } });
-                return;
-            }
+        // BUG-002 Fix: Strict State Machine & Authorization
+        const allowedTransitions = {
+            pending: ['restaurant_confirmed', 'cancelled', 'rejected'],
+            restaurant_confirmed: ['preparing', 'ready', 'cancelled'],
+            preparing: ['ready', 'cancelled'],
+            ready: ['rider_assigned', 'picked_up'], // system assigns rider, but rider can pick up
+            rider_assigned: ['picked_up'],
+            picked_up: ['out_for_delivery', 'delivered'], // some flows might skip out_for_delivery
+            out_for_delivery: ['delivered'],
+            delivered: [],
+            cancelled: [],
+            rejected: []
+        };
+        if (!allowedTransitions[order.status]?.includes(status)) {
+            res.status(400).json({ success: false, error: { code: 'INVALID_TRANSITION', message: `Cannot transition order from ${order.status} to ${status}` } });
+            return;
         }
-        // Delivery partners can only update orders assigned to them
-        if (user.role === 'delivery_partner') {
-            const partner = await prisma.deliveryPartner.findUnique({ where: { user_id: user.id } });
-            if (!partner || partner.id !== order.delivery_partner_id) {
-                res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'You are not authorized to update this order' } });
-                return;
-            }
+        const transition = `${order.status}->${status}`;
+        let allowedActors = [];
+        if (status === 'cancelled' || status === 'rejected') {
+            allowedActors = ['restaurant_partner', 'admin', 'customer'];
+        }
+        else if (['restaurant_confirmed', 'preparing', 'ready'].includes(status)) {
+            allowedActors = ['restaurant_partner', 'admin'];
+        }
+        else if (['rider_assigned'].includes(status)) {
+            allowedActors = ['admin']; // Usually system, but admin can manually assign
+        }
+        else if (['picked_up', 'out_for_delivery', 'delivered'].includes(status)) {
+            allowedActors = ['delivery_partner', 'admin'];
+        }
+        if (!allowedActors.includes(user.role)) {
+            res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: `Role ${user.role} cannot change status to ${status}` } });
+            return;
         }
         // Delivery OTP Enforcement
         if (status === 'delivered') {
@@ -508,21 +580,22 @@ router.put('/:id/status', authorizeRole(['restaurant_partner', 'delivery_partner
                 });
             }
         }
-        // Trigger Real Refund if Cancelled and already paid online
+        // FIX-003: Safe refund — if it fails, escalate to admin rather than silently dropping
         if (status === 'cancelled' && updated.payment_status === 'success' && updated.razorpay_payment_id) {
-            try {
-                await razorpay.payments.refund(updated.razorpay_payment_id, {
-                    amount: Math.round(Number(updated.total_amount) * 100)
-                });
-                await prisma.order.update({
-                    where: { id: updated.id },
-                    data: { payment_status: 'refunded' }
-                });
+            const refundResult = await processRefund(updated.id, cancellation_reason || 'Order cancelled');
+            if (refundResult.success) {
                 updated.payment_status = 'refunded';
             }
-            catch (refundError) {
-                console.error('Razorpay Refund Failed in order routes:', refundError);
-                // Note: we still allow the cancellation to succeed in DB, but log the refund failure
+            else {
+                // Do NOT mark as cancelled if refund failed — create an admin alert
+                console.error(`[REFUND_FAILED] Order ${updated.id} cancelled but refund failed: ${refundResult.error}. Admin action required.`);
+                // Restore order status to previous so customer is not left without money
+                await prisma.order.update({
+                    where: { id: updated.id },
+                    data: { status: order.status, cancellation_reason: null, cancelled_by: null }
+                });
+                res.status(500).json({ success: false, error: { code: 'REFUND_FAILED', message: 'Could not process refund at this time. Order cancellation rolled back. Please contact support.' } });
+                return;
             }
         }
         if (status === 'cancelled' && user.role === 'admin') {

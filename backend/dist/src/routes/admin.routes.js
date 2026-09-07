@@ -4,6 +4,7 @@ import { prisma } from '../utils/prisma.js';
 import { getPublicUrl, uploadFile, deleteFile, validateFile, generateFilename } from '../services/storage.service.js';
 import multer from 'multer';
 import Razorpay from 'razorpay';
+import { processRefund } from '../controllers/payment.controller.js';
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
     key_secret: process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_mock',
@@ -369,13 +370,11 @@ router.patch('/support/:id/resolve', async (req, res) => {
         // Handle True Refund if requested
         if (issue_refund && ticket.order_id) {
             if (ticket.order?.payment_status === 'success' && ticket.order?.razorpay_payment_id) {
-                try {
-                    await razorpay.payments.refund(ticket.order.razorpay_payment_id, {
-                        amount: Math.round(Number(ticket.order.total_amount) * 100)
-                    });
+                const refundResult = await processRefund(ticket.order_id, resolution_notes || 'Admin support refund');
+                if (refundResult.success) {
                     await prisma.order.update({
                         where: { id: ticket.order_id },
-                        data: { status: 'cancelled', payment_status: 'refunded' }
+                        data: { status: 'cancelled' }
                     });
                     await prisma.adminAuditLog.create({
                         data: {
@@ -387,9 +386,10 @@ router.patch('/support/:id/resolve', async (req, res) => {
                         }
                     });
                 }
-                catch (error) {
-                    console.error('Razorpay Admin Refund Failed:', error);
-                    // If Razorpay fails, we don't mark as refunded in DB to prevent state mismatch
+                else {
+                    console.error(`[Admin Refund Failed] Order ${ticket.order_id}:`, refundResult.error);
+                    // If refund fails, do not mark the order as cancelled so state remains consistent
+                    return res.status(500).json({ success: false, error: { code: 'REFUND_FAILED', message: refundResult.error } });
                 }
             }
             else {
@@ -437,6 +437,31 @@ router.get('/audit-logs', async (req, res) => {
     }
     catch (error) {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch audit logs' } });
+    }
+});
+// ─── PAYOUTS ─────────────────────────────────────────────────────────────────
+// GET /admin/payouts
+router.get('/payouts', async (req, res) => {
+    const status = req.query.status;
+    const page = req.query.page || '1';
+    const limit = req.query.limit || '20';
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    try {
+        const where = status ? { payout_status: status } : {};
+        const [assignments, total] = await Promise.all([
+            prisma.deliveryAssignment.findMany({
+                where,
+                skip,
+                take: parseInt(limit),
+                include: { partner: true, order: true },
+                orderBy: { created_at: 'desc' }
+            }),
+            prisma.deliveryAssignment.count({ where }),
+        ]);
+        res.json({ success: true, data: assignments, total, page: parseInt(page) });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch payouts' } });
     }
 });
 export default router;
