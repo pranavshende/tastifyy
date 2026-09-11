@@ -4,6 +4,7 @@ import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
 import { io, Socket } from 'socket.io-client';
 import { router } from 'expo-router';
+import { SOCKET_URL } from '../../constants/config';
 
 export default function CustomerOrders() {
   const { user } = useAuthStore();
@@ -36,7 +37,7 @@ export default function CustomerOrders() {
   useEffect(() => {
     fetchOrders();
 
-    const newSocket = io('http://localhost:5000');
+    const newSocket = io(SOCKET_URL);
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
@@ -45,8 +46,16 @@ export default function CustomerOrders() {
       }
     });
 
-    newSocket.on('order_status_update', (data) => {
-      setOrders(prev => prev.map(o => o.id === data.orderId ? { ...o, status: data.status } : o));
+    const statusEvents = [
+      'order:restaurant_confirmed', 'order:preparing', 'order:ready', 
+      'order:rider_assigned', 'order:picked_up', 'order:out_for_delivery', 
+      'order:delivered', 'order:cancelled', 'order:rejected'
+    ];
+
+    statusEvents.forEach(event => {
+      newSocket.on(event, (data) => {
+        setOrders(prev => prev.map(o => o.id === data.orderId ? { ...o, status: data.status } : o));
+      });
     });
 
     newSocket.on('rider_location_update', (data) => {
@@ -69,12 +78,15 @@ export default function CustomerOrders() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return '#F59E0B'; // Amber
-      case 'accepted':
+      case 'restaurant_confirmed':
       case 'preparing': return '#3B82F6'; // Blue
-      case 'ready_for_pickup':
+      case 'ready':
+      case 'rider_assigned':
+      case 'picked_up':
       case 'out_for_delivery': return '#8B5CF6'; // Purple
       case 'delivered': return '#10B981'; // Green
-      case 'cancelled': return '#EF4444'; // Red
+      case 'cancelled':
+      case 'rejected': return '#EF4444'; // Red
       default: return '#6B7280'; // Gray
     }
   };
@@ -85,8 +97,7 @@ export default function CustomerOrders() {
 
   const submitReview = async () => {
     try {
-      await api.post('/reviews', {
-        order_id: selectedOrderId,
+      await api.post(`/orders/${selectedOrderId}/rate`, {
         food_rating: foodRating,
         restaurant_rating: restRating,
         delivery_rating: delRating,

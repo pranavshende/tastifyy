@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
+import { Logo } from '../../components/ui/Logo';
 
 export default function AdminLogin() {
   const { setAuth } = useAuthStore();
@@ -32,8 +33,8 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 selection:bg-brand-primary">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary mx-auto flex items-center justify-center mb-4 shadow-lg shadow-brand-primary/20">
-            <span className="text-white font-black text-3xl">T</span>
+          <div className="flex justify-center mb-4">
+            <Logo size="xl" showText={false} />
           </div>
           <h2 className="text-3xl font-bold text-white tracking-tight">Admin Console</h2>
           <p className="text-gray-400 mt-2">Sign in to manage the Tastifyy platform</p>

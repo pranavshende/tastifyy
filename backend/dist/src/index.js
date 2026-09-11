@@ -32,8 +32,10 @@ const allowedOrigins = process.env.CORS_ORIGIN
 if (process.env.CORS_ORIGIN && !allowedOrigins.includes('https://tastifyy.pranavshende.online')) {
     allowedOrigins.push('https://tastifyy.pranavshende.online');
 }
+console.log('--- CORS allowedOrigins ---', allowedOrigins);
 app.use(cors({
     origin: allowedOrigins,
+    credentials: true,
 }));
 // Webhook MUST be parsed as raw buffer for cryptographic signature validation
 import { handleRazorpayWebhook } from './controllers/payment.controller.js';

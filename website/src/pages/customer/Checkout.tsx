@@ -24,6 +24,7 @@ export default function Checkout() {
   const [addresses, setAddresses] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
+  const [isAddressConfirmed, setIsAddressConfirmed] = useState(false);
   
   const [profile, setProfile] = useState<any>(null);
 
@@ -88,6 +89,12 @@ export default function Checkout() {
       return;
     }
 
+    if (!isAddressConfirmed) {
+      setError('Please confirm your delivery address before placing the order.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data } = await api.post('/orders', {
         restaurant_id: cart.restaurantId,
@@ -100,7 +107,8 @@ export default function Checkout() {
         })),
         payment_method: paymentMethod,
         special_instructions: '',
-        coupon_code: appliedCoupon ? appliedCoupon.code : undefined
+        coupon_code: appliedCoupon ? appliedCoupon.code : undefined,
+        confirm_address: isAddressConfirmed
       });
 
       if (data.success) {
@@ -251,9 +259,37 @@ export default function Checkout() {
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-xs font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md uppercase">{addr.label}</span>
                         </div>
-                        <p className="text-gray-600 font-medium leading-relaxed">
+                        <p className="text-gray-600 font-medium leading-relaxed mb-4">
                           {addr.address_line}, {addr.city}, {addr.state} - {addr.pincode}
                         </p>
+                        
+                        {!isAddressConfirmed ? (
+                          <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl mt-4">
+                            <h3 className="font-bold text-brand-dark mb-1">📍 Confirm Delivery Address</h3>
+                            <p className="text-sm text-gray-600 mb-3">Is this address correct for delivery?</p>
+                            <div className="flex gap-3">
+                              <button 
+                                onClick={() => setIsAddressConfirmed(true)}
+                                className="bg-brand-primary text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-brand-secondary transition-colors"
+                              >
+                                Confirm Address
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setIsAddressConfirmed(false);
+                                  setShowAddressModal(true);
+                                }}
+                                className="bg-white border border-gray-200 text-gray-700 text-sm font-bold px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                              >
+                                Edit Address
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-green-600 font-bold text-sm mt-2 bg-green-50 p-2 rounded-lg inline-flex">
+                            <Check className="w-4 h-4" /> Address Confirmed
+                          </div>
+                        )}
                       </>
                     );
                   })() : (
@@ -454,7 +490,11 @@ export default function Checkout() {
               {addresses.map((address) => (
                 <div 
                   key={address.id} 
-                  onClick={() => { setSelectedAddressId(address.id); setShowAddressModal(false); }}
+                  onClick={() => { 
+                    setSelectedAddressId(address.id); 
+                    setIsAddressConfirmed(false); 
+                    setShowAddressModal(false); 
+                  }}
                   className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${selectedAddressId === address.id ? 'border-brand-primary bg-orange-50/30' : 'border-gray-100 bg-white hover:border-brand-primary/30'}`}
                 >
                   <div className="flex justify-between items-start mb-1">

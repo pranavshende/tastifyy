@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChefHat, Bike, Search, CheckCircle, Clock, MapPin, ArrowRight, ShieldCheck, Zap, Star } from 'lucide-react';
+import { Search, MapPin, Star, Clock, ArrowRight, Bike, CheckCircle, ChefHat, Zap, ShieldCheck } from 'lucide-react';
+import { Logo } from '../components/ui/Logo';
 import api from '../api/axios';
 import RestaurantCard from '../components/customer/RestaurantCard';
 import MobileBottomNav from '../components/customer/MobileBottomNav';
@@ -71,11 +72,8 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex justify-between items-center">
           {/* Left: Logo & Location */}
           <div className="flex items-center gap-6">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-brand-primary flex items-center justify-center shadow-lg shadow-brand-primary/20">
-                <span className="text-white font-black text-lg">T</span>
-              </div>
-              <span className="text-xl md:text-2xl font-black tracking-tight text-brand-dark">Tastifyy</span>
+            <Link to="/" className="hover:opacity-90 transition-opacity">
+              <Logo size="sm" />
             </Link>
 
             <div className="hidden md:flex items-center gap-2 text-sm text-gray-600 hover:text-brand-primary transition-colors cursor-pointer group">
@@ -379,11 +377,8 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-12 mb-12">
             <div className="col-span-1 md:col-span-1">
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-8 h-8 rounded-xl bg-brand-dark flex items-center justify-center">
-                  <span className="text-white font-black text-lg">T</span>
-                </div>
-                <span className="text-xl font-black tracking-tight text-gray-900">Tastifyy</span>
+              <div className="mb-6">
+                <Logo size="sm" />
               </div>
               <p className="text-gray-500 text-sm leading-relaxed mb-6">
                 Your favorite food, delivered fast. We partner with the best local restaurants to bring you hot, fresh meals.

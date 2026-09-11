@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Star, Heart, Clock, Bike } from 'lucide-react';
 
 interface RestaurantCardProps {
   id: string;
@@ -11,22 +12,24 @@ interface RestaurantCardProps {
   isOpen: boolean;
   isPureVeg: boolean;
   city: string;
+  distance?: string;
+  reviewsCount?: string;
 }
 
 export default function RestaurantCard({
-  id, name, coverImage, cuisineTags, rating, prepTime, isOpen, isPureVeg
+  id, name, coverImage, cuisineTags, rating, prepTime, isOpen, isPureVeg, distance = "2.1 km", reviewsCount = "1.2k"
 }: RestaurantCardProps) {
   return (
-    <Link to={`/customer/restaurants/${id}`} className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-card transition-all duration-300 border border-gray-100 flex flex-col cursor-pointer block relative">
+    <Link to={`/customer/restaurants/${id}`} className="group bg-white rounded-[20px] overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300 border border-gray-100/80 flex flex-col cursor-pointer block relative">
       
-      {/* Cover Image */}
-      <div className="relative h-40 w-full overflow-hidden bg-gray-100">
+      {/* Cover Image Area */}
+      <div className="relative h-44 w-full overflow-hidden bg-gray-100">
         {coverImage ? (
           <img
             src={coverImage}
             alt={name}
             loading="lazy"
-            className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${!isOpen ? 'grayscale opacity-70' : ''}`}
+            className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ${!isOpen ? 'grayscale opacity-70' : ''}`}
           />
         ) : (
           <div className={`w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center group-hover:from-orange-50 group-hover:to-orange-100 transition-all ${!isOpen ? 'grayscale opacity-70' : ''}`}>
@@ -37,44 +40,64 @@ export default function RestaurantCard({
           </div>
         )}
 
+        {/* Gradient Overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 pointer-events-none"></div>
+
+        {/* Closed Overlay */}
         {!isOpen && (
-          <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] flex items-center justify-center">
-            <span className="bg-gray-900 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-sm">Currently Closed</span>
+          <div className="absolute inset-0 bg-white/30 backdrop-blur-[2px] flex items-center justify-center z-20">
+            <span className="bg-gray-900/90 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-sm">Currently Closed</span>
           </div>
         )}
 
-        <div className="absolute top-3 left-3 flex flex-col gap-2">
-          {isPureVeg && (
-            <div className="bg-white/95 backdrop-blur-sm px-2 py-1 rounded-md shadow-sm border border-green-500 flex items-center gap-1.5 self-start">
-              <div className="w-2.5 h-2.5 rounded-sm border-2 border-green-600 flex items-center justify-center">
-                <div className="w-1 h-1 bg-green-600 rounded-full"></div>
+        {/* Top Badges & Icons */}
+        <div className="absolute top-3 w-full px-3 flex items-start justify-between z-10">
+          <div className="flex flex-col gap-2">
+            {isPureVeg && (
+              <div className="bg-white/95 backdrop-blur-sm px-2 py-1 rounded border border-green-500/50 flex items-center gap-1.5 shadow-sm">
+                <div className="w-2.5 h-2.5 rounded-sm border-2 border-green-600 flex items-center justify-center">
+                  <div className="w-1 h-1 bg-green-600 rounded-full"></div>
+                </div>
+                <span className="text-[9px] font-black text-green-700 uppercase tracking-widest leading-none">Pure Veg</span>
               </div>
-              <span className="text-[10px] font-bold text-green-700 uppercase tracking-wider">Pure Veg</span>
-            </div>
-          )}
+            )}
+          </div>
+          <button className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center hover:bg-black/40 transition-colors border border-white/20">
+            <Heart className="w-4 h-4 text-white" />
+          </button>
+        </div>
+
+        {/* Bottom Image Content (Rating Pill) */}
+        <div className="absolute bottom-3 left-3 z-10">
+           <div className="bg-black/60 backdrop-blur-md text-white px-2 py-1 rounded-lg flex items-center gap-1 border border-white/10 shadow-sm">
+              <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+              <span className="text-xs font-bold leading-none mt-0.5">{rating ? rating.toFixed(1) : '4.2'}</span>
+              <span className="text-[10px] text-gray-300 font-medium leading-none mt-0.5">({reviewsCount})</span>
+           </div>
         </div>
       </div>
       
-      {/* Content */}
-      <div className="p-3.5 flex-1 flex flex-col">
-        <div className="flex items-start justify-between mb-1 gap-2">
-          <h3 className="text-lg font-bold text-gray-900 group-hover:text-brand-primary transition-colors truncate">
-            {name}
-          </h3>
-          <div className="bg-green-100 text-green-800 px-1.5 py-0.5 rounded text-[13px] font-bold shrink-0">
-            {rating ? rating.toFixed(1) : '4.2'}
-          </div>
-        </div>
+      {/* Content Area */}
+      <div className="p-4 flex-1 flex flex-col bg-white">
+        <h3 className="text-[17px] font-black text-gray-900 group-hover:text-brand-primary transition-colors truncate mb-0.5 leading-tight">
+          {name}
+        </h3>
         
-        <div className="text-xs text-gray-500 font-medium mb-1 truncate">
+        <div className="text-[13px] text-gray-500 font-medium mb-3 truncate">
           {cuisineTags.length > 0 ? cuisineTags.slice(0, 3).join(' • ') : 'Various Cuisines'}
         </div>
         
-        <div className="text-xs text-gray-500 font-medium mt-1">
-          {prepTime ? `${prepTime}-${prepTime + 10} mins` : '30-40 mins'} • ₹₹
+        <div className="flex items-center gap-4 text-xs font-bold text-gray-600 mt-auto pt-3 border-t border-gray-50">
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-gray-400" />
+            <span>{prepTime ? `${prepTime}-${prepTime + 10} min` : '30-40 min'}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Bike className="w-4 h-4 text-gray-400" />
+            <span>{distance}</span>
+          </div>
         </div>
       </div>
     </Link>
   );
 }
-

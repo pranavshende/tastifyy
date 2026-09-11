@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { register, login, me, logout, sendOtp, verifyOtp } from '../controllers/auth.controller.js';
+import { register, login, me, logout, sendOtp, verifyOtp, googleLogin } from '../controllers/auth.controller.js';
 const router = Router();
 import { authenticate } from '../middlewares/auth.js';
 router.post('/register', register);
 router.post('/login', login);
+router.post('/google', googleLogin);
 router.post('/otp/send', sendOtp);
 router.post('/otp/verify', verifyOtp);
 router.get('/me', me);

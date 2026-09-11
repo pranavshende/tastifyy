@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { LayoutDashboard, UtensilsCrossed, User, LogOut, Wallet } from 'lucide-react';
+import { LogOut, LayoutDashboard, UtensilsCrossed, User, Wallet } from 'lucide-react';
+import { Logo } from '../../components/ui/Logo';
 import api from '../../api/axios';
 import { getStorageUrl } from '../../lib/supabase';
 
@@ -112,7 +113,7 @@ export default function DashboardLayout() {
         {/* Top Header */}
         <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-20">
           <div className="flex items-center md:hidden">
-            <span className="text-lg font-black">Tastifyy Partner</span>
+            <Logo size="sm" textSuffix="Partner" />
           </div>
           
           {/* Top right */}

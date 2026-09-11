@@ -454,7 +454,7 @@ router.get('/payouts', async (req, res) => {
                 skip,
                 take: parseInt(limit),
                 include: { partner: true, order: true },
-                orderBy: { created_at: 'desc' }
+                orderBy: { assigned_at: 'desc' }
             }),
             prisma.deliveryAssignment.count({ where }),
         ]);

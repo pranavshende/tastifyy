@@ -438,7 +438,11 @@ model Order {
   platform_fee          Decimal         @db.Decimal(10, 2)
   discount_amount       Decimal         @default(0) @db.Decimal(10, 2)
   tax_amount            Decimal         @default(0) @db.Decimal(10, 2)
-  total_amount          Decimal         @db.Decimal(10, 2)
+  total_amount              Decimal         @db.Decimal(10, 2)
+  restaurant_discount_share Decimal         @default(0) @db.Decimal(10, 2)
+  platform_discount_share   Decimal         @default(0) @db.Decimal(10, 2)
+  restaurant_commission     Decimal         @default(0) @db.Decimal(10, 2)
+  restaurant_transfer       Decimal         @default(0) @db.Decimal(10, 2)
   payment_method        PaymentMethod
   payment_status        PaymentStatus
   razorpay_order_id     String?

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { useAuthStore } from '../../store/authStore';
 import api from '../../api/axios';
 import { io, Socket } from 'socket.io-client';
+import { SOCKET_URL } from '../../constants/config';
 
 export default function RestaurantDashboard() {
   const { user } = useAuthStore();
@@ -24,7 +25,7 @@ export default function RestaurantDashboard() {
   useEffect(() => {
     fetchActiveOrders();
 
-    const newSocket = io('http://localhost:5000'); // Note: Replace with actual backend IP for physical device
+    const newSocket = io(SOCKET_URL);
     setSocket(newSocket);
 
     newSocket.on('connect', () => {

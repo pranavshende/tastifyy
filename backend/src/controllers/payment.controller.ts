@@ -233,7 +233,7 @@ export const triggerPayout = async (req: Request, res: Response): Promise<void> 
     }
 
     // Deterministic idempotency key (<36 chars limit for RazorpayX)
-    const idempotencyKey = assignment_id;
+    const idempotencyKey = `payout_assignment_${assignment_id}`.substring(0, 36);
 
 
     if (!process.env.RAZORPAYX_ACCOUNT_NUMBER) {

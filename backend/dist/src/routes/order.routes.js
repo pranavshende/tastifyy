@@ -37,6 +37,10 @@ router.post('/', authorizeRole(['customer']), async (req, res) => {
             res.status(400).json({ success: false, error: { code: 'NO_ADDRESS', message: 'A valid delivery address is required before checking out.' } });
             return;
         }
+        if (!req.body.confirm_address) {
+            res.status(400).json({ success: false, error: { code: 'ADDRESS_NOT_CONFIRMED', message: 'You must explicitly confirm your delivery address before placing an order.' } });
+            return;
+        }
         let item_subtotal = 0;
         const orderItemsData = [];
         const firstItem = await prisma.menuItem.findUnique({ where: { id: items[0].menu_item_id } });
@@ -50,6 +54,7 @@ router.post('/', authorizeRole(['customer']), async (req, res) => {
             return;
         }
         // Haversine Distance Check (only if coordinates are present)
+        let distanceKm = 0;
         if (Number(address.latitude) !== 0 || Number(address.longitude) !== 0) {
             const R = 6371; // Earth radius in km
             const dLat = (Number(restaurant.latitude) - Number(address.latitude)) * Math.PI / 180;
@@ -58,7 +63,7 @@ router.post('/', authorizeRole(['customer']), async (req, res) => {
                 Math.cos(Number(address.latitude) * Math.PI / 180) * Math.cos(Number(restaurant.latitude) * Math.PI / 180) *
                     Math.sin(dLon / 2) * Math.sin(dLon / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            const distanceKm = R * c;
+            distanceKm = R * c;
             if (distanceKm > Number(restaurant.service_radius_km || 5)) {
                 res.status(400).json({ success: false, error: { code: 'OUT_OF_RANGE', message: `Delivery address is ${distanceKm.toFixed(1)}km away, which exceeds the restaurant's ${restaurant.service_radius_km}km service radius.` } });
                 return;
@@ -98,12 +103,26 @@ router.post('/', authorizeRole(['customer']), async (req, res) => {
                 subtotal: sub
             });
         }
-        const delivery_fee = 40.0;
-        const platform_fee = 10.0;
+        const configs = await prisma.adminConfig.findMany({
+            where: { key: { in: ['PLATFORM_FEE', 'DELIVERY_BASE_FEE', 'DELIVERY_PER_KM_FEE'] } }
+        });
+        const configMap = configs.reduce((acc, c) => ({ ...acc, [c.key]: Number(c.value) }), {});
+        const platform_fee = Math.min(configMap['PLATFORM_FEE'] || 5.0, 5.0);
+        // Distance-based affordable launch delivery fee
+        let calculated_delivery_fee = 20;
+        if (distanceKm > 2 && distanceKm <= 5) {
+            calculated_delivery_fee = 22;
+        }
+        else if (distanceKm > 5) {
+            calculated_delivery_fee = 25;
+        }
+        const delivery_fee = Math.min(calculated_delivery_fee, 25);
         const tax_amount = item_subtotal * 0.05;
         let total_amount = item_subtotal + delivery_fee + platform_fee + tax_amount;
         let discount_amount = 0;
         let valid_coupon_id = null;
+        let platform_discount_share = 0;
+        let restaurant_discount_share = 0;
         if (req.body.coupon_code) {
             const coupon = await prisma.coupon.findUnique({ where: { code: req.body.coupon_code } });
             if (coupon && coupon.is_active && new Date() >= coupon.valid_from && new Date() <= coupon.valid_until && item_subtotal >= Number(coupon.min_order_value)) {
@@ -116,6 +135,16 @@ router.post('/', authorizeRole(['customer']), async (req, res) => {
                 else {
                     discount_amount = Number(coupon.discount_value);
                 }
+                if (coupon.funded_by === 'platform') {
+                    platform_discount_share = discount_amount;
+                }
+                else if (coupon.funded_by === 'restaurant') {
+                    restaurant_discount_share = discount_amount;
+                }
+                else if (coupon.funded_by === 'shared') {
+                    platform_discount_share = discount_amount / 2;
+                    restaurant_discount_share = discount_amount / 2;
+                }
                 total_amount -= discount_amount;
                 total_amount = Math.max(0, total_amount);
                 valid_coupon_id = coupon.id;
@@ -126,6 +155,10 @@ router.post('/', authorizeRole(['customer']), async (req, res) => {
             }
         }
         let razorpay_order_id = null;
+        const commissionRate = Number(restaurant.commission_rate || 0);
+        const restaurant_commission = item_subtotal * (commissionRate / 100);
+        let restaurant_transfer = item_subtotal - restaurant_commission - restaurant_discount_share;
+        restaurant_transfer = Math.max(0, restaurant_transfer);
         if (payment_method && payment_method !== 'cod') {
             const restaurant = await prisma.restaurant.findUnique({ where: { id: restaurant_id } });
             const transfers = [];
@@ -148,13 +181,10 @@ router.post('/', authorizeRole(['customer']), async (req, res) => {
                 }
             }
             if (isTransferReady) {
-                const commissionRate = Number(restaurant.commission_rate || 0);
-                const commissionAmount = item_subtotal * (commissionRate / 100);
-                const payoutAmount = item_subtotal - commissionAmount;
-                if (payoutAmount > 0) {
+                if (restaurant_transfer > 0) {
                     transfers.push({
                         account: restaurant.razorpay_account_id,
-                        amount: Math.round(payoutAmount * 100),
+                        amount: Math.round(restaurant_transfer * 100),
                         currency: 'INR',
                         notes: { type: 'restaurant_payout' },
                         linked_account_notes: ['type'],
@@ -206,6 +236,10 @@ router.post('/', authorizeRole(['customer']), async (req, res) => {
                     tax_amount,
                     discount_amount,
                     total_amount,
+                    platform_discount_share,
+                    restaurant_discount_share,
+                    restaurant_commission,
+                    restaurant_transfer,
                     payment_method: payment_method || 'cod',
                     payment_status: payment_method === 'cod' ? 'pending' : 'processing',
                     razorpay_order_id,

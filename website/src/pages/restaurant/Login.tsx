@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+
+import { Logo } from '../../components/ui/Logo';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
@@ -47,9 +49,7 @@ export default function RestaurantLogin() {
           <div className="absolute top-0 right-0 w-64 h-64 bg-brand-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
           <div className="relative z-10">
             <Link to="/" className="inline-block mb-8">
-              <div className="w-12 h-12 rounded-xl bg-brand-primary text-white flex items-center justify-center text-2xl font-black shadow-lg shadow-brand-primary/30">
-                T
-              </div>
+              <Logo size="lg" showText={false} />
             </Link>
             <h1 className="text-4xl font-black mb-4 leading-tight">Grow your business with us.</h1>
             <p className="text-gray-400 text-lg">Manage orders, update menus, and reach more customers.</p>

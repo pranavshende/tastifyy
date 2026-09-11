@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api from '../../api/axios';
+import { Logo } from '../../components/ui/Logo';
 import { useNavigate } from 'react-router-dom';
 
 export default function RestaurantRegister() {
@@ -21,8 +22,8 @@ export default function RestaurantRegister() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-[#E86A22]">Partner with Tastifyy</h2>
+      <div className="sm:mx-auto sm:w-full sm:max-w-md flex flex-col items-center">
+        <Logo size="lg" textSuffix="Partner" className="mt-6 mb-4" />
       </div>
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">

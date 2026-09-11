@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Switch, FlatList, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import api from '../../api/axios';
+import { io, Socket } from 'socket.io-client';
+import { SOCKET_URL } from '../../constants/config';
 
 export default function DeliveryHomeScreen() {
   const [isOnline, setIsOnline] = useState(false);
@@ -8,6 +10,7 @@ export default function DeliveryHomeScreen() {
   const [availableOrders, setAvailableOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [socket, setSocket] = useState<Socket | null>(null);
 
   const fetchDashboardStatus = async () => {
     try {
@@ -51,7 +54,7 @@ export default function DeliveryHomeScreen() {
     fetchOrders();
 
     // PHASE I: Connect to socket to emit live location
-    const newSocket = io('http://localhost:5000');
+    const newSocket = io(SOCKET_URL);
     setSocket(newSocket);
 
     return () => {

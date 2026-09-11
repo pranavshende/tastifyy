@@ -5,6 +5,7 @@ import api from '../../../api/axios';
 import { io, Socket } from 'socket.io-client';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../../store/authStore';
+import { SOCKET_URL } from '../../../constants/config';
 
 export default function OrderDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -30,7 +31,7 @@ export default function OrderDetailsScreen() {
 
     fetchOrder();
 
-    const newSocket = io('http://localhost:5000');
+    const newSocket = io(SOCKET_URL);
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
@@ -129,11 +130,11 @@ export default function OrderDetailsScreen() {
           <Text style={styles.sectionTitle}>Bill Summary</Text>
           <View style={styles.billRow}>
             <Text style={styles.billLabel}>Item Total</Text>
-            <Text style={styles.billValue}>₹{(parseFloat(order.total_amount) - 45).toFixed(2)}</Text>
+            <Text style={styles.billValue}>₹{(parseFloat(order.total_amount) - 25).toFixed(2)}</Text>
           </View>
           <View style={styles.billRow}>
             <Text style={styles.billLabel}>Taxes & Fees</Text>
-            <Text style={styles.billValue}>₹45.00</Text>
+            <Text style={styles.billValue}>₹25.00</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.billRow}>
@@ -141,6 +142,23 @@ export default function OrderDetailsScreen() {
             <Text style={styles.totalValue}>₹{parseFloat(order.total_amount).toFixed(2)}</Text>
           </View>
         </View>
+
+        {/* Delivery Address */}
+        {order.delivery_address && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Delivery Address</Text>
+            <Text style={styles.restName}>{order.delivery_address.label || 'Address'}</Text>
+            <Text style={styles.restAddress}>{order.delivery_address.address_line}, {order.delivery_address.city}</Text>
+          </View>
+        )}
+
+        {/* Rate Order */}
+        {order.status === 'delivered' && (
+          <TouchableOpacity style={styles.rateBtn} onPress={() => router.push(`/(customer)/rate/${order.id}` as any)}>
+            <Ionicons name="star" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.rateBtnText}>Rate this Order</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity style={styles.supportBtn} onPress={() => router.push(`/(customer)/support?orderId=${order.id}`)}>
           <Ionicons name="help-buoy-outline" size={20} color="#171717" style={{ marginRight: 8 }} />
@@ -201,22 +219,15 @@ const styles = StyleSheet.create({
   itemPrice: { fontSize: 14, fontWeight: '600', color: '#171717' },
 
   billRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  billLabel: { fontSize: 14, color: '#666' },
-  billValue: { fontSize: 14, color: '#333', fontWeight: '500' },
-  divider: { height: 1, backgroundColor: '#EEE', marginVertical: 12 },
-  totalLabel: { fontSize: 16, fontWeight: '800', color: '#171717' },
-  totalValue: { fontSize: 18, fontWeight: '900', color: '#171717' },
+  billLabel: { fontSize: 14, color: '#666', fontWeight: '500' },
+  billValue: { fontSize: 14, color: '#171717', fontWeight: '700' },
+  divider: { height: 1, backgroundColor: '#F0F0F0', marginVertical: 12 },
+  totalLabel: { fontSize: 16, color: '#171717', fontWeight: '900' },
+  totalValue: { fontSize: 18, color: '#E86A22', fontWeight: '900' },
 
-  supportBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderWidth: 1.5,
-    borderColor: '#E5E5E5',
-    borderRadius: 16,
-    paddingVertical: 16,
-    marginTop: 8
-  },
-  supportBtnText: { fontSize: 15, fontWeight: '700', color: '#171717' }
+  supportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#EBEBEB', marginBottom: 16 },
+  supportBtnText: { color: '#171717', fontSize: 15, fontWeight: '700' },
+
+  rateBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#E86A22', padding: 16, borderRadius: 12, marginBottom: 16, shadowColor: '#E86A22', shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
+  rateBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' }
 });

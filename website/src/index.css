@@ -1,12 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-brand-primary: #E86A22;
-  --color-brand-secondary: #C1531A;
-  --color-brand-dark: #171717;
-  --color-brand-light: #F9FAFB; /* Off White / Gray 50 */
+  --color-brand-primary: #FF5B33;
+  --color-brand-secondary: #E04B28;
+  --color-brand-dark: #1A1A1A;
+  --color-brand-light: #FAFAFA; /* Off White / Gray 50 */
   
   --font-sans: 'Inter', 'Roboto', 'Outfit', system-ui, sans-serif;
+  --font-handwriting: 'Caveat', cursive;
   
   --animate-fade-in-up: fade-in-up 0.5s ease-out;
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;

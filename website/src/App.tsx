@@ -207,6 +207,8 @@ function AppRoutes() {
   );
 }
 
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
 function App() {
   const { initAuth } = useAuthStore();
 
@@ -216,11 +218,13 @@ function App() {
   }, [initAuth]);
 
   return (
-    <Router>
-      <div className="min-h-screen bg-gray-50">
-        <AppRoutes />
-      </div>
-    </Router>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || 'dummy-client-id'}>
+      <Router>
+        <div className="min-h-screen bg-gray-50">
+          <AppRoutes />
+        </div>
+      </Router>
+    </GoogleOAuthProvider>
   );
 }
 

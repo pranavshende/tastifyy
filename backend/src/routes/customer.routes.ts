@@ -206,6 +206,37 @@ router.delete('/addresses/:id', async (req: Request, res: Response) => {
   }
 });
 
+router.patch('/addresses/:id/default', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const user_id = (req.user as any).id;
+  
+  try {
+    const address = await prisma.address.findFirst({
+      where: { id: id as string, user_id, is_deleted: false }
+    });
+    
+    if (!address) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Address not found' } });
+      return;
+    }
+    
+    await prisma.$transaction([
+      prisma.address.updateMany({
+        where: { user_id },
+        data: { is_default: false }
+      }),
+      prisma.address.update({
+        where: { id: id as string },
+        data: { is_default: true }
+      })
+    ]);
+    
+    res.json({ success: true, message: 'Default address updated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to set default address' } });
+  }
+});
+
 // ─── RESTAURANT & MENU ROUTES ───────────────────────────────────────────────
 
 // GET /api/customer/restaurants

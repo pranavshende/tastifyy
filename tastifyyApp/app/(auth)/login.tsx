@@ -156,6 +156,11 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
           </View>
 
+          {/* Google Auth */}
+          <TouchableOpacity style={styles.googleBtn} onPress={() => Alert.alert('Coming Soon', 'Google Sign-In is being integrated in the next phase.')}>
+            <Text style={styles.googleBtnText}>Continue with Google</Text>
+          </TouchableOpacity>
+
           {/* Guest Browse */}
           <TouchableOpacity style={styles.ghostBtn} onPress={handleGuestBrowse}>
             <Text style={styles.ghostBtnText}>Browse as Guest 🍕</Text>
@@ -224,18 +229,34 @@ const styles = StyleSheet.create({
   primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
 
   divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#EEE' },
-  dividerText: { marginHorizontal: 12, color: '#AAA', fontWeight: '500', fontSize: 13 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#E0E0E0' },
+  dividerText: { marginHorizontal: 16, color: '#888', fontWeight: '600' },
 
-  ghostBtn: {
-    borderWidth: 1.5, borderColor: '#E86A22', borderRadius: 14,
-    paddingVertical: 14, alignItems: 'center',
+  googleBtn: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
-  ghostBtnText: { color: '#E86A22', fontSize: 15, fontWeight: '700' },
+  googleBtnText: {
+    color: '#171717',
+    fontSize: 16,
+    fontWeight: '800',
+  },
 
-  partnerLink: { marginTop: 20, alignItems: 'center' },
-  partnerLinkText: { fontSize: 13, color: '#888', textAlign: 'center' },
-  partnerLinkHighlight: { color: '#E86A22', fontWeight: '700' },
+  ghostBtn: { alignItems: 'center', paddingVertical: 16, marginBottom: 24 },
+  ghostBtnText: { color: '#E86A22', fontSize: 16, fontWeight: '800' },
 
-  footer: { marginTop: 32, textAlign: 'center', fontSize: 11, color: '#BBB', lineHeight: 16 },
+  partnerLink: { alignItems: 'center', paddingVertical: 16, borderTopWidth: 1, borderTopColor: '#F0F0F0' },
+  partnerLinkText: { color: '#666', fontSize: 14, fontWeight: '600' },
+  partnerLinkHighlight: { color: '#171717', fontWeight: '800' },
+
+  footer: { textAlign: 'center', color: '#AAA', fontSize: 13, lineHeight: 18, marginTop: 'auto' }
 });

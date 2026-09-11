@@ -41,8 +41,11 @@ if (process.env.CORS_ORIGIN && !allowedOrigins.includes('https://tastifyy.pranav
   allowedOrigins.push('https://tastifyy.pranavshende.online');
 }
 
+console.log('--- CORS allowedOrigins ---', allowedOrigins);
+
 app.use(cors({
   origin: allowedOrigins,
+  credentials: true,
 }));
 
 // Webhook MUST be parsed as raw buffer for cryptographic signature validation
@@ -114,9 +117,9 @@ app.get('/health', async (_req, res) => {
 });
 
 if (process.env.NODE_ENV !== 'test') {
-  const PORT = process.env.PORT;
-  httpServer.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+  const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
+  httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on port ${PORT} (0.0.0.0)`);
   });
 }
 

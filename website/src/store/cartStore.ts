@@ -102,8 +102,8 @@ export const useCartStore = create<CartState>()(
         );
 
         // Standard fees as defined in MVP backend
-        const deliveryFee = itemSubtotal > 0 ? 40 : 0;
-        const platformFee = itemSubtotal > 0 ? 10 : 0;
+        const deliveryFee = itemSubtotal > 0 ? 20 : 0;
+        const platformFee = itemSubtotal > 0 ? 5 : 0;
         const taxAmount = itemSubtotal * 0.05;
         const totalAmount = itemSubtotal + deliveryFee + platformFee + taxAmount;
 

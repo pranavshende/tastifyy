@@ -187,7 +187,7 @@ export const triggerPayout = async (req, res) => {
             return;
         }
         // Deterministic idempotency key (<36 chars limit for RazorpayX)
-        const idempotencyKey = assignment_id;
+        const idempotencyKey = `payout_assignment_${assignment_id}`.substring(0, 36);
         if (!process.env.RAZORPAYX_ACCOUNT_NUMBER) {
             await prisma.deliveryAssignment.update({ where: { id: assignment_id }, data: { payout_status: 'failed' } });
             res.status(400).json({ success: false, error: 'RAZORPAYX_ACCOUNT_NUMBER is not configured.' });

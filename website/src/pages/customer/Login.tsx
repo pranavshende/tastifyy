@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
 import { Eye, EyeOff, UtensilsCrossed } from 'lucide-react';
+import { Logo } from '../../components/ui/Logo';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function CustomerLogin() {
   const [isRegister, setIsRegister] = useState(false);
@@ -40,6 +42,23 @@ export default function CustomerLogin() {
     }
   };
 
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.post('/auth/google', { credential: credentialResponse.credential });
+      const token = res.data.session?.access_token;
+      if (!token || !res.data.user) throw new Error('Invalid response from server');
+      setAuth(res.data.user, token);
+      navigate('/customer/home');
+    } catch (err: any) {
+      const msg = err.response?.data?.error?.message || err.response?.data?.error || err.message || 'Google Authentication failed';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-brand-light flex items-center justify-center p-4">
       <div className="max-w-4xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
@@ -53,11 +72,8 @@ export default function CustomerLogin() {
           </div>
           
           <div className="relative z-10">
-            <Link to="/" className="inline-flex items-center gap-2 mb-12 hover:opacity-90 transition-opacity">
-              <div className="w-12 h-12 rounded-xl bg-white text-brand-primary flex items-center justify-center text-2xl font-black shadow-lg">
-                T
-              </div>
-              <span className="text-2xl font-black tracking-tight">Tastifyy</span>
+            <Link to="/" className="inline-block mb-12 hover:opacity-90 transition-opacity">
+              <Logo size="lg" textColor="text-white" invert />
             </Link>
             <h1 className="text-4xl md:text-5xl font-black mb-6 leading-tight">Your next favorite meal is waiting.</h1>
             <p className="text-white/90 text-lg font-medium leading-relaxed max-w-sm">
@@ -81,6 +97,25 @@ export default function CustomerLogin() {
                 {typeof error === 'object' ? (error as any).message || JSON.stringify(error) : String(error)}
               </div>
             )}
+
+            <div className="mb-6 flex justify-center">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => {
+                    setError('Google Authentication Failed');
+                  }}
+                  text={isRegister ? 'signup_with' : 'signin_with'}
+                />
+            </div>
+
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">Or continue with email</span>
+              </div>
+            </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               {isRegister && (
