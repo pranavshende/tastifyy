@@ -1,123 +1,222 @@
-# Payment Architecture Audit Report
+﻿# Payments — Tastifyy
 
-This report provides a complete, end-to-end overview of the payment flow within the Tastifyy platform. It traces exactly how money flows between the Customer, Platform, Restaurant Partner, and Delivery Partner using Razorpay.
-
-## 1. End-to-End Payment Flow Architecture
-
-```mermaid
-graph TD
-    %% Customer Flow
-    C[Customer Checkout] -->|Frontend initiates| O[Backend Creates Order]
-    O -->|POST /orders| RZ[Razorpay API]
-    RZ -->|Returns Order ID| O
-    O -->|Saves to DB| DB[(Database)]
-    O -->|Returns to Frontend| CF[Customer Pays via Razorpay UI]
-    
-    %% Webhook & Verification
-    CF -->|Payment Success| WH[Razorpay Webhook: payment.captured]
-    WH -->|Verifies Signature| B[Backend Server]
-    B -->|Updates Order Status| DB
-    B -->|Emits Socket Event| REST[Restaurant Dashboard]
-    
-    %% Split Payment (Route)
-    RZ -->|Auto-Transfer on Payment| ROUTE[Razorpay Route]
-    ROUTE -->|Deducts Commission| PLAT[Platform Account]
-    ROUTE -->|Transfers Subtotal| REST_B[Restaurant Bank Account]
-    ROUTE -.->|Webhook: transfer.processed| B
-    
-    %% Delivery Partner Payout (RazorpayX)
-    REST -->|Order Ready| DEL[Delivery Partner Assigned]
-    DEL -->|Order Delivered| DP[Delivery Completed]
-    DP -->|Admin clicks 'Process Payout'| AP[Admin Dashboard]
-    AP -->|POST /payouts| RZX[RazorpayX API]
-    RZX -->|Fund Account Transfer| DEL_B[Delivery Partner Bank Account]
-    RZX -.->|Webhook: payout.processed| B
+```
+Last Updated: 2026-09-12
+Source of Truth: backend/src/routes/order.routes.ts, backend/src/controllers/payment.controller.ts
+Status: Current
 ```
 
 ---
 
-## 2. Numerical Example
+## Overview
 
-Let's break down the exact math based on the hardcoded values found in `order.routes.ts`:
-
-**Customer Order Breakdown:**
-- Food `item_subtotal`: ₹500
-- `delivery_fee`: ₹40 (Hardcoded in backend)
-- `platform_fee`: ₹10 (Hardcoded in backend)
-- `tax_amount`: ₹30 (Calculated via `tax_rate` * `item_subtotal`)
-- `discount_amount`: ₹50 (Applied via Coupon/Points)
-- **Customer Pays (`total_amount`)**: **₹530** `(500 + 40 + 10 + 30 - 50)`
-
-**Money Distribution:**
-- **Restaurant Share:** 
-  - Assuming `commission_rate` = 10%
-  - Commission = ₹50 (`500 * 0.10`)
-  - Transferred to Restaurant via Razorpay Route = **₹450**
-  - *Note: Tax, Delivery Fee, and Platform Fee are kept by the platform; they are NOT transferred to the restaurant.*
-
-- **Delivery Partner Share:**
-  - `earning_amount`: Dynamic (set during assignment creation)
-  - Let's assume earning is **₹30**.
-  - Payout is triggered manually via RazorpayX.
-
-- **Platform Revenue:**
-  - Receives: ₹530 (Customer total)
-  - Minus Route Transfer: -₹450
-  - Remaining in Razorpay Nodal Account: ₹80
-  - Minus Razorpay Gateway Fees (e.g., ~2% on ₹530) = -₹10.60
-  - Minus Delivery Payout (RazorpayX): -₹30
-  - **Net Platform Revenue:** **₹39.40** (which conceptually covers the ₹10 platform fee, ₹10 delivery margin, and ₹30 tax which the platform must remit).
+Tastifyy uses **Razorpay** for all online payment processing. The integration includes:
+- **Standard Checkout** for customer payments
+- **Razorpay Route** for automatic payment splits to restaurant linked accounts
+- **Razorpay Webhook** for async payment confirmation and payout events
+- **Manual Refunds** via Razorpay Refund API (triggered on cancellation/rejection)
 
 ---
 
-## 3. Detailed Investigation
+## Complete Payment Flow
 
-### 3.1 Customer Payment
-- **Flow:** Customer hits `POST /orders` -> Backend calculates totals -> Calls `razorpay.orders.create` with `transfers` array attached (if restaurant is verified) -> Frontend opens widget -> On success, Razorpay triggers `payment.captured` webhook.
-- **Amounts:** Total amount is strictly calculated on the backend to prevent tampering. `Math.round(total_amount * 100)` converts it to paise.
-- **Idempotency:** A `razorpay_order_id` is saved immediately. If the customer abandons and retries, a new order row is currently generated (no strict idempotency key is used to reuse abandoned orders).
-- **Failure:** Handled gracefully via `payment.failed` webhook, which marks the order as cancelled and restores `stock_quantity` for menu items.
-
-### 3.2 Restaurant Settlement (Razorpay Route)
-- **Flow:** The settlement is completely automated via Razorpay Route. When creating the order, the backend injects a `transfers` array containing the `razorpay_account_id` of the restaurant.
-- **Cooling Period:** The system correctly checks if the restaurant is `active` or if a 24-hour cooling period has passed since `activated`.
-- **Exclusions:** Delivery fees, platform fees, taxes, and discounts are **excluded** from the restaurant's payout. The calculation strictly uses `item_subtotal - commissionAmount`.
-- **Webhook:** `transfer.processed` webhook captures the `transfer.id` and saves it to `razorpay_transfer_id` in the database.
-
-### 3.3 Delivery Partner Payment (RazorpayX)
-- **Flow:** Handled asynchronously via `POST /api/payment/payout` in the Admin Dashboard.
-- **Contacts & Fund Accounts:** The backend smartly creates a Razorpay `contact` and a `fund_account` on the fly using the delivery partner's bank details, saving the IDs to the database for reuse.
-- **Idempotency:** Uses `delivery_${assignment_id}_${timestamp}` as the `X-Payout-Idempotency` header to prevent double payouts.
-- **Failure/Reversal:** Listens to `payout.failed` and `payout.reversed` webhooks to reset the `payout_status` back to failed/reversed, allowing the admin to retry.
-
-### 3.4 Refunds & Reversals
-- **Flow:** Triggered manually via `POST /orders/:id/refund` or automatically on cancellation.
-- **Logic:** Calls `razorpay.payments.refund`.
-- **Transfer Reversal:** If money was already transferred to the restaurant via Route (i.e., `razorpay_transfer_id` exists), the backend explicitly calls `razorpay.transfers.reverse` to pull the money back from the restaurant's linked account before issuing the refund to the customer.
+```
+1. Customer builds cart and reaches checkout
+       |
+2. POST /api/orders
+   - Validates address, items, stock, service radius
+   - Calculates: item_subtotal, delivery_fee, tax(5%), platform_fee(cap Rs5), discount
+   - Creates Razorpay Order (razorpay.orders.create) with total amount in paise
+   - If restaurant has active Route account: adds transfer with on_hold=1
+   - Creates Order record in DB (status=pending, payment_status=processing)
+   - Emits order:created to restaurant + admin via Socket.io
+   - Returns order.id + razorpay_order_id to frontend
+       |
+3. Frontend opens Razorpay Checkout SDK with razorpay_order_id
+       |
+4. Customer completes payment on Razorpay
+   - Razorpay returns: razorpay_payment_id, razorpay_signature
+       |
+5. POST /api/orders/verify-payment
+   - Verifies HMAC-SHA256 signature:
+     sign = razorpay_order_id + "|" + razorpay_payment_id
+     expectedSign = HMAC-SHA256(RAZORPAY_KEY_SECRET, sign)
+   - On success: payment_status=success, order.status=restaurant_confirmed
+   - Emits order:restaurant_confirmed via Socket.io
+       |
+6. Restaurant sees new order on dashboard (Socket.io push)
+       |
+7. Restaurant accepts: PUT /api/orders/:id/status { status: "preparing" }
+   - triggers assignDeliveryPartner() fire-and-forget
+   - DeliveryAssignment record created, assigned partner notified via Socket.io
+       |
+8. Delivery partner picks up: PUT /api/orders/:id/status { status: "picked_up" }
+   - Customer FCM push: "Your order is on the way!"
+   - SMS sent to customer with 4-digit delivery OTP
+       |
+9. PUT /api/orders/:id/status { status: "delivered", otp: "1234" }
+   - OTP validated against order.delivery_otp
+   - Order marked delivered
+   - Customer FCM push: "Food arrived!"
+       |
+10. Razorpay releases on-hold transfer to restaurant account
+    (manual or scheduled by Razorpay, not automated by Tastifyy)
+```
 
 ---
 
-## 4. Critical Audit & Security Review
+## Fee Calculation
 
-| # | Area | Status | Findings / Issues |
-|---|---|---|---|
-| 1 | **Amount Calculation** | 🟢 Secure | The backend recalculates everything based on DB `item_subtotal`. No frontend manipulation is possible. |
-| 2 | **Route Transfers** | 🟢 Implemented | Accurately calculates `item_subtotal - commission`. Properly handles 24hr Route cooling periods. |
-| 3 | **RazorpayX Payouts** | 🟡 Partial | Uses idempotency headers, but the key uses a `timestamp`. If an admin clicks twice rapidly, two requests with different timestamps might bypass idempotency. The key should strictly be `payout_assignment_${id}`. |
-| 4 | **Stock Restoration** | 🟢 Implemented | `payment.failed` webhook properly restores `stock_quantity`. |
-| 5 | **Refund Reversals** | 🟢 Implemented | Code correctly issues `razorpay.transfers.reverse` if the money was already split to the restaurant. |
-| 6 | **Discounts/Coupons** | 🔴 Incomplete | The calculation `total_amount -= discount_amount` deducts the discount from the *Grand Total*. Because the restaurant transfer is based on `item_subtotal`, the **Platform bears 100% of all discounts**. There is no logic implemented to split discounts between the restaurant and the platform (e.g., `FundedBy`). |
-| 7 | **Race Conditions** | 🟡 Medium Risk | The `payment.captured` webhook updates the order. If the frontend simultaneously hits an order verification endpoint (if one exists), they could race. However, the webhook-only approach used here is generally safe. |
-| 8 | **Webhook Security** | 🟢 Secure | Signature verification (`crypto.createHmac`) is correctly implemented and enforced. |
-| 9 | **Hardcoded Values** | 🔴 Needs Fix | `delivery_fee = 40.0` and `platform_fee = 10.0` are hardcoded in `order.routes.ts`. This means every order uses these exact numbers regardless of distance or admin settings. |
+```
+item_subtotal = sum(price * quantity + customization_costs) for each item
+delivery_fee  = distance-based:
+                <= 2km  → Rs20
+                2-5km   → Rs22
+                > 5km   → Rs25
+                (max Rs25)
+tax_amount    = item_subtotal * 0.05 (5% GST)
+platform_fee  = min(PLATFORM_FEE config, Rs5)
+discount      = coupon discount (if applicable)
+total_amount  = item_subtotal + delivery_fee + platform_fee + tax_amount - discount
+```
 
 ---
 
-### Final Verdict: Is it ready for deployment?
+## COD Orders
 
-**Yes, the core payment infrastructure is fully functional and safe for production.** The money successfully routes from the customer -> platform -> restaurant, and payouts are operational.
+- `payment_method: "cod"` → No Razorpay order created
+- `payment_status: "pending"` on creation
+- Order flows normally, no payment verification step required
+- No automatic refund on cancellation (no payment captured)
 
-However, before scaling, you **must fix**:
-1. **The Hardcoded Fees:** Dynamic delivery fees and platform fees need to be fetched from the database or calculated by distance.
-2. **Discount Funding Logic:** If you plan on offering coupons where the restaurant shares the cost, you must update the Route transfer calculation to subtract the restaurant's share of the discount. Currently, the platform pays for all discounts.
-3. **Payout Idempotency Key:** Remove the timestamp from the `X-Payout-Idempotency` header in `payment.controller.ts` to ensure true mathematical idempotency.
+---
+
+## Scenario: Payment Succeeds + Restaurant Accepts
+
+**Normal flow.** See above. Restaurant receives transfer via Razorpay Route.
+
+---
+
+## Scenario: Payment Succeeds + Restaurant Rejects
+
+1. Restaurant calls `PUT /orders/:id/status { status: "rejected" }`
+2. Backend checks: `payment_status === "success" && razorpay_payment_id exists`
+3. `processRefund()` is called synchronously
+4. On refund success: `payment_status = "refunded"`, admin audit log written
+5. On refund failure: **order status is ROLLED BACK to previous state**; API returns 500 with REFUND_FAILED. Admin must intervene manually.
+
+---
+
+## Scenario: Payment Succeeds + Restaurant Does Not Respond
+
+**NOT IMPLEMENTED.** There is no timeout mechanism. If a restaurant never accepts or rejects, the order stays in `pending` or `restaurant_confirmed` indefinitely. No auto-cancel, no auto-refund. This is a known production gap.
+
+---
+
+## Scenario: Payment Fails
+
+- Razorpay Checkout SDK handles failure on client side
+- If customer closes/abandons: `verify-payment` is never called
+- DB Order record remains with `payment_status: "processing"` and `status: "pending"`
+- **These orphaned orders are never cleaned up** (no background job)
+
+---
+
+## Refund Flow
+
+**Trigger:** `PUT /orders/:id/status` with `status: cancelled | rejected` when `payment_status === success`
+
+**Implementation:** `processRefund()` in `payment.controller.ts`
+
+```
+processRefund(orderId, reason):
+  1. Fetch order by ID
+  2. Check razorpay_payment_id exists
+  3. Check no existing refund (refund_status == null)
+  4. Call Razorpay Refunds API:
+     POST https://api.razorpay.com/v1/payments/:payment_id/refund
+     { amount: full_amount_in_paise, notes: { reason } }
+  5. If Route transfer exists (razorpay_transfer_id):
+     - Attempt Route transfer reversal
+     - Store razorpay_reversal_id + reversal_status
+  6. Update order:
+     - razorpay_refund_id, refund_status=refunded, payment_status=refunded
+  7. On failure:
+     - refund_status=refund_failed, refund_failure_reason stored
+     - Returns { success: false, error: ... }
+     - Caller (order status update) rolls back order status
+```
+
+**Idempotency:** Refund is blocked if `refund_status` already exists (prevents duplicate refunds).
+
+**Refund Status in DB:** `refund_pending` → `refunded` | `refund_failed`
+
+**Customer UI:** Shows in order detail as "Payment Refunded" when `refund_status === refunded`
+
+---
+
+## Razorpay Route (Restaurant Payouts)
+
+### Onboarding Steps (Restaurant)
+1. `POST /api/payments/linked-account` — Create Route linked account (requires PAN)
+2. `POST /api/payments/stakeholder` — Add business stakeholder
+3. `POST /api/payments/product-config` — Enable Route product on account
+4. `POST /api/payments/bank-account` — Add bank account as fund account
+5. Admin approves on Razorpay dashboard → account becomes `activated`
+6. 24-hour cooling period → auto-promoted to `active` on next order
+
+### Transfer Logic
+- Transfer is created with `on_hold: 1` at order creation (funds held until release)
+- Release happens when payment verification succeeds
+- **Restaurant must have `route_account_status === active` OR `activated` + 24h cooling passed**
+- If not ready, order is created without a transfer (restaurant receives no Route payout for that order)
+
+### Restaurant Commission
+```
+restaurant_transfer = item_subtotal - (item_subtotal * commission_rate%) - restaurant_discount_share
+```
+Default commission: 15%
+
+---
+
+## RazorpayX Payouts (Delivery Partners)
+
+**PARTIALLY IMPLEMENTED.** The `DeliveryAssignment` table has `payout_status`, `payout_reference_id`, `payout_idempotency_key` fields. The `payment.controller.ts` has logic for RazorpayX payouts. However, **automatic delivery partner payout is not triggered in the order lifecycle**. Payouts must be manually initiated via admin or a batch job (not yet implemented).
+
+---
+
+## Webhook Handler
+
+`POST /api/payment/webhook` — Raw body required for HMAC verification.
+
+Handled events:
+- `payment.captured` — Updates payment_status to success
+- `payment.failed` — Updates payment_status to failed
+- `route.transfer.processed` — Updates razorpay_transfer_id
+- `route.transfer.reversed` — Updates reversal_status
+- `payout.processed` — Updates delivery assignment payout_status
+- `payout.failed` — Updates payout_failure_reason
+
+**Signature verification:** `X-Razorpay-Signature` HMAC-SHA256 with `RAZORPAY_WEBHOOK_SECRET`
+
+---
+
+## Security
+
+- No raw card data ever stored
+- Payment signatures verified server-side before any order state change
+- Webhook payloads verified via HMAC before processing
+- Refund idempotency enforced at DB level (refund_status check)
+- Razorpay secret keys never exposed to frontend
+
+---
+
+## Known Payment Gaps
+
+| Gap | Severity | Status |
+|---|---|---|
+| No restaurant response timeout / auto-cancel | HIGH | NOT IMPLEMENTED |
+| Orphaned orders (failed payments) never cleaned up | MEDIUM | NOT IMPLEMENTED |
+| Delivery partner payout not automated | MEDIUM | PARTIAL |
+| No customer-facing refund status notification (only DB update) | LOW | NOT IMPLEMENTED |
+| Transfer not created if restaurant Route not ready (silent failure) | MEDIUM | KNOWN |

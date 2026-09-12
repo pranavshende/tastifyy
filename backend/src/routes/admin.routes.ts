@@ -5,7 +5,7 @@ import { getPublicUrl, uploadFile, deleteFile, validateFile, generateFilename } 
 import multer from 'multer';
 import type { Request, Response } from 'express';
 import Razorpay from 'razorpay';
-import { processRefund } from '../controllers/payment.controller.js';
+import { refundQueue } from '../jobs/queues.js';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
@@ -399,27 +399,25 @@ router.patch('/support/:id/resolve', async (req: Request, res: Response) => {
     // Handle True Refund if requested
     if (issue_refund && ticket.order_id) {
       if (ticket.order?.payment_status === 'success' && ticket.order?.razorpay_payment_id) {
-        const refundResult = await processRefund(ticket.order_id, resolution_notes || 'Admin support refund');
-        if (refundResult.success) {
-          await prisma.order.update({
-            where: { id: ticket.order_id },
-            data: { status: 'cancelled' }
-          });
+        
+        // Mark order as cancelled and queue the refund
+        await prisma.order.update({
+          where: { id: ticket.order_id },
+          data: { status: 'cancelled', cancelled_by: 'admin', cancellation_reason: resolution_notes || 'Admin support refund' }
+        });
 
-          await prisma.adminAuditLog.create({
-            data: {
-              admin_id: (req.user as any).id,
-              action: 'REFUND_PROCESSED',
-              target_type: 'Order',
-              target_id: ticket.order_id,
-              details: { amount: Number(ticket.order.total_amount), reason: resolution_notes }
-            }
-          });
-        } else {
-          console.error(`[Admin Refund Failed] Order ${ticket.order_id}:`, refundResult.error);
-          // If refund fails, do not mark the order as cancelled so state remains consistent
-          return res.status(500).json({ success: false, error: { code: 'REFUND_FAILED', message: refundResult.error } });
-        }
+        await refundQueue.add('refund-order', { orderId: ticket.order_id, reason: resolution_notes || 'Admin support refund' });
+
+        await prisma.adminAuditLog.create({
+          data: {
+            admin_id: (req.user as any).id,
+            action: 'REFUND_QUEUED',
+            target_type: 'Order',
+            target_id: ticket.order_id,
+            details: { amount: Number(ticket.order.total_amount), reason: resolution_notes }
+          }
+        });
+        
       } else {
         // Just cancel if not paid online
         await prisma.order.update({

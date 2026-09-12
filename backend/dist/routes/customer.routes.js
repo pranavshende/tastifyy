@@ -10,7 +10,44 @@ const upload = multer({
 const router = Router();
 router.use(authenticate, authorizeRole(['customer']));
 router.use(authenticate, authorizeRole(['customer']));
-// ─── PROFILE ROUTES ─────────────────────────────────────────────────────────
+// ─── NOTIFICATIONS ─────────────────────────────────────────────────────────
+router.get('/notifications', async (req, res) => {
+    try {
+        const notifications = await prisma.notification.findMany({
+            where: { recipient_id: req.user.id, recipient_type: 'customer' },
+            orderBy: { created_at: 'desc' },
+            take: 50
+        });
+        res.json({ success: true, data: notifications });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch notifications' } });
+    }
+});
+router.patch('/notifications/read-all', async (req, res) => {
+    try {
+        await prisma.notification.updateMany({
+            where: { recipient_id: req.user.id, recipient_type: 'customer', is_read: false },
+            data: { is_read: true }
+        });
+        res.json({ success: true, message: 'All notifications marked as read' });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to update notifications' } });
+    }
+});
+router.patch('/notifications/:id/read', async (req, res) => {
+    try {
+        const notification = await prisma.notification.update({
+            where: { id: req.params.id, recipient_id: req.user.id },
+            data: { is_read: true }
+        });
+        res.json({ success: true, data: notification });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to update notification' } });
+    }
+});
 router.get('/profile', async (req, res) => {
     try {
         const user = await prisma.user.findUnique({

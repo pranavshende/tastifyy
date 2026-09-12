@@ -5,10 +5,7 @@ import { getIO } from '../socket.js';
 import type { Request, Response } from 'express';
 import crypto, { randomUUID } from 'crypto';
 import Razorpay from 'razorpay';
-import { sendDeliveryOTP } from '../services/sms.service.js';
-import { assignDeliveryPartner } from '../services/assignment.service.js';
-import { sendPushNotification } from '../services/notification.service.js';
-import { processRefund } from '../controllers/payment.controller.js';
+import { scheduleOrderTimeout, cancelOrderTimeout, payoutQueue, smsQueue, assignmentQueue, notificationQueue, refundQueue } from '../jobs/queues.js';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
@@ -305,6 +302,9 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
 
     io.to(`restaurant_${restaurant_id}`).emit('order:created', orderCreatedPayload);
     io.to('admin').emit('order:created', orderCreatedPayload);
+
+    const timeoutMins = parseInt(configMap['ORDER_ACCEPT_TIMEOUT_MINS'] || '5');
+    await scheduleOrderTimeout(order.id, timeoutMins * 60 * 1000);
 
     res.status(201).json({ success: true, data: order });
   } catch (error: any) {
@@ -646,25 +646,37 @@ router.put('/:id/status', authorizeRole(['restaurant_partner', 'delivery_partner
       }
     });
 
+    if (['restaurant_confirmed', 'cancelled', 'rejected'].includes(status)) {
+      await cancelOrderTimeout(order.id);
+    }
+
     // Send SMS when out for delivery
     if (status === 'out_for_delivery' && order.status !== 'out_for_delivery') {
       if (order.customer?.phone && order.delivery_otp) {
-        // Run asynchronously so it doesn't block the response
-        sendDeliveryOTP(order.customer.phone, order.delivery_otp).catch(err => console.error('Failed to send OTP SMS', err));
+        await smsQueue.add('send-delivery-otp', { type: 'delivery', phone: order.customer.phone, otp: order.delivery_otp });
       }
     }
 
     // Assign Delivery Partner automatically when accepted by restaurant
     if ((status === 'restaurant_confirmed' || status === 'preparing') && !order.delivery_partner_id) {
-      assignDeliveryPartner(order.id).catch(err => console.error('Assignment Error:', err));
+      await assignmentQueue.add('assign-partner', { orderId: order.id });
     }
 
     // Push Notifications for Customers
     if (status === 'picked_up' && order.status !== 'picked_up') {
-      sendPushNotification(order.customer_id, 'Order on the way!', 'Your delivery partner has picked up your food.').catch(console.error);
+      await notificationQueue.add('notify', { type: 'both', userId: order.customer_id, userRole: 'customer', title: 'Order on the way!', body: 'Your delivery partner has picked up your food.' });
     }
     if (status === 'delivered' && order.status !== 'delivered') {
-      sendPushNotification(order.customer_id, 'Food arrived!', 'Enjoy your meal from Tastifyy!').catch(console.error);
+      await notificationQueue.add('notify', { type: 'both', userId: order.customer_id, userRole: 'customer', title: 'Food arrived!', body: 'Enjoy your meal from Tastifyy!' });
+      
+      const assignment = await prisma.deliveryAssignment.findUnique({ where: { order_id: order.id } });
+      if (assignment) {
+        await payoutQueue.add('delivery-payout', { assignment_id: assignment.id }, {
+          jobId: `payout-${assignment.id}`,
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 5000 }
+        });
+      }
     }
 
     // Restore stock if cancelled or rejected
@@ -682,22 +694,10 @@ router.put('/:id/status', authorizeRole(['restaurant_partner', 'delivery_partner
       }
     }
 
-    // FIX-003: Safe refund — if it fails, escalate to admin rather than silently dropping
+    // Safe refund — queued to worker so it doesn't block API
     if ((status === 'cancelled' || status === 'rejected') && updated.payment_status === 'success' && updated.razorpay_payment_id) {
-      const refundResult = await processRefund(updated.id, cancellation_reason || `Order ${status}`);
-      if (refundResult.success) {
-        updated.payment_status = 'refunded';
-      } else {
-        // Do NOT mark as cancelled if refund failed — create an admin alert
-        console.error(`[REFUND_FAILED] Order ${updated.id} ${status} but refund failed: ${refundResult.error}. Admin action required.`);
-        // Restore order status to previous so customer is not left without money
-        await prisma.order.update({
-          where: { id: updated.id },
-          data: { status: order.status as any, cancellation_reason: null, cancelled_by: null }
-        });
-        res.status(500).json({ success: false, error: { code: 'REFUND_FAILED', message: `Could not process refund at this time. Order ${status} rolled back. Please contact support.` } });
-        return;
-      }
+      // Background the refund. The worker will handle setting payment_status = 'refunded'
+      await refundQueue.add('refund-order', { orderId: updated.id, reason: cancellation_reason || `Order ${status}` });
     }
 
     if ((status === 'cancelled' || status === 'rejected') && user.role === 'admin') {

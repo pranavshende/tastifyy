@@ -1,6 +1,6 @@
 import { prisma } from '../utils/prisma.js';
 import { getIO } from '../socket.js';
-import { sendPushNotification } from './notification.service.js';
+import { notificationQueue } from '../jobs/queues.js';
 // Haversine formula to calculate distance in km
 function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371; // Earth radius in km
@@ -85,8 +85,14 @@ export async function assignDeliveryPartner(orderId) {
             partnerName: closestPartner.name,
             partnerPhone: closestPartner.phone
         });
-        // Send Push Notification via FCM
-        sendPushNotification(closestPartner.user_id, 'New Order Assigned!', `You have been assigned an order from ${order.restaurant.name}. Pickup is ${closestPartner.distance.toFixed(1)}km away.`, { type: 'order_assigned', orderId: order.id }).catch(err => console.error('FCM Dispatch Error:', err));
+        // Queue Push Notification via BullMQ
+        await notificationQueue.add('notify', {
+            type: 'push_only',
+            userId: closestPartner.user_id,
+            title: 'New Order Assigned!',
+            body: `You have been assigned an order from ${order.restaurant.name}. Pickup is ${closestPartner.distance.toFixed(1)}km away.`,
+            data: { type: 'order_assigned', orderId: order.id }
+        });
         return true;
     }
     catch (error) {

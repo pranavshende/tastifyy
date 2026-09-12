@@ -1,47 +1,193 @@
-# Tastifyy — Phase-Wise Implementation Plan
+﻿# Phases — Tastifyy Development Roadmap
 
-**Cross Reference:**
-- `prd.md` → Product requirements and feature scope
-- `architecture.md` → System architecture, application flow, modules and navigation
-- `design.md` → UI/UX system
-- `memory.md` → Development history and implementation decisions
-- `questions.md` → Definitive QA Audit (Source of truth for actual completion status)
+```
+Last Updated: 2026-09-12
+Source of Truth: Current codebase + implementation audit
+Status: Current
+```
 
 ---
 
-# Development Workflow
+## Phase Status Legend
+- COMPLETE — Fully implemented, in production
+- PARTIAL — Core implemented, some gaps remain
+- IN PROGRESS — Actively being worked on
+- PLANNED — Decided but not started
+- NOT STARTED — Not begun
 
-As per the unified application prompt, implementation occurs in strict dependency order.
-This table contrasts the originally claimed completion status against the **True Audited Status** (from `questions.md`).
+---
 
-| Phase | Category | Modules / Features | Claimed Status | True Audited Status |
-| :--- | :--- | :--- | :---: | :--- |
-| **A** | **Auth, Sessions, Roles** | Backend Supabase Auth, JWT Sessions, DB Schema | 🟢 Complete | 🟢 **Complete** (Supabase sessions, BlackSMS OTP integrated) |
-| **B** | **Customer Onboarding** | Universal Login, OTP + Email auth, Profile & Location | 🟢 Complete | 🟢 **Complete** (OTP added, Location distance strict validation active) |
-| **C** | **Restaurant Onboarding** | Registration forms, Document upload, Admin approval | 🟢 Complete | 🟢 **Complete** (Document uploads working via Supabase Storage) |
-| **D** | **Delivery Onboarding** | Partner registration, Vehicle/ID verification, Approval | 🟢 Complete | 🟢 **Complete** (Document verification uploads working via Supabase Storage) |
-| **E** | **Role-Based Navigation** | Expo Router guards, Web guards, Startup flow | 🟢 Complete | 🟢 **Complete** (Client-side routing works) |
-| **F** | **Customer Dashboard** | Web & Mobile UI, Search & Discovery | 🟢 Complete | 🟢 **Complete** (Unified search engine for restaurants & dishes implemented) |
-| **G** | **Restaurant Dashboard** | Web & Mobile Restaurant Dashboard | 🟢 Complete | 🟢 **Complete** (Real-time Socket.io UI connection secured) |
-| **H** | **Delivery Dashboard** | Delivery Home & Earnings UI | 🟢 Complete | 🟢 **Complete** (Live OTP prompt and lifecycle workflow fixed) |
-| **I** | **Admin Dashboard** | Admin metrics and management UI | 🟢 Complete | 🟢 **Complete** (Refunds and immutable audit trail logs fully integrated) |
-| **J** | **Restaurant / Menu** | Menu CRUD, Inventory management | 🟢 Complete | 🟢 **Complete** (Menu CRUD works, stock auto-decrement and restoration integrated) |
-| **K** | **Cart, Checkout, Payment**| Cart state, Payment gateway integration | 🟢 Complete | 🟢 **Complete** (Customization calculations fixed, Webhooks secured) |
-| **L** | **Order Engine** | Centralized order state machine | 🟢 Complete | 🟢 **Complete** (Strict transitions, RBAC secured, Refunds automated) |
-| **M** | **Delivery Assignment** | Assignment logic, Live tracking | 🟢 Complete | 🟢 **Complete** (Automated Proximity assignment and BlackSMS OTP secured) |
-| **N** | **Notifications / Realtime**| Socket.io events, Push notifications | 🟢 Complete | 🟢 **Complete** (FCM integrated into lifecycle via Notification Service) |
-| **O** | **Reviews & Support** | Rating system, Ticketing system | 🟢 Complete | 🟢 **Complete** (Post-delivery rating UI flow and backend submission fully integrated) |
-| **P** | **Analytics & Config** | Admin configuration panel, Dashboard charts | 🟢 Complete | 🟢 **Complete** (Config panel added to UI, backend API built, KPIs calculating accurately) |
-| **Q** | **Security & Testing** | RLS & RBAC audits, End-to-End tests | 🟢 Complete | 🟢 **Complete** (Jest + Supertest E2E integration suites fully passing as of 2026-08-29) |
-| **R** | **Production Deployment** | Release builds, Go live | 🟢 Complete | 🟢 **Complete** (Real money movement implemented via Razorpay Route & RazorpayX Payouts) |
+## Phase A — Authentication & Sessions
+**Status: COMPLETE**
 
-> **Note:** The "Claimed Status" represents the visual/UI completion of the phase. The "True Audited Status" represents the actual operational backend readiness of the phase. Phase 2 features (AI, Coins, Subscriptions, Group Orders) are entirely absent from the codebase.
+| Feature | Status |
+|---|---|
+| Email/password registration | COMPLETE |
+| Email/password login | COMPLETE |
+| Custom JWT issuance (HS256, JWT_SECRET) | COMPLETE |
+| Google OAuth (ID token → server verify) | COMPLETE |
+| OTP send/verify (BlackSMS) | COMPLETE |
+| FCM token registration | COMPLETE |
+| GET /auth/me (session validation) | COMPLETE |
+| Role-based middleware (RBAC) | COMPLETE |
+| Passport-JWT strategy (HS256 + RS256) | COMPLETE |
+| Trust proxy: 1 for Render | COMPLETE |
+| Rate limiting on auth routes | COMPLETE |
 
-### Test Infrastructure Fix (2026-08-29)
-The root `tsconfig.json` had `"exclude": ["tests"]`, meaning the TS language server never applied `@types/jest` to any test file. This has been resolved by:
-- `backend/tests/tsconfig.json` — standalone tsconfig (no `extends`) with `"types": ["node", "jest"]`
-- `backend/tsconfig.test.json` — composite tsconfig for ts-jest runtime
-- `backend/jest.config.js` — updated to use `tsconfig.test.json`
-- `backend/tests/setup.ts` — mock generics fixed (`jest.fn<() => Promise<...>>()`)
+Known Issues:
+- OTP stored in-memory — not durable across server restarts
 
-Phase Q status remains 🟡 **Partial** until `npm test` is run and all suites pass.
+---
+
+## Phase B — Customer Experience
+**Status: COMPLETE (minor gaps)**
+
+| Feature | Status |
+|---|---|
+| Customer registration/login (web + mobile) | COMPLETE |
+| Google login flow | COMPLETE |
+| Profile view + edit + photo | COMPLETE |
+| Address management (add, delete, default) | COMPLETE |
+| Restaurant discovery | COMPLETE |
+| Restaurant search (web + mobile) | COMPLETE |
+| Restaurant detail + full menu | COMPLETE |
+| Cart (Zustand) | COMPLETE |
+| Checkout (Razorpay + COD) | COMPLETE |
+| Coupon application | COMPLETE |
+| Order history | COMPLETE |
+| Order detail + real-time status | COMPLETE |
+| Delivery OTP confirmation | COMPLETE |
+| Order rating + review | COMPLETE |
+| Support ticket creation | COMPLETE |
+| AI recommendation (mock NLP) | PARTIAL — no LLM, regex only |
+| Cuisines/Offers pages | PARTIAL — pages exist, static content |
+| Notification inbox | NOT IMPLEMENTED |
+
+---
+
+## Phase C — Restaurant Partner Experience
+**Status: COMPLETE (payouts partial)**
+
+| Feature | Status |
+|---|---|
+| Restaurant onboarding (multi-step) | COMPLETE |
+| Document upload (FSSAI, PAN, etc.) | COMPLETE |
+| Admin approval workflow | COMPLETE |
+| Live order dashboard (Socket.io) | COMPLETE |
+| Accept / reject orders | COMPLETE |
+| Order status updates | COMPLETE |
+| Menu category + item CRUD | COMPLETE |
+| Menu item image upload | COMPLETE |
+| Item customizations | COMPLETE |
+| Stock management (auto-decrement) | COMPLETE |
+| Restaurant profile + hours | COMPLETE |
+| Toggle open/closed | COMPLETE |
+| Transactions/earnings view | PARTIAL — mock 7-day payout logic |
+| Razorpay Route onboarding | COMPLETE |
+| Actual payout tracking | PARTIAL — DB fields exist, no automation |
+
+---
+
+## Phase D — Delivery Partner Experience
+**Status: COMPLETE (payout not automated)**
+
+| Feature | Status |
+|---|---|
+| Delivery onboarding (web + mobile) | COMPLETE |
+| Document upload (license, RC, ID) | COMPLETE |
+| Admin approval | COMPLETE |
+| Toggle online/offline | COMPLETE |
+| View active order | COMPLETE |
+| Automatic proximity assignment (Haversine) | COMPLETE |
+| Real-time location relay via Socket.io | COMPLETE |
+| Order status updates (pickup → delivery) | COMPLETE |
+| Delivery OTP entry | COMPLETE |
+| Earnings view | COMPLETE |
+| Automatic payout via RazorpayX | PARTIAL — DB ready, not triggered |
+
+---
+
+## Phase E — Admin
+**Status: COMPLETE**
+
+| Feature | Status |
+|---|---|
+| Admin login | COMPLETE |
+| KPI dashboard + revenue chart | COMPLETE |
+| User management (activate/suspend) | COMPLETE |
+| Restaurant management (approve/reject/suspend) | COMPLETE |
+| Delivery partner management | COMPLETE |
+| Order management | COMPLETE |
+| Coupon management | COMPLETE |
+| Platform config management | COMPLETE |
+| Support ticket management | COMPLETE |
+| Admin audit log (immutable) | COMPLETE |
+| Manual refund trigger | COMPLETE |
+
+---
+
+## Phase F — Payments (Razorpay Full Integration)
+**Status: PARTIAL**
+
+| Feature | Status |
+|---|---|
+| Razorpay online payment | COMPLETE |
+| Payment signature verification | COMPLETE |
+| Route transfer (splits) | COMPLETE |
+| COD orders | COMPLETE |
+| Automatic refunds on cancellation | COMPLETE |
+| Idempotent refunds | COMPLETE |
+| Razorpay webhook handler | COMPLETE |
+| Delivery partner payout (RazorpayX) | PARTIAL |
+| Restaurant response timeout + auto-refund | NOT IMPLEMENTED |
+| Orphaned order cleanup (failed payments) | NOT IMPLEMENTED |
+
+---
+
+## Phase G — Real-time & Notifications
+**Status: PARTIAL**
+
+| Feature | Status |
+|---|---|
+| Socket.io order event broadcasting | COMPLETE |
+| Live delivery location relay | COMPLETE |
+| BlackSMS OTP (auth + delivery) | COMPLETE |
+| FCM push notifications (backend) | PARTIAL — needs production credential |
+| Notification inbox UI | NOT IMPLEMENTED |
+
+---
+
+## Phase H — Infrastructure Enhancements
+**Status: IN PROGRESS**
+
+| Feature | Status |
+|---|---|
+| Render deployment | COMPLETE |
+| trust proxy: 1 configuration | COMPLETE |
+| CORS configuration | COMPLETE |
+| Rate limiting | COMPLETE |
+| Redis + BullMQ background jobs | PLANNED — queues for SMS, FCM, assignment |
+
+---
+
+## Phase I — Testing
+**Status: PARTIAL**
+
+| Feature | Status |
+|---|---|
+| Jest + Supertest test suite (backend) | PARTIAL — suites written, production not re-run |
+| TypeScript config for tests | COMPLETE |
+| Production auth flow testing | NOT COMPLETED |
+| Payment flow end-to-end testing | NOT COMPLETED |
+
+---
+
+## Phase J — Future Roadmap (NOT STARTED)
+
+- AI food recommendations using real LLM (Gemini/OpenAI)
+- Tastifyy Coins / loyalty program
+- Group orders
+- Subscription plans for customers
+- Advanced restaurant analytics
+- Multi-language support
+- Tastifyy Pay (wallet)

@@ -1,17 +1,14 @@
 import type { Request, Response } from 'express';
 import { prisma } from '../utils/prisma.js';
 import { supabase } from '../utils/supabase.js';
-import { sendOTP } from '../services/sms.service.js';
+import { smsQueue } from '../jobs/queues.js';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import { getPublicUrl, uploadFile, validateFile, generateFilename } from '../services/storage.service.js';
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// In-memory OTP store (for MVP)
-// Format: { "+919999999999": { otp: "123456", expiresAt: 1690000000, role: "customer" } }
-const otpStore = new Map<string, { otp: string; expiresAt: number; role?: string }>();
-
+import { redisClient } from '../utils/redis.js';
 export const sendOtp = async (req: Request, res: Response): Promise<void> => {
   const { phone, role } = req.body;
 
@@ -23,18 +20,17 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
   try {
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
+    
+    // Store in Redis with 5 minute TTL (300 seconds)
+    await redisClient.setex(`otp:${phone}`, 300, JSON.stringify({ otp, role }));
 
-    otpStore.set(phone, { otp, expiresAt, role });
+    // Queue via BullMQ
+    await smsQueue.add('send-auth-otp', { type: 'auth', phone, otp, role }, {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 2000 }
+    });
 
-    // Send via BlackSMS
-    const sent = await sendOTP(phone, otp);
-
-    if (sent) {
-      res.json({ success: true, message: 'OTP sent successfully' });
-    } else {
-      res.status(500).json({ success: false, error: { code: 'SMS_FAILED', message: 'Failed to send OTP SMS' } });
-    }
+    res.json({ success: true, message: 'OTP sent successfully' });
   } catch (error) {
     console.error('Send OTP Error:', error);
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } });
@@ -49,21 +45,22 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const record = otpStore.get(phone);
+  const raw = await redisClient.get(`otp:${phone}`);
 
-  if (!record || record.otp !== otp) {
+  if (!raw) {
     res.status(401).json({ success: false, error: { code: 'INVALID_OTP', message: 'Invalid or expired OTP' } });
     return;
   }
 
-  if (Date.now() > record.expiresAt) {
-    otpStore.delete(phone);
-    res.status(401).json({ success: false, error: { code: 'EXPIRED_OTP', message: 'OTP has expired' } });
+  const record = JSON.parse(raw);
+
+  if (record.otp !== otp) {
+    res.status(401).json({ success: false, error: { code: 'INVALID_OTP', message: 'Invalid OTP' } });
     return;
   }
 
   // OTP is valid, clear it
-  otpStore.delete(phone);
+  await redisClient.del(`otp:${phone}`);
 
   try {
     // Determine user role (default to customer if not specified during sendOtp)

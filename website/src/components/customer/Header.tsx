@@ -7,6 +7,7 @@ import { Logo } from '../ui/Logo';
 import MobileNav from './MobileNav';
 import LocationModal from './LocationModal';
 import { useLocationStore } from '../../store/locationStore';
+import NotificationBell from '../NotificationBell';
 
 interface HeaderProps {
   showSearch?: boolean;
@@ -127,6 +128,7 @@ export default function Header({ showSearch = true, searchQuery = '', onSearchCh
 
           {/* Right Actions */}
           <div className="flex items-center gap-3 sm:gap-6 shrink-0">
+            {user && <NotificationBell />}
             <Link to="/customer/checkout" className="relative p-2 text-gray-700 hover:bg-gray-50 rounded-full transition-colors">
               <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
               {totalItems > 0 && (

@@ -1,36 +1,100 @@
-# Database Schema
+﻿# Database Schema — Tastifyy
 
-*Cross-reference: Data models, tables, fields, types, and relationships. All code changes to data models must be reflected here first.*
-
-**ORM**: Prisma | **Database**: Supabase (PostgreSQL) | **Schema file**: `prisma/schema.prisma`
+```
+Last Updated: 2026-09-12
+Source of Truth: backend/prisma/schema.prisma
+Status: Current (fully synced with schema)
+ORM: Prisma | Database: Supabase PostgreSQL
+```
 
 ---
 
-## Phase 1 — MVP Tables
+## Enums
 
-### `users`
+| Enum | Values |
+|---|---|
+| `Role` | `customer`, `admin`, `delivery_partner`, `restaurant_partner` |
+| `AddressLabel` | `home`, `work`, `other` |
+| `RestaurantType` | `restaurant`, `cloud_kitchen`, `home_kitchen` |
+| `RestaurantStatus` | `pending`, `active`, `suspended`, `rejected` |
+| `SubscriptionPlan` | `starter`, `growth`, `pro` |
+| `DayOfWeek` | `mon`, `tue`, `wed`, `thu`, `fri`, `sat`, `sun` |
+| `PartnerRole` | `owner`, `manager` |
+| `AvailabilityType` | `full_time`, `part_time` |
+| `PartnerStatus` | `pending`, `active`, `suspended`, `rejected` |
+| `OrderStatus` | `pending`, `restaurant_confirmed`, `preparing`, `ready`, `rider_assigned`, `picked_up`, `out_for_delivery`, `delivered`, `cancelled`, `rejected` |
+| `PaymentMethod` | `upi`, `card`, `net_banking`, `wallet`, `cod` |
+| `PaymentStatus` | `pending`, `processing`, `success`, `failed`, `refunded` |
+| `RefundStatus` | `refund_pending`, `refunded`, `refund_failed` |
+| `PayoutStatus` | `pending`, `processing`, `success`, `failed`, `reversed` |
+| `ReversalStatus` | `pending`, `success`, `failed` |
+| `CancelledBy` | `customer`, `restaurant`, `admin` |
+| `DiscountType` | `percentage`, `flat` |
+| `FundedBy` | `restaurant`, `platform`, `shared` |
+| `RouteAccountStatus` | `not_started`, `account_created`, `stakeholder_pending`, `product_config_pending`, `verification_pending`, `activated`, `active`, `suspended`, `rejected`, `failed` |
+| `RecipientType` | `customer`, `restaurant_partner`, `delivery_partner`, `admin` |
+| `TicketCategory` | `missing_item`, `wrong_item`, `payment_issue`, `delivery_issue`, `restaurant_issue`, `account_issue` |
+| `TicketStatus` | `open`, `in_progress`, `resolved`, `closed` |
+
+---
+
+## Data Model Hierarchy
+
+```
+User (id = Supabase auth.users.id)
+ ├── Address[]               (user delivery addresses)
+ ├── Order[]                 (as customer)
+ ├── CouponRedemption[]
+ ├── Rating[]
+ ├── SupportTicket[]
+ ├── AdminConfig[]           (only if admin)
+ └── AdminAuditLog[]         (only if admin)
+
+Restaurant
+ ├── RestaurantOperatingHour[]
+ ├── RestaurantDocument[]
+ ├── RestaurantPartner[]     (links to staff/owners - separate from User)
+ ├── MenuCategory[]
+ ├── MenuItem[]
+ ├── Order[]
+ ├── Coupon[]
+ └── Rating[]
+
+DeliveryPartner (links to User via user_id)
+ ├── DeliveryPartnerAvailability[]
+ ├── DeliveryPartnerDocument[]
+ ├── Order[]
+ ├── Rating[]
+ └── DeliveryAssignment[]
+```
+
+---
+
+## Models
+
+### `users` — Core User Table
 | Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK, DEFAULT gen_random_uuid() | |
+|---|---|---|---|
+| `id` | UUID | PK, gen_random_uuid() | Matches Supabase auth.users.id |
 | `name` | VARCHAR(255) | NOT NULL | |
-| `phone` | VARCHAR(15) | UNIQUE, NOT NULL | Primary login identifier |
-| `email` | VARCHAR(255) | UNIQUE, NULLABLE | |
-| `role` | ENUM | NOT NULL | `customer`, `admin`, `delivery_partner`, `restaurant_partner` |
-| `profile_photo_url` | TEXT | NULLABLE | |
-| `dob` | DATE | NULLABLE | For birthday offers (Phase 2) |
-| `fcm_token` | VARCHAR(500) | NULLABLE | For push notifications |
+| `phone` | VARCHAR(15) | UNIQUE NOT NULL | |
+| `email` | VARCHAR(255) | UNIQUE NULLABLE | |
+| `role` | Role enum | NOT NULL | |
+| `profile_photo_url` | TEXT | NULLABLE | Storage path, resolved to public URL |
+| `dob` | DATE | NULLABLE | |
+| `fcm_token` | VARCHAR(500) | NULLABLE | Firebase push token |
 | `is_active` | BOOLEAN | DEFAULT true | |
 | `created_at` | TIMESTAMPTZ | DEFAULT now() | |
-| `updated_at` | TIMESTAMPTZ | DEFAULT now() | |
+| `updated_at` | TIMESTAMPTZ | DEFAULT now(), auto-update | |
 
 ---
 
-### `addresses`
+### `addresses` — Customer Delivery Addresses
 | Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
+|---|---|---|---|
 | `id` | UUID | PK | |
-| `user_id` | UUID | FK → users.id, ON DELETE CASCADE | |
-| `label` | ENUM | NOT NULL | `home`, `work`, `other` |
+| `user_id` | UUID | FK → users.id CASCADE DELETE | |
+| `label` | AddressLabel enum | NOT NULL | |
 | `custom_label` | VARCHAR(100) | NULLABLE | |
 | `address_line` | TEXT | NOT NULL | |
 | `city` | VARCHAR(100) | NOT NULL | |
@@ -39,358 +103,266 @@
 | `latitude` | DECIMAL(10,8) | NOT NULL | |
 | `longitude` | DECIMAL(11,8) | NOT NULL | |
 | `is_default` | BOOLEAN | DEFAULT false | |
+| `is_deleted` | BOOLEAN | DEFAULT false | Soft delete |
 | `created_at` | TIMESTAMPTZ | DEFAULT now() | |
 
 ---
 
 ### `restaurants`
 | Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
+|---|---|---|---|
 | `id` | UUID | PK | |
 | `name` | VARCHAR(255) | NOT NULL | |
-| `type` | ENUM | NOT NULL | `restaurant`, `cloud_kitchen`, `home_kitchen` |
+| `type` | RestaurantType enum | NOT NULL | |
 | `owner_name` | VARCHAR(255) | NOT NULL | |
 | `phone` | VARCHAR(15) | NOT NULL | |
 | `email` | VARCHAR(255) | NULLABLE | |
 | `address_line` | TEXT | NOT NULL | |
-| `city` | VARCHAR(100) | NOT NULL | |
-| `state` | VARCHAR(100) | NOT NULL | |
-| `pincode` | VARCHAR(10) | NOT NULL | |
-| `latitude` | DECIMAL(10,8) | NOT NULL | |
-| `longitude` | DECIMAL(11,8) | NOT NULL | |
+| `city/state/pincode` | VARCHAR | NOT NULL | |
+| `latitude/longitude` | DECIMAL | NOT NULL | |
 | `service_radius_km` | DECIMAL(5,2) | NOT NULL | |
-| `logo_url` | TEXT | NULLABLE | |
-| `cover_image_url` | TEXT | NULLABLE | |
-| `photo_gallery_urls` | TEXT[] | DEFAULT '{}' | |
+| `logo_url` | TEXT | NULLABLE | Storage path |
+| `cover_image_url` | TEXT | NULLABLE | Storage path |
+| `photo_gallery_urls` | String[] | DEFAULT [] | |
 | `is_pure_veg` | BOOLEAN | DEFAULT false | |
-| `cuisine_tags` | TEXT[] | DEFAULT '{}' | |
-| `status` | ENUM | DEFAULT `pending` | `pending`, `active`, `suspended`, `rejected` |
-| `is_open` | BOOLEAN | DEFAULT false | Manual open/close toggle |
-| `commission_rate` | DECIMAL(5,2) | NOT NULL | Admin-configurable per restaurant |
-| `subscription_plan` | ENUM | DEFAULT `starter` | `starter`, `growth`, `pro` |
+| `cuisine_tags` | String[] | DEFAULT [] | |
+| `status` | RestaurantStatus | DEFAULT pending | |
+| `is_open` | BOOLEAN | DEFAULT false | Real-time toggle |
+| `commission_rate` | DECIMAL(5,2) | NOT NULL | Default 15% |
+| `subscription_plan` | SubscriptionPlan | DEFAULT starter | |
 | `avg_preparation_time_mins` | INT | NULLABLE | |
-| `razorpay_account_id` | TEXT | NULLABLE | For Razorpay Route splits |
-| `created_at` | TIMESTAMPTZ | DEFAULT now() | |
-| `updated_at` | TIMESTAMPTZ | DEFAULT now() | |
-
----
-
-### `restaurant_operating_hours`
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `restaurant_id` | UUID | FK → restaurants.id | |
-| `day_of_week` | ENUM | NOT NULL | `mon`,`tue`,`wed`,`thu`,`fri`,`sat`,`sun` |
-| `open_time` | TIME | NOT NULL | |
-| `close_time` | TIME | NOT NULL | |
-| `is_closed` | BOOLEAN | DEFAULT false | |
-
----
-
-### `restaurant_documents`
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `restaurant_id` | UUID | FK → restaurants.id | |
-| `document_type` | VARCHAR(100) | NOT NULL | e.g., "FSSAI", "GST", "ID Proof" |
-| `document_url` | TEXT | NOT NULL | |
-| `verified` | BOOLEAN | DEFAULT false | |
-| `uploaded_at` | TIMESTAMPTZ | DEFAULT now() | |
+| `razorpay_account_id` | TEXT | NULLABLE | Razorpay Route |
+| `razorpay_stakeholder_id` | TEXT | NULLABLE | |
+| `route_account_status` | RouteAccountStatus | DEFAULT not_started | |
+| `route_activated_at` | TIMESTAMPTZ | NULLABLE | |
+| `bank_account_number` | TEXT | NULLABLE | |
+| `ifsc_code` | VARCHAR(20) | NULLABLE | |
+| `bank_beneficiary_name` | TEXT | NULLABLE | |
+| `pan_number` | VARCHAR(10) | NULLABLE | |
+| `created_at/updated_at` | TIMESTAMPTZ | DEFAULT/auto | |
 
 ---
 
 ### `restaurant_partners`
-*Login accounts for restaurant owners/managers.*
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `restaurant_id` | UUID | FK → restaurants.id | |
-| `name` | VARCHAR(255) | NOT NULL | |
-| `phone` | VARCHAR(15) | UNIQUE, NOT NULL | |
-| `email` | VARCHAR(255) | NULLABLE | |
-| `role` | ENUM | NOT NULL | `owner`, `manager` |
-| `is_active` | BOOLEAN | DEFAULT true | |
-| `created_at` | TIMESTAMPTZ | DEFAULT now() | |
+Links restaurant staff to their restaurant. Separate from `users` table.
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | |
+| `restaurant_id` | UUID FK → restaurants.id | |
+| `name/phone/email` | VARCHAR | phone UNIQUE |
+| `password_hash` | TEXT NULLABLE | Legacy field, not used in current auth |
+| `role` | PartnerRole (owner/manager) | |
+| `is_active` | BOOLEAN DEFAULT true | |
+
+> **Note:** Auth for restaurant partners is done via `users` table. The `restaurant_partners` table is queried by phone to resolve which restaurant a logged-in user manages.
 
 ---
 
 ### `menu_categories`
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `restaurant_id` | UUID | FK → restaurants.id | |
-| `name` | VARCHAR(255) | NOT NULL | |
-| `display_order` | INT | DEFAULT 0 | |
-| `is_active` | BOOLEAN | DEFAULT true | |
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | |
+| `restaurant_id` | UUID FK → restaurants.id | |
+| `name` | VARCHAR(255) | |
+| `display_order` | INT DEFAULT 0 | |
+| `is_active` | BOOLEAN DEFAULT true | |
 
 ---
 
 ### `menu_items`
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `restaurant_id` | UUID | FK → restaurants.id | |
-| `category_id` | UUID | FK → menu_categories.id | |
-| `name` | VARCHAR(255) | NOT NULL | |
-| `description` | TEXT | NULLABLE | |
-| `price` | DECIMAL(10,2) | NOT NULL | |
-| `image_url` | TEXT | NULLABLE | |
-| `is_veg` | BOOLEAN | NOT NULL | |
-| `is_available` | BOOLEAN | DEFAULT true | |
-| `is_bestseller` | BOOLEAN | DEFAULT false | |
-| `stock_quantity` | INT | NULLABLE | NULL = unlimited |
-| `preparation_time_mins` | INT | NULLABLE | |
-| `created_at` | TIMESTAMPTZ | DEFAULT now() | |
-| `updated_at` | TIMESTAMPTZ | DEFAULT now() | |
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | |
+| `restaurant_id` | UUID FK → restaurants.id | |
+| `category_id` | UUID FK → menu_categories.id | |
+| `name` | VARCHAR(255) | |
+| `description` | TEXT NULLABLE | |
+| `price` | DECIMAL(10,2) | |
+| `image_url` | TEXT NULLABLE | Storage path |
+| `is_veg` | BOOLEAN | |
+| `is_available` | BOOLEAN DEFAULT true | |
+| `is_bestseller` | BOOLEAN DEFAULT false | |
+| `stock_quantity` | INT NULLABLE | NULL = unlimited |
+| `preparation_time_mins` | INT NULLABLE | |
 
 ---
 
-### `menu_item_customizations`
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `menu_item_id` | UUID | FK → menu_items.id | |
-| `group_name` | VARCHAR(100) | NOT NULL | e.g., "Spice Level", "Add-ons" |
-| `is_required` | BOOLEAN | DEFAULT false | |
-| `is_multi_select` | BOOLEAN | DEFAULT false | |
-
----
-
-### `menu_item_customization_options`
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `customization_id` | UUID | FK → menu_item_customizations.id | |
-| `label` | VARCHAR(100) | NOT NULL | e.g., "Mild", "Extra Cheese" |
-| `additional_price` | DECIMAL(10,2) | DEFAULT 0 | |
+### `menu_item_customizations` + `menu_item_customization_options`
+Groups (e.g., "Size", "Toppings") and their options (e.g., "Large +₹50").
 
 ---
 
 ### `delivery_partners`
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `name` | VARCHAR(255) | NOT NULL | |
-| `phone` | VARCHAR(15) | UNIQUE, NOT NULL | |
-| `email` | VARCHAR(255) | NULLABLE | |
-| `password_hash` | TEXT | NULLABLE | |
-| `profile_photo_url` | TEXT | NULLABLE | |
-| `vehicle_type` | VARCHAR(100) | NULLABLE | |
-| `vehicle_number` | VARCHAR(50) | NULLABLE | |
-| `bank_account_number` | TEXT | NULLABLE | Encrypted at rest |
-| `bank_ifsc` | VARCHAR(20) | NULLABLE | |
-| `bank_beneficiary_name` | VARCHAR(255) | NULLABLE | For payouts |
-| `razorpay_fund_account_id` | TEXT | NULLABLE | For RazorpayX payouts |
-| `availability_type` | ENUM | NOT NULL | `full_time`, `part_time` |
-| `is_online` | BOOLEAN | DEFAULT false | |
-| `current_latitude` | DECIMAL(10,8) | NULLABLE | Updated in realtime |
-| `current_longitude` | DECIMAL(11,8) | NULLABLE | Updated in realtime |
-| `status` | ENUM | DEFAULT `pending` | `pending`, `active`, `suspended`, `rejected` |
-| `created_at` | TIMESTAMPTZ | DEFAULT now() | |
-| `updated_at` | TIMESTAMPTZ | DEFAULT now() | |
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | |
+| `user_id` | UUID UNIQUE FK → users.id | |
+| `name/phone/email` | VARCHAR | phone UNIQUE |
+| `vehicle_type/number/model` | VARCHAR NULLABLE | |
+| `license_number` | VARCHAR NULLABLE | |
+| `bank_account_number/ifsc_code/upi_id` | VARCHAR NULLABLE | |
+| `razorpay_contact_id/fund_account_id` | TEXT NULLABLE | For RazorpayX payouts |
+| `availability_type` | AvailabilityType | |
+| `is_online` | BOOLEAN DEFAULT false | Real-time presence |
+| `current_latitude/longitude` | DECIMAL NULLABLE | Live GPS |
+| `status` | PartnerStatus DEFAULT pending | |
 
 ---
 
-### `delivery_partner_availability`
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `partner_id` | UUID | FK → delivery_partners.id | |
-| `day_of_week` | ENUM | NOT NULL | `mon`,`tue`,`wed`,`thu`,`fri`,`sat`,`sun` |
-| `start_time` | TIME | NOT NULL | |
-| `end_time` | TIME | NOT NULL | |
-
----
-
-### `delivery_partner_documents`
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `partner_id` | UUID | FK → delivery_partners.id | |
-| `document_type` | VARCHAR(100) | NOT NULL | e.g., "Govt ID", "Driving License" |
-| `document_url` | TEXT | NOT NULL | |
-| `verified` | BOOLEAN | DEFAULT false | |
-| `uploaded_at` | TIMESTAMPTZ | DEFAULT now() | |
-
----
-
-### `orders`
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `customer_id` | UUID | FK → users.id | |
-| `restaurant_id` | UUID | FK → restaurants.id | |
-| `delivery_partner_id` | UUID | FK → delivery_partners.id, NULLABLE | |
-| `delivery_address_id` | UUID | FK → addresses.id | |
-| `status` | ENUM | NOT NULL | `pending`, `restaurant_confirmed`, `preparing`, `ready`, `rider_assigned`, `picked_up`, `out_for_delivery`, `delivered`, `cancelled`, `rejected` |
-| `item_subtotal` | DECIMAL(10,2) | NOT NULL | |
-| `delivery_fee` | DECIMAL(10,2) | NOT NULL | |
-| `platform_fee` | DECIMAL(10,2) | NOT NULL | |
-| `discount_amount` | DECIMAL(10,2) | DEFAULT 0 | |
-| `tax_amount` | DECIMAL(10,2) | DEFAULT 0 | |
-| `total_amount` | DECIMAL(10,2) | NOT NULL | |
-| `payment_method` | ENUM | NOT NULL | `upi`, `card`, `net_banking`, `wallet`, `cod` |
-| `payment_status` | ENUM | NOT NULL | `pending`, `processing`, `success`, `failed`, `refunded` |
-| `razorpay_order_id` | TEXT | NULLABLE | |
-| `razorpay_payment_id` | TEXT | NULLABLE | |
-| `idempotency_key` | TEXT | UNIQUE, NOT NULL | Duplicate-order prevention (Rule 4) |
-| `coupon_id` | UUID | FK → coupons.id, NULLABLE | |
-| `special_instructions` | TEXT | NULLABLE | |
-| `cancelled_by` | ENUM | NULLABLE | `customer`, `restaurant`, `admin` |
-| `cancellation_reason` | TEXT | NULLABLE | |
-| `delivery_otp` | VARCHAR(4) | NULLABLE | |
-| `created_at` | TIMESTAMPTZ | DEFAULT now() | |
-| `updated_at` | TIMESTAMPTZ | DEFAULT now() | |
+### `orders` — The Central Order Record
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | |
+| `customer_id` | UUID FK → users.id | |
+| `restaurant_id` | UUID FK → restaurants.id | |
+| `delivery_partner_id` | UUID FK → delivery_partners.id NULLABLE | |
+| `delivery_address_id` | UUID FK → addresses.id | |
+| `status` | OrderStatus | State machine enforced |
+| `item_subtotal` | DECIMAL(10,2) | |
+| `delivery_fee` | DECIMAL(10,2) | |
+| `platform_fee` | DECIMAL(10,2) | |
+| `discount_amount` | DECIMAL(10,2) DEFAULT 0 | |
+| `tax_amount` | DECIMAL(10,2) DEFAULT 0 | |
+| `total_amount` | DECIMAL(10,2) | |
+| `restaurant_discount_share` | DECIMAL(10,2) DEFAULT 0 | |
+| `platform_discount_share` | DECIMAL(10,2) DEFAULT 0 | |
+| `restaurant_commission` | DECIMAL(10,2) DEFAULT 0 | |
+| `restaurant_transfer` | DECIMAL(10,2) DEFAULT 0 | Net amount owed to restaurant |
+| `payment_method` | PaymentMethod | |
+| `payment_status` | PaymentStatus | |
+| `razorpay_order_id` | TEXT NULLABLE | |
+| `razorpay_payment_id` | TEXT NULLABLE | |
+| `razorpay_transfer_id` | TEXT NULLABLE | |
+| `razorpay_refund_id` | TEXT NULLABLE | |
+| `refund_status` | RefundStatus NULLABLE | |
+| `refund_failure_reason` | TEXT NULLABLE | |
+| `razorpay_reversal_id` | TEXT NULLABLE | For Route transfer reversal |
+| `reversal_status` | ReversalStatus NULLABLE | |
+| `idempotency_key` | TEXT UNIQUE | Prevents duplicate orders |
+| `coupon_id` | UUID FK NULLABLE | |
+| `special_instructions` | TEXT NULLABLE | |
+| `cancelled_by` | CancelledBy NULLABLE | |
+| `cancellation_reason` | TEXT NULLABLE | |
+| `delivery_otp` | VARCHAR(4) NULLABLE | 4-digit OTP for delivery confirmation |
+| `created_at/updated_at` | TIMESTAMPTZ | |
 
 ---
 
 ### `order_items`
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `order_id` | UUID | FK → orders.id | |
-| `menu_item_id` | UUID | FK → menu_items.id | |
-| `name_snapshot` | VARCHAR(255) | NOT NULL | Captured at order time |
-| `price_snapshot` | DECIMAL(10,2) | NOT NULL | Captured at order time |
-| `quantity` | INT | NOT NULL | |
-| `customizations_snapshot` | JSONB | NULLABLE | Selected options at order time |
-| `subtotal` | DECIMAL(10,2) | NOT NULL | |
+Snapshot of item details at time of ordering (prevents menu price changes from affecting historical orders).
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | |
+| `order_id` | UUID FK → orders.id | |
+| `menu_item_id` | UUID FK → menu_items.id | |
+| `name_snapshot` | VARCHAR(255) | |
+| `price_snapshot` | DECIMAL(10,2) | |
+| `quantity` | INT | |
+| `customizations_snapshot` | JSON NULLABLE | Array of {name, price} |
+| `subtotal` | DECIMAL(10,2) | |
 
 ---
 
 ### `coupons`
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `code` | VARCHAR(50) | UNIQUE, NOT NULL | |
-| `discount_type` | ENUM | NOT NULL | `percentage`, `flat` |
-| `discount_value` | DECIMAL(10,2) | NOT NULL | |
-| `max_discount_cap` | DECIMAL(10,2) | NULLABLE | For percentage coupons |
-| `min_order_value` | DECIMAL(10,2) | DEFAULT 0 | |
-| `funded_by` | ENUM | NOT NULL | `restaurant`, `platform`, `shared` |
-| `restaurant_id` | UUID | FK → restaurants.id, NULLABLE | NULL = platform-wide |
-| `max_uses_total` | INT | NULLABLE | |
-| `max_uses_per_user` | INT | DEFAULT 1 | |
-| `valid_from` | TIMESTAMPTZ | NOT NULL | |
-| `valid_until` | TIMESTAMPTZ | NOT NULL | |
-| `is_active` | BOOLEAN | DEFAULT true | |
-| `created_at` | TIMESTAMPTZ | DEFAULT now() | |
-
----
-
-### `coupon_redemptions`
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `coupon_id` | UUID | FK → coupons.id | |
-| `user_id` | UUID | FK → users.id | |
-| `order_id` | UUID | FK → orders.id | |
-| `redeemed_at` | TIMESTAMPTZ | DEFAULT now() | |
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | |
+| `code` | VARCHAR(50) UNIQUE | |
+| `discount_type` | DiscountType (percentage/flat) | |
+| `discount_value` | DECIMAL(10,2) | |
+| `max_discount_cap` | DECIMAL NULLABLE | For percentage coupons |
+| `min_order_value` | DECIMAL DEFAULT 0 | |
+| `funded_by` | FundedBy | |
+| `restaurant_id` | UUID FK NULLABLE | Restaurant-specific coupon |
+| `max_uses_total` | INT NULLABLE | |
+| `max_uses_per_user` | INT DEFAULT 1 | |
+| `valid_from/until` | TIMESTAMPTZ | |
+| `is_active` | BOOLEAN DEFAULT true | |
 
 ---
 
 ### `ratings`
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `order_id` | UUID | FK → orders.id, UNIQUE | One rating per order |
-| `customer_id` | UUID | FK → users.id | |
-| `restaurant_id` | UUID | FK → restaurants.id | |
-| `delivery_partner_id` | UUID | FK → delivery_partners.id, NULLABLE | |
-| `food_rating` | SMALLINT | CHECK (1–5) | |
-| `restaurant_rating` | SMALLINT | CHECK (1–5) | |
-| `delivery_rating` | SMALLINT | CHECK (1–5), NULLABLE | |
-| `review_text` | TEXT | NULLABLE | |
-| `photo_urls` | TEXT[] | NULLABLE | |
-| `tags` | TEXT[] | NULLABLE | e.g., "Great taste", "Late delivery" |
-| `created_at` | TIMESTAMPTZ | DEFAULT now() | |
-
----
-
-### `notifications`
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `recipient_type` | ENUM | NOT NULL | `customer`, `restaurant_partner`, `delivery_partner`, `admin` |
-| `recipient_id` | UUID | NOT NULL | References the relevant role table |
-| `type` | VARCHAR(100) | NOT NULL | e.g., `order_confirmed`, `rider_assigned` |
-| `title` | VARCHAR(255) | NOT NULL | |
-| `body` | TEXT | NOT NULL | |
-| `data` | JSONB | NULLABLE | Order ID, etc. |
-| `is_read` | BOOLEAN | DEFAULT false | |
-| `created_at` | TIMESTAMPTZ | DEFAULT now() | |
+One rating per delivered order.
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | |
+| `order_id` | UUID UNIQUE FK → orders.id | 1 rating per order enforced |
+| `customer_id` | UUID FK → users.id | |
+| `restaurant_id` | UUID FK → restaurants.id | |
+| `delivery_partner_id` | UUID FK NULLABLE | |
+| `food_rating` | SMALLINT | |
+| `restaurant_rating` | SMALLINT | |
+| `delivery_rating` | SMALLINT NULLABLE | |
+| `review_text` | TEXT NULLABLE | |
+| `photo_urls` | String[] DEFAULT [] | |
+| `tags` | String[] DEFAULT [] | |
 
 ---
 
 ### `support_tickets`
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `customer_id` | UUID | FK → users.id | |
-| `order_id` | UUID | FK → orders.id, NULLABLE | |
-| `category` | ENUM | NOT NULL | `missing_item`, `wrong_item`, `payment_issue`, `delivery_issue`, `restaurant_issue`, `account_issue` |
-| `description` | TEXT | NOT NULL | |
-| `status` | ENUM | DEFAULT `open` | `open`, `in_progress`, `resolved`, `closed` |
-| `resolution_notes` | TEXT | NULLABLE | |
-| `created_at` | TIMESTAMPTZ | DEFAULT now() | |
-| `updated_at` | TIMESTAMPTZ | DEFAULT now() | |
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | |
+| `customer_id` | UUID FK → users.id | |
+| `order_id` | UUID FK → orders.id NULLABLE | |
+| `category` | TicketCategory | |
+| `description` | TEXT | |
+| `status` | TicketStatus DEFAULT open | |
+| `resolution_notes` | TEXT NULLABLE | |
 
 ---
 
 ### `admin_config`
-*All configurable financial values. Never hardcoded per Rule 3.*
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `key` | VARCHAR(100) | UNIQUE, NOT NULL | e.g., `default_commission_rate`, `platform_fee_flat`, `delivery_base_fee`, `delivery_per_km_fee`, `min_lmd_discount_pct` |
-| `value` | TEXT | NOT NULL | Stored as string, typed at application layer |
-| `description` | TEXT | NULLABLE | |
-| `updated_by` | UUID | FK → users.id | Admin user who last changed this |
-| `updated_at` | TIMESTAMPTZ | DEFAULT now() | |
+Key-value store for platform configuration.
+| Key | Purpose |
+|---|---|
+| `PLATFORM_FEE` | Platform fee per order (Rs) |
+| `DELIVERY_BASE_FEE` | Base delivery fee |
+| `DELIVERY_PER_KM_FEE` | Per km delivery fee |
+| `PLATFORM_FEE_PERCENT` | Platform commission % (for analytics) |
 
 ---
 
 ### `admin_audit_log`
-*Logs all sensitive Admin Panel actions per Rule 10.*
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `admin_id` | UUID | FK → users.id | |
-| `action` | TEXT | NOT NULL | e.g., `APPROVE_RESTAURANT`, `UPDATE_CONFIG`, `SUSPEND_USER` |
-| `target_type` | VARCHAR(100) | NULLABLE | e.g., `restaurant`, `delivery_partner` |
-| `target_id` | UUID | NULLABLE | |
-| `details` | JSONB | NULLABLE | Before/after values |
-| `created_at` | TIMESTAMPTZ | DEFAULT now() | |
+Immutable log of admin actions (cancellations, refunds, approvals).
 
 ---
 
 ### `delivery_assignments`
-| Column | Type | Constraints | Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | UUID | PK | |
-| `order_id` | UUID | FK → orders.id, UNIQUE | |
-| `partner_id` | UUID | FK → delivery_partners.id | |
-| `status` | VARCHAR(50) | NOT NULL | `accepted`, `picked_up`, `delivered`, `rejected` |
-| `earning_amount` | DECIMAL(10,2) | NULLABLE | |
-| `pickup_distance_km` | DECIMAL(6,2) | NULLABLE | |
-| `delivery_distance_km` | DECIMAL(6,2) | NULLABLE | |
-| `payout_status` | ENUM | NULLABLE | `pending`, `processing`, `success`, `failed`, `refunded` |
-| `payout_reference_id` | TEXT | NULLABLE | |
-| `assigned_at` | TIMESTAMPTZ | DEFAULT now() | |
-| `updated_at` | TIMESTAMPTZ | DEFAULT now() | |
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | |
+| `order_id` | UUID UNIQUE FK → orders.id | 1 assignment per order |
+| `partner_id` | UUID FK → delivery_partners.id | |
+| `status` | VARCHAR(50) | accepted, picked_up, delivered, rejected |
+| `earning_amount` | DECIMAL NULLABLE | |
+| `pickup_distance_km` | DECIMAL NULLABLE | |
+| `payout_status` | PayoutStatus NULLABLE | |
+| `payout_reference_id/idempotency_key/failure_reason` | TEXT NULLABLE | |
+| `payout_processed_at` | TIMESTAMPTZ NULLABLE | |
 
 ---
 
-## Phase 2 — Tables (To Be Defined Before Phase 2 Build Starts)
-- `tastifyy_coins` / `coin_transactions`
-- `referrals`
-- `group_orders` / `group_order_participants`
-- `split_bill_requests` / `split_bill_payments`
-- `scheduled_orders`
-- `last_minute_deals`
+### `notifications`
+Notification inbox (not currently displayed in frontend).
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | |
+| `recipient_type` | RecipientType | |
+| `recipient_id` | UUID | |
+| `type/title/body` | VARCHAR/TEXT | |
+| `data` | JSON NULLABLE | |
+| `is_read` | BOOLEAN DEFAULT false | |
 
-## Phase 3 — Tables (To Be Defined Before Phase 3 Build Starts)
-- `advertisement_campaigns`
-- `sponsored_listings`
-- `community_polls` / `community_votes`
-- `rent_earn_listings` *(Unfinalized — requires PRD confirmation before schema is written)*
+---
+
+## Known Schema Issues / Concerns
+
+| Issue | Severity |
+|---|---|
+| `restaurant_partners.password_hash` exists but is unused (auth is via `users` table) | LOW (legacy) |
+| `notifications` table exists but frontend has no notification inbox UI | MEDIUM |
+| `DeliveryPartnerAvailability` table exists but not displayed in delivery partner UI | LOW |
+| OTP is stored in-memory, not in DB — lost on server restart | HIGH |
+| No `preferences` column on User despite PRD mentioning dietary preferences | LOW |
+| `custom_label` on Address is stored but not exposed in any frontend UI | LOW |

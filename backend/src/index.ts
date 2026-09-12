@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { initSocket } from './socket.js';
 import { prisma } from './utils/prisma.js';
+import './jobs/workers.js';
 
 import authRoutes from './routes/auth.routes.js';
 import restaurantRoutes from './routes/restaurant.routes.js';

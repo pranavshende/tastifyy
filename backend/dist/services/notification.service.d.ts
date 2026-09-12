@@ -1,9 +1,13 @@
-/**
- * sendPushNotification
- *
- * Fetches the user's FCM token and dispatches a push notification.
- * If FIREBASE_SERVICE_ACCOUNT is not set, it logs the payload to console
- * to simulate the FCM dispatch successfully.
- */
 export declare function sendPushNotification(userId: string, title: string, body: string, data?: Record<string, string>): Promise<boolean>;
+export declare function createNotification(recipientId: string, recipientType: 'customer' | 'restaurant_partner' | 'delivery_partner' | 'admin', type: string, title: string, body: string, data?: any): Promise<{
+    id: string;
+    created_at: Date;
+    type: string;
+    data: import("@prisma/client/runtime/client").JsonValue | null;
+    recipient_type: import("@prisma/client").$Enums.RecipientType;
+    recipient_id: string;
+    title: string;
+    body: string;
+    is_read: boolean;
+} | null>;
 //# sourceMappingURL=notification.service.d.ts.map
