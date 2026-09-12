@@ -46,6 +46,5 @@
     "skipLibCheck": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "tests", "prisma", "*.config.ts"],
-  "references": [{ "path": "./tsconfig.test.json" }]
+  "exclude": ["node_modules", "tests", "prisma", "*.config.ts"]
 }
