@@ -8,6 +8,7 @@ import Landing from './pages/Landing';
 import AdminLogin from './pages/admin/Login';
 import AdminDashboard from './pages/admin/Dashboard';
 import CustomerLogin from './pages/customer/Login';
+import CustomerRegister from './pages/customer/Register';
 import CustomerHome from './pages/customer/Home';
 import RestaurantRegister from './pages/restaurant/Register';
 import RestaurantLogin from './pages/restaurant/Login';
@@ -50,6 +51,10 @@ function AppRoutes() {
       <Route
         path="/customer/login"
         element={user ? <Navigate to="/customer/home" replace /> : <CustomerLogin />}
+      />
+      <Route
+        path="/customer/register"
+        element={user ? <Navigate to="/customer/home" replace /> : <CustomerRegister />}
       />
       <Route
         path="/restaurant/login"
