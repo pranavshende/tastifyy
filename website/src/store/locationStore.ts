@@ -9,21 +9,18 @@ export interface LocationZone {
 }
 
 export const DELIVERY_ZONES: LocationZone[] = [
-  { id: '1', name: 'Main Market & Station Road', deliveryTime: '20-25 mins', baseFee: 30 },
-  { id: '2', name: 'Ward 3, 4 & Green Avenue', deliveryTime: '20 mins', baseFee: 30 },
-  { id: '3', name: 'College Campus & Bypass Chowk', deliveryTime: '25-30 mins', baseFee: 35 },
-  { id: '4', name: 'Bus Depot & Civil Hospital Area', deliveryTime: '20-25 mins', baseFee: 30 },
-  { id: '5', name: 'Lakhandur Road', deliveryTime: '20-25 mins', baseFee: 30 },
-  { id: '6', name: 'Panchsheel Ward', deliveryTime: '25 mins', baseFee: 30 },
-  { id: '7', name: 'M.B. Patel College Road', deliveryTime: '25-30 mins', baseFee: 35 },
-  { id: '8', name: 'Ramabai Ambedkar Chowk', deliveryTime: '20-25 mins', baseFee: 30 },
-  { id: '9', name: 'Nursury Colony', deliveryTime: '25 mins', baseFee: 30 },
-  { id: '10', name: 'Pragati Colony', deliveryTime: '25 mins', baseFee: 30 },
-  { id: '11', name: 'Birsa Munda Chowk', deliveryTime: '20 mins', baseFee: 30 },
-  { id: '12', name: 'Jamanapur Road', deliveryTime: '25-30 mins', baseFee: 35 },
-  { id: '13', name: 'Nagzira Road', deliveryTime: '30-35 mins', baseFee: 40 },
-  { id: '14', name: 'Nipane Colony', deliveryTime: '25-30 mins', baseFee: 35 },
-  { id: '15', name: 'Karanjekar College area', deliveryTime: '30-35 mins', baseFee: 40 },
+  { id: '1', name: 'Manohar Bhai Patel College area', deliveryTime: '20-25 mins', baseFee: 30 },
+  { id: '2', name: 'Karanjekar College area', deliveryTime: '25-30 mins', baseFee: 35 },
+  { id: '3', name: 'NH-53 / Main Highway', deliveryTime: '20 mins', baseFee: 30 },
+  { id: '4', name: 'Nagzira Road', deliveryTime: '30-35 mins', baseFee: 40 },
+  { id: '5', name: 'Jamnapur', deliveryTime: '25-30 mins', baseFee: 35 },
+  { id: '6', name: 'Virshi', deliveryTime: '30-40 mins', baseFee: 45 },
+  { id: '7', name: 'Ganesh Ward', deliveryTime: '15-20 mins', baseFee: 30 },
+  { id: '8', name: 'Panchshil Ward', deliveryTime: '15-20 mins', baseFee: 30 },
+  { id: '9', name: 'LIC / BSNL Tower area', deliveryTime: '15-20 mins', baseFee: 30 },
+  { id: '10', name: 'Sakoli Main Chowk', deliveryTime: '15 mins', baseFee: 25 },
+  { id: '11', name: 'Hospital area', deliveryTime: '15-20 mins', baseFee: 30 },
+  { id: '12', name: 'Sakoli Lake / Tourist Side', deliveryTime: '25-30 mins', baseFee: 35 },
 ];
 
 export type City = 'Sakoli' | 'Sendurwafa' | 'Khairlanji';
