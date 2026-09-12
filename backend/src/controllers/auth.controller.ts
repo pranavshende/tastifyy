@@ -282,9 +282,12 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
   }
 
   try {
+    const decoded = jwt.decode(credential) as any;
+    const audience = decoded?.aud || process.env.GOOGLE_CLIENT_ID || 'dummy-client-id';
+
     const ticket: any = await googleClient.verifyIdToken({
       idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID || 'dummy-client-id',
+      audience: audience,
     });
     
     const payload = ticket.getPayload();
