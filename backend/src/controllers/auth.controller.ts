@@ -172,6 +172,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
+    let adminDataUser = null;
     const { data: adminData, error: adminError } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -179,13 +180,36 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     });
 
     if (adminError) {
-      res.status(400).json({ success: false, error: { code: 'AUTH_ERROR', message: adminError.message } });
-      return;
-    }
-
-    if (!adminData.user) {
-      res.status(400).json({ success: false, error: { code: 'AUTH_ERROR', message: 'Failed to create user. Email may already be registered.' } });
-      return;
+      if (adminError.code === 'email_exists' || adminError.message?.includes('already been registered')) {
+        // Find the orphaned Supabase user
+        let foundUser = null;
+        let page = 1;
+        while (true) {
+          const { data: usersData } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+          if (!usersData || !usersData.users || usersData.users.length === 0) break;
+          foundUser = usersData.users.find(u => u.email === email);
+          if (foundUser) break;
+          page++;
+        }
+        
+        if (foundUser) {
+          adminDataUser = foundUser;
+          // Update their password to what they just entered during registration
+          await supabase.auth.admin.updateUserById(foundUser.id, { password, email_confirm: true });
+        } else {
+          res.status(400).json({ success: false, error: { code: 'AUTH_ERROR', message: 'Email already registered but user not found in identity provider' } });
+          return;
+        }
+      } else {
+        res.status(400).json({ success: false, error: { code: 'AUTH_ERROR', message: adminError.message } });
+        return;
+      }
+    } else {
+      if (!adminData.user) {
+        res.status(400).json({ success: false, error: { code: 'AUTH_ERROR', message: 'Failed to create user in identity provider' } });
+        return;
+      }
+      adminDataUser = adminData.user;
     }
 
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
@@ -343,58 +367,15 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
     // Check if user exists in our DB
     let dbUser = await prisma.user.findUnique({ where: { email } });
 
-    let supabaseUserId = dbUser?.id;
-
     if (!dbUser) {
-      // For compatibility, create a dummy user in Supabase auth (since middleware expects a valid sub)
-      // Or just create it directly in prisma with the googleId.
-      const dummyPassword = Math.random().toString(36).slice(-10) + 'A1!'; 
-      
-      let { data: adminData, error: adminError } = await supabase.auth.admin.createUser({
-        email: email,
-        password: dummyPassword,
-        email_confirm: true
+      // User is not registered in Prisma. Do NOT automatically create a dummy profile.
+      // Return a structured response so the frontend can redirect them to the Signup flow.
+      res.status(404).json({ 
+        success: false, 
+        error: { code: 'GOOGLE_USER_NOT_REGISTERED', message: 'User not registered. Please complete signup.' },
+        data: { email, name, picture }
       });
-
-      if (adminError && (adminError.code === 'email_exists' || adminError.message?.includes('already been registered'))) {
-        // Attempt to find the orphaned Supabase user
-        const { data: usersData } = await supabase.auth.admin.listUsers();
-        const existingUser = usersData?.users?.find(u => u.email === email);
-        if (existingUser) {
-          adminData = { user: existingUser } as any;
-          adminError = null;
-        }
-      }
-
-      if (adminError) {
-        console.error("Supabase create user error:", adminError);
-        res.status(500).json({ success: false, error: { code: 'AUTH_ERROR', message: 'Failed to create user in identity provider' } });
-        return;
-      }
-
-      if (!adminData?.user) {
-        console.error("Supabase create user error: user is null");
-        res.status(500).json({ success: false, error: { code: 'AUTH_ERROR', message: 'Failed to retrieve user ID from identity provider' } });
-        return;
-      }
-
-      supabaseUserId = adminData.user.id;
-
-      // Generate a dummy phone that is strictly under 15 characters
-      // +91 (3) + 00000 (5) + 6 random digits = 14 characters
-      const randomDigits = Math.floor(100000 + Math.random() * 900000).toString();
-      const dummyPhone = '+9100000' + randomDigits;
-
-      dbUser = await prisma.user.create({
-        data: {
-          id: supabaseUserId,
-          email,
-          name: name || 'Google User',
-          phone: dummyPhone,
-          role: 'customer',
-          profile_photo_url: picture
-        }
-      });
+      return;
     }
 
     if (!dbUser.is_active) {

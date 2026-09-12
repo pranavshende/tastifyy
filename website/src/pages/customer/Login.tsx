@@ -92,8 +92,16 @@ export default function CustomerLogin() {
       setAuth(res.data.user, token);
       handleRedirect(res.data.user.role);
     } catch (err: any) {
-      const msg = err.response?.data?.error?.message || err.response?.data?.error || err.message || 'Google Authentication failed';
-      setError(msg);
+      if (err.response?.data?.error?.code === 'GOOGLE_USER_NOT_REGISTERED') {
+        const { email: googleEmail, name: googleName } = err.response.data.data;
+        setIsRegister(true);
+        if (googleEmail) setEmail(googleEmail);
+        if (googleName) setName(googleName);
+        setError('Google account not registered. Please complete your profile to sign up.');
+      } else {
+        const msg = err.response?.data?.error?.message || err.response?.data?.error || err.message || 'Google Authentication failed';
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
