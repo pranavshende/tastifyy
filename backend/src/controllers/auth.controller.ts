@@ -256,10 +256,28 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       });
     }
 
+    const jwtSecret = process.env.JWT_SECRET || 'fallback_development_secret';
+    const token = jwt.sign(
+      { 
+        sub: user.id,
+        aud: "authenticated",
+        role: "authenticated",
+        email: user.email,
+        phone: user.phone
+      }, 
+      jwtSecret, 
+      { expiresIn: '7d' }
+    );
+
     res.status(201).json({ 
       success: true, 
       user: { ...user, profile_photo_url: getPublicUrl(user.profile_photo_url) }, 
-      session: authData.session 
+      session: {
+        access_token: token,
+        token_type: 'bearer',
+        expires_in: 7 * 24 * 60 * 60,
+        user: { id: user.id, phone: user.phone, email: user.email }
+      }
     });
   } catch (error: any) {
     console.error('Registration Error:', error);
@@ -304,10 +322,28 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    const jwtSecret = process.env.JWT_SECRET || 'fallback_development_secret';
+    const token = jwt.sign(
+      { 
+        sub: user.id,
+        aud: "authenticated",
+        role: "authenticated",
+        email: user.email,
+        phone: user.phone
+      }, 
+      jwtSecret, 
+      { expiresIn: '7d' }
+    );
+
     res.json({ 
       success: true, 
       user: { ...user, profile_photo_url: getPublicUrl(user.profile_photo_url) }, 
-      session: authData.session 
+      session: {
+        access_token: token,
+        token_type: 'bearer',
+        expires_in: 7 * 24 * 60 * 60,
+        user: { id: user.id, phone: user.phone, email: user.email }
+      }
     });
   } catch (error) {
     console.error('Login Error:', error);
