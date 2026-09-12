@@ -29,9 +29,12 @@ const io = initSocket(httpServer);
 // Standard Middleware
 const allowedOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
-    : ['http://localhost:5173', 'https://tastifyy.pranavshende.online'];
-if (process.env.CORS_ORIGIN && !allowedOrigins.includes('https://tastifyy.pranavshende.online')) {
-    allowedOrigins.push('https://tastifyy.pranavshende.online');
+    : ['http://localhost:5173', 'https://www.tastifyy.in', 'https://tastifyy.in', 'https://tastifyy.pranavshende.online'];
+// Always ensure production domains are included
+for (const domain of ['https://www.tastifyy.in', 'https://tastifyy.in']) {
+    if (!allowedOrigins.includes(domain)) {
+        allowedOrigins.push(domain);
+    }
 }
 console.log('--- CORS allowedOrigins ---', allowedOrigins);
 app.use(cors({
