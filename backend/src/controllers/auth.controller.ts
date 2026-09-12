@@ -427,8 +427,8 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
       } 
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Google Login Error:', error);
-    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Internal server error during Google login' } });
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: `Internal server error during Google login: ${error?.message || 'Unknown error'}` } });
   }
 };

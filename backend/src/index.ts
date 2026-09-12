@@ -56,7 +56,9 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), hand
 app.use(express.json());
 
 // Security Middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }
+}));
 
 // Global Rate Limiting
 const limiter = rateLimit({
