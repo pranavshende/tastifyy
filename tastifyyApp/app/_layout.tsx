@@ -15,8 +15,8 @@ export default function RootLayout() {
     if (!initialized) return;
 
     if (!user) {
-      // Not authenticated — send to universal landing page
-      router.replace('/');
+      // Not authenticated — send to customer home to allow guest browsing
+      router.replace('/(customer)/home');
       return;
     }
 

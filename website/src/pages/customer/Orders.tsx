@@ -4,6 +4,7 @@ import api from '../../api/axios';
 import { Clock, ChevronRight, ArrowLeft, ReceiptText, Star } from 'lucide-react';
 import socketService from '../../api/socket';
 import ImageWithFallback from '../../components/ui/ImageWithFallback';
+import MobileNav from '../../components/customer/MobileNav';
 
 export default function Orders() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -200,6 +201,8 @@ export default function Orders() {
           </div>
         )}
       </main>
+
+      <MobileNav />
     </div>
   );
 }

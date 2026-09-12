@@ -167,6 +167,17 @@ export default function CustomerProfile() {
     }
   };
 
+  const handleSetDefaultAddress = async (id: string) => {
+    try {
+      await api.patch(`/customer/addresses/${id}/default`);
+      // Update local state: mark this as default, unmark others
+      setAddresses(addresses.map(a => ({ ...a, is_default: a.id === id })));
+      setSuccess('Default address updated');
+    } catch (err: any) {
+      setError(err.response?.data?.error?.message || 'Failed to set default address');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -365,9 +376,19 @@ export default function CustomerProfile() {
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                        <p className="text-gray-600 font-medium text-sm leading-relaxed pr-6">
+                        <p className="text-gray-600 font-medium text-sm leading-relaxed pr-6 mb-3">
                           {address.address_line}, {address.city}, {address.state} - {address.pincode}
                         </p>
+                        {!address.is_default && (
+                          <div className="flex justify-start">
+                            <button 
+                              onClick={() => handleSetDefaultAddress(address.id)}
+                              className="text-xs font-bold text-brand-primary hover:text-brand-secondary bg-orange-50 hover:bg-orange-100 px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                              Set as Default
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

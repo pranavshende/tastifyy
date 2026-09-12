@@ -6,6 +6,11 @@ import {
 import { router } from 'expo-router';
 import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+});
 
 type AuthMode = 'login' | 'register';
 
@@ -56,6 +61,33 @@ export default function LoginScreen() {
   const handleGuestBrowse = () => {
     // Customers can browse restaurants without logging in
     router.replace('/(customer)/home');
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      const idToken = response.data?.idToken;
+
+      if (!idToken) throw new Error('Google Sign-In failed to return an ID token');
+
+      const res = await api.post('/auth/google', { credential: idToken });
+      const token = res.data.session?.access_token;
+      if (!token || !res.data.user) throw new Error('Invalid server response');
+
+      await setAuth(res.data.user, token);
+      // Root layout's useEffect will handle the navigation
+    } catch (err: any) {
+      console.error(err);
+      const msg = err.response?.data?.error?.message
+        || err.response?.data?.error
+        || err.message
+        || 'Google Authentication failed. Please try again.';
+      Alert.alert('Google Sign-In Error', msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -157,7 +189,11 @@ export default function LoginScreen() {
           </View>
 
           {/* Google Auth */}
-          <TouchableOpacity style={styles.googleBtn} onPress={() => Alert.alert('Coming Soon', 'Google Sign-In is being integrated in the next phase.')}>
+          <TouchableOpacity 
+            style={styles.googleBtn} 
+            onPress={handleGoogleSignIn}
+            disabled={loading}
+          >
             <Text style={styles.googleBtnText}>Continue with Google</Text>
           </TouchableOpacity>
 

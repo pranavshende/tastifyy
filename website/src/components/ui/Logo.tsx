@@ -28,8 +28,8 @@ export const Logo: React.FC<LogoProps> = ({
 
   return (
     <div className={`flex items-center gap-2 shrink-0 ${className}`}>
-      <div className={`${s.box} ${invert ? 'bg-white text-brand-primary shadow-white/30' : 'bg-brand-primary text-white shadow-brand-primary/30'} flex items-center justify-center shadow-lg shrink-0`}>
-        <span className={`font-black ${s.letter} leading-none block`}>T</span>
+      <div className={`${s.box} ${invert ? 'shadow-white/30' : 'shadow-brand-primary/30'} flex items-center justify-center shadow-lg shrink-0 overflow-hidden`}>
+        <img src="/android-icon.png" alt="Tastifyy Logo" className="w-full h-full object-cover" />
       </div>
       {showText && (
         <span className={`font-black tracking-tight ${s.text} ${textColor}`}>

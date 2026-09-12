@@ -167,7 +167,7 @@ export default function RestaurantDetails() {
 
   return (
     <div className="min-h-screen bg-brand-light font-sans text-brand-dark flex flex-col pb-32">
-      <Header location={restaurant.city} showSearch={false} />
+      <Header showSearch={false} />
       
       {/* Back nav */}
       <div className="bg-white border-b border-gray-100 sticky top-16 z-30">

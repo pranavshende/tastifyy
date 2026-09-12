@@ -667,8 +667,8 @@ router.put('/:id/status', authorizeRole(['restaurant_partner', 'delivery_partner
       sendPushNotification(order.customer_id, 'Food arrived!', 'Enjoy your meal from Tastifyy!').catch(console.error);
     }
 
-    // Restore stock if cancelled
-    if (status === 'cancelled' && order.status !== 'cancelled') {
+    // Restore stock if cancelled or rejected
+    if ((status === 'cancelled' || status === 'rejected') && !['cancelled', 'rejected'].includes(order.status)) {
       for (const item of order.order_items) {
         await prisma.menuItem.updateMany({
           where: { 
@@ -683,29 +683,29 @@ router.put('/:id/status', authorizeRole(['restaurant_partner', 'delivery_partner
     }
 
     // FIX-003: Safe refund — if it fails, escalate to admin rather than silently dropping
-    if (status === 'cancelled' && updated.payment_status === 'success' && updated.razorpay_payment_id) {
-      const refundResult = await processRefund(updated.id, cancellation_reason || 'Order cancelled');
+    if ((status === 'cancelled' || status === 'rejected') && updated.payment_status === 'success' && updated.razorpay_payment_id) {
+      const refundResult = await processRefund(updated.id, cancellation_reason || `Order ${status}`);
       if (refundResult.success) {
         updated.payment_status = 'refunded';
       } else {
         // Do NOT mark as cancelled if refund failed — create an admin alert
-        console.error(`[REFUND_FAILED] Order ${updated.id} cancelled but refund failed: ${refundResult.error}. Admin action required.`);
+        console.error(`[REFUND_FAILED] Order ${updated.id} ${status} but refund failed: ${refundResult.error}. Admin action required.`);
         // Restore order status to previous so customer is not left without money
         await prisma.order.update({
           where: { id: updated.id },
           data: { status: order.status as any, cancellation_reason: null, cancelled_by: null }
         });
-        res.status(500).json({ success: false, error: { code: 'REFUND_FAILED', message: 'Could not process refund at this time. Order cancellation rolled back. Please contact support.' } });
+        res.status(500).json({ success: false, error: { code: 'REFUND_FAILED', message: `Could not process refund at this time. Order ${status} rolled back. Please contact support.` } });
         return;
       }
     }
 
-    if (status === 'cancelled' && user.role === 'admin') {
+    if ((status === 'cancelled' || status === 'rejected') && user.role === 'admin') {
       try {
         await prisma.adminAuditLog.create({
           data: {
             admin_id: user.id,
-            action: updated.payment_status === 'refunded' ? 'REFUND_PROCESSED' : 'ORDER_CANCELLED',
+            action: updated.payment_status === 'refunded' ? 'REFUND_PROCESSED' : (status === 'rejected' ? 'ORDER_REJECTED' : 'ORDER_CANCELLED'),
             target_type: 'Order',
             target_id: updated.id,
             details: { reason: cancellation_reason, payment_status: updated.payment_status }

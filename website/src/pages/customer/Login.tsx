@@ -18,6 +18,25 @@ export default function CustomerLogin() {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
 
+  const handleRedirect = (role: string) => {
+    switch (role) {
+      case 'customer':
+        navigate('/customer/home');
+        break;
+      case 'restaurant_partner':
+        navigate('/restaurant/dashboard');
+        break;
+      case 'delivery_partner':
+        navigate('/delivery/dashboard');
+        break;
+      case 'admin':
+        navigate('/admin/dashboard');
+        break;
+      default:
+        navigate('/');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -33,7 +52,7 @@ export default function CustomerLogin() {
       const token = res.data.session?.access_token;
       if (!token || !res.data.user) throw new Error('Invalid response from server');
       setAuth(res.data.user, token);
-      navigate('/customer/home');
+      handleRedirect(res.data.user.role);
     } catch (err: any) {
       const msg = err.response?.data?.error?.message || err.response?.data?.error || err.message || 'Authentication failed';
       setError(msg);
@@ -50,7 +69,7 @@ export default function CustomerLogin() {
       const token = res.data.session?.access_token;
       if (!token || !res.data.user) throw new Error('Invalid response from server');
       setAuth(res.data.user, token);
-      navigate('/customer/home');
+      handleRedirect(res.data.user.role);
     } catch (err: any) {
       const msg = err.response?.data?.error?.message || err.response?.data?.error || err.message || 'Google Authentication failed';
       setError(msg);

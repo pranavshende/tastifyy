@@ -48,13 +48,7 @@ export default function CustomerLayout() {
           tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'search' : 'search-outline'} focused={focused} />,
         }}
       />
-      <Tabs.Screen
-        name="favorites"
-        options={{
-          title: 'Favorites',
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'heart' : 'heart-outline'} focused={focused} />,
-        }}
-      />
+
       <Tabs.Screen
         name="orders"
         options={{

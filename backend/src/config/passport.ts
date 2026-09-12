@@ -51,7 +51,7 @@ passport.use(
         where: { id: jwt_payload.sub }
       });
 
-      if (user) {
+      if (user && user.is_active) {
         return done(null, user);
       }
       return done(null, false);

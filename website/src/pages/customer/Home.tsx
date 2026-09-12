@@ -274,7 +274,7 @@ export default function CustomerHome() {
                     isOpen={restaurant.is_open !== false}
                     isPureVeg={restaurant.is_pure_veg}
                     city={restaurant.city}
-                    rating={restaurant.rating || 4.2}
+                    rating={restaurant.rating}
                     prepTime={restaurant.avg_preparation_time_mins}
                   />
                 </div>
@@ -305,7 +305,7 @@ export default function CustomerHome() {
                     isOpen={restaurant.is_open !== false}
                     isPureVeg={restaurant.is_pure_veg}
                     city={restaurant.city}
-                    rating={restaurant.rating || 4.5}
+                    rating={restaurant.rating}
                     prepTime={restaurant.avg_preparation_time_mins}
                   />
                 </div>

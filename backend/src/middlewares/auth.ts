@@ -1,39 +1,19 @@
 import type { Request, Response, NextFunction } from 'express';
-import { supabase } from '../utils/supabase.js';
-import { prisma } from '../utils/prisma.js';
+import passport from 'passport';
+import '../config/passport.js'; // Ensure passport is initialized
 
-export const authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const authHeader = req.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Unauthorized: No token provided' });
-    return;
-  }
-  
-  const token = authHeader.split(' ')[1];
-  
-  try {
-    const { data: { user: supabaseUser }, error } = await supabase.auth.getUser(token);
-    
-    if (error || !supabaseUser) {
-      console.log('Supabase Auth Failed:', error?.message);
-      res.status(401).json({ error: 'Unauthorized: Invalid token or session expired', details: error?.message });
-      return;
+export const authenticate = (req: Request, res: Response, next: NextFunction): void => {
+  passport.authenticate('jwt', { session: false }, (err: any, user: any, info: any) => {
+    if (err) {
+      console.error('Authentication Error:', err);
+      return res.status(500).json({ error: 'Internal Server Error during authentication' });
     }
-    
-    const user = await prisma.user.findUnique({ where: { id: supabaseUser.id } });
-    
-    if (!user || !user.is_active) {
-      res.status(401).json({ error: 'Unauthorized: User not found or account deactivated' });
-      return;
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized: Invalid token or session expired', details: info?.message });
     }
-    
     req.user = user;
     next();
-  } catch (err: any) {
-    console.error('Authentication Error:', err);
-    res.status(500).json({ error: 'Internal Server Error during authentication' });
-  }
+  })(req, res, next);
 };
 
 export const authorizeRole = (allowedRoles: string[]) => {

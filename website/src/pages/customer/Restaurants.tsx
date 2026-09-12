@@ -218,7 +218,7 @@ export default function Restaurants() {
                 isOpen={restaurant.is_open}
                 isPureVeg={restaurant.is_pure_veg}
                 city={restaurant.city}
-                rating={restaurant.rating || 4.2}
+                rating={restaurant.rating}
                 prepTime={restaurant.avg_preparation_time_mins}
               />
             ))}

@@ -257,14 +257,26 @@ router.get('/restaurants', async (req: Request, res: Response) => {
         cuisine_tags: true,
         avg_preparation_time_mins: true,
         is_open: true,
+        ratings: { select: { restaurant_rating: true } }
       },
       orderBy: { created_at: 'desc' }
     });
-    const result = restaurants.map(r => ({
-      ...r,
-      logo_url: getPublicUrl(r.logo_url),
-      cover_image_url: getPublicUrl(r.cover_image_url),
-    }));
+    const result = restaurants.map(r => {
+      let rating = 0;
+      if (r.ratings && r.ratings.length > 0) {
+        const sum = r.ratings.reduce((acc, curr) => acc + curr.restaurant_rating, 0);
+        rating = Number((sum / r.ratings.length).toFixed(1));
+      }
+      
+      const { ratings, ...rest } = r;
+
+      return {
+        ...rest,
+        rating,
+        logo_url: getPublicUrl(r.logo_url),
+        cover_image_url: getPublicUrl(r.cover_image_url),
+      };
+    });
     res.json({ success: true, data: result });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch restaurants' } });
@@ -289,6 +301,7 @@ router.get('/restaurants/:id/menu', async (req: Request, res: Response) => {
         cover_image_url: true,
         logo_url: true,
         is_open: true,
+        ratings: { select: { restaurant_rating: true } }
       }
     });
 
@@ -322,8 +335,16 @@ router.get('/restaurants/:id/menu', async (req: Request, res: Response) => {
       }))
     }));
 
+    let rating = 0;
+    if (restaurant.ratings && restaurant.ratings.length > 0) {
+      const sum = restaurant.ratings.reduce((acc, curr) => acc + curr.restaurant_rating, 0);
+      rating = Number((sum / restaurant.ratings.length).toFixed(1));
+    }
+    const { ratings, ...restRestaurant } = restaurant;
+
     const formattedRestaurant = {
-      ...restaurant,
+      ...restRestaurant,
+      rating,
       logo_url: getPublicUrl(restaurant.logo_url),
       cover_image_url: getPublicUrl(restaurant.cover_image_url),
     };

@@ -10,7 +10,7 @@ router.post('/login', login);
 router.post('/google', googleLogin);
 router.post('/otp/send', sendOtp);
 router.post('/otp/verify', verifyOtp);
-router.get('/me', me);
+router.get('/me', authenticate, me);
 router.post('/logout', logout);
 
 // FCM Token Registration

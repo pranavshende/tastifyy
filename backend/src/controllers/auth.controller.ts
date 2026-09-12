@@ -4,6 +4,7 @@ import { supabase } from '../utils/supabase.js';
 import { sendOTP } from '../services/sms.service.js';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
+import { getPublicUrl } from '../services/storage.service.js';
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -133,7 +134,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
 
     res.json({ 
       success: true, 
-      user: dbUser, 
+      user: { ...dbUser, profile_photo_url: getPublicUrl(dbUser.profile_photo_url) }, 
       session: { 
         access_token: token, 
         token_type: 'bearer',
@@ -189,7 +190,11 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       data: { id: authData.user.id, email, phone, name, role }
     });
 
-    res.status(201).json({ success: true, user, session: authData.session });
+    res.status(201).json({ 
+      success: true, 
+      user: { ...user, profile_photo_url: getPublicUrl(user.profile_photo_url) }, 
+      session: authData.session 
+    });
   } catch (error: any) {
     console.error('Registration Error:', error);
     if (error.code === 'P2002') {
@@ -233,7 +238,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    res.json({ success: true, user, session: authData.session });
+    res.json({ 
+      success: true, 
+      user: { ...user, profile_photo_url: getPublicUrl(user.profile_photo_url) }, 
+      session: authData.session 
+    });
   } catch (error) {
     console.error('Login Error:', error);
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Internal server error during login' } });
@@ -242,39 +251,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
 // GET /auth/me — validate session and return full user profile + role
 export const me = async (req: Request, res: Response): Promise<void> => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'No token provided' } });
-    return;
+  // auth.routes.ts now uses `authenticate` middleware which populates req.user
+  const user = req.user as any;
+  if (user && user.profile_photo_url) {
+    user.profile_photo_url = getPublicUrl(user.profile_photo_url);
   }
-
-  const token = authHeader.split(' ')[1];
-
-  try {
-    const { data: { user: supabaseUser }, error } = await supabase.auth.getUser(token);
-
-    if (error || !supabaseUser) {
-      res.status(401).json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Session expired or invalid. Please log in again.' } });
-      return;
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: supabaseUser.id } });
-
-    if (!user) {
-      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User profile not found' } });
-      return;
-    }
-
-    if (!user.is_active) {
-      res.status(403).json({ success: false, error: { code: 'ACCOUNT_SUSPENDED', message: 'Account suspended' } });
-      return;
-    }
-
-    res.json({ success: true, user });
-  } catch (error) {
-    console.error('Me Error:', error);
-    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } });
-  }
+  res.json({ success: true, user });
 };
 
 // POST /auth/logout
@@ -374,7 +356,7 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
 
     res.json({ 
       success: true, 
-      user: dbUser, 
+      user: { ...dbUser, profile_photo_url: getPublicUrl(dbUser.profile_photo_url) }, 
       session: { 
         access_token: token, 
         token_type: 'bearer',

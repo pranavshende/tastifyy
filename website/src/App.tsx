@@ -25,6 +25,9 @@ import StatusScreen from './pages/onboarding/Status';
 
 // New MVP Pages
 import Restaurants from './pages/customer/Restaurants';
+import Cuisines from './pages/customer/Cuisines';
+import Offers from './pages/customer/Offers';
+import About from './pages/customer/About';
 import RestaurantDetails from './pages/customer/RestaurantDetails';
 import Search from './pages/customer/Search';
 import Checkout from './pages/customer/Checkout';
@@ -95,6 +98,30 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['customer']}>
             <Restaurants />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/cuisines"
+        element={
+          <ProtectedRoute allowedRoles={['customer']}>
+            <Cuisines />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/offers"
+        element={
+          <ProtectedRoute allowedRoles={['customer']}>
+            <Offers />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/about"
+        element={
+          <ProtectedRoute allowedRoles={['customer']}>
+            <About />
           </ProtectedRoute>
         }
       />

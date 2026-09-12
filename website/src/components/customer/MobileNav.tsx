@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Search, Receipt, Heart, User } from 'lucide-react';
+import { Home, Search, Receipt, User } from 'lucide-react';
 
 export default function MobileNav() {
   const location = useLocation();
@@ -14,7 +14,6 @@ export default function MobileNav() {
     { to: '/customer/home', icon: <Home className="w-6 h-6" />, label: 'Home' },
     { to: '/customer/search', icon: <Search className="w-6 h-6" />, label: 'Search' },
     { to: '/customer/orders', icon: <Receipt className="w-6 h-6" />, label: 'Orders' },
-    { to: '/customer/favorites', icon: <Heart className="w-6 h-6" />, label: 'Favorites' },
     { to: '/customer/profile', icon: <User className="w-6 h-6" />, label: 'Profile' },
   ];
 
