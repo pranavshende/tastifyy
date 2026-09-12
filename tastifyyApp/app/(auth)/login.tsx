@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert
+  ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Image
 } from 'react-native';
 import { router } from 'expo-router';
 import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import * as ImagePicker from 'expo-image-picker';
 
 GoogleSignin.configure({
   webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
@@ -20,6 +21,12 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [dob, setDob] = useState('');
+  const [profilePhoto, setProfilePhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [addressLine, setAddressLine] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [pincode, setPincode] = useState('');
   const [loading, setLoading] = useState(false);
   const { setAuth } = useAuthStore();
 
@@ -37,7 +44,32 @@ export default function LoginScreen() {
     try {
       let res;
       if (mode === 'register') {
-        res = await api.post('/auth/register', { email, password, name, phone, role: 'customer' });
+        const formData = new FormData();
+        formData.append('email', email);
+        formData.append('password', password);
+        formData.append('name', name);
+        formData.append('phone', phone);
+        formData.append('role', 'customer');
+        if (dob) formData.append('dob', dob);
+        if (addressLine) formData.append('address_line', addressLine);
+        if (city) formData.append('city', city);
+        if (state) formData.append('state', state);
+        if (pincode) formData.append('pincode', pincode);
+        
+        if (profilePhoto) {
+          const fileExtension = profilePhoto.uri.split('.').pop();
+          const mimeType = profilePhoto.type === 'image' || profilePhoto.mimeType ? profilePhoto.mimeType : `image/${fileExtension}`;
+          
+          formData.append('profile_photo', {
+            uri: profilePhoto.uri,
+            name: `profile.${fileExtension}`,
+            type: mimeType || 'image/jpeg'
+          } as any);
+        }
+
+        res = await api.post('/auth/register', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
       } else {
         res = await api.post('/auth/login', { email, password });
       }
@@ -61,6 +93,19 @@ export default function LoginScreen() {
   const handleGuestBrowse = () => {
     // Customers can browse restaurants without logging in
     router.replace('/(customer)/home');
+  };
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setProfilePhoto(result.assets[0]);
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -128,6 +173,16 @@ export default function LoginScreen() {
         <View style={styles.form}>
           {mode === 'register' && (
             <>
+              <View style={styles.imagePickerContainer}>
+                <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+                  {profilePhoto ? (
+                    <Image source={{ uri: profilePhoto.uri }} style={styles.profileImage} />
+                  ) : (
+                    <Text style={styles.imagePickerText}>Add Photo</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+
               <Text style={styles.label}>Full Name</Text>
               <TextInput
                 style={styles.input}
@@ -145,6 +200,46 @@ export default function LoginScreen() {
                 value={phone}
                 onChangeText={setPhone}
                 keyboardType="phone-pad"
+              />
+              <Text style={styles.label}>Date of Birth</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor="#aaa"
+                value={dob}
+                onChangeText={setDob}
+              />
+              <Text style={styles.label}>Default Address</Text>
+              <TextInput
+                placeholder="Address Line"
+                placeholderTextColor="#aaa"
+                value={addressLine}
+                onChangeText={setAddressLine}
+                style={[styles.input, { marginBottom: 10 }]}
+              />
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="City"
+                  placeholderTextColor="#aaa"
+                  value={city}
+                  onChangeText={setCity}
+                />
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="State"
+                  placeholderTextColor="#aaa"
+                  value={state}
+                  onChangeText={setState}
+                />
+              </View>
+              <TextInput
+                style={[styles.input, { marginTop: 10 }]}
+                placeholder="PIN Code"
+                placeholderTextColor="#aaa"
+                value={pincode}
+                onChangeText={setPincode}
+                keyboardType="number-pad"
               />
             </>
           )}
@@ -253,6 +348,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 14,
     fontSize: 15, color: '#171717',
     borderWidth: 1.5, borderColor: '#EEE',
+  },
+  imagePickerContainer: {
+    alignItems: 'center',
+    marginVertical: 12,
+  },
+  imagePicker: {
+    width: 90, height: 90,
+    borderRadius: 45,
+    backgroundColor: '#fff',
+    borderWidth: 2, borderColor: '#EEE', borderStyle: 'dashed',
+    alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden'
+  },
+  imagePickerText: {
+    color: '#888',
+    fontSize: 12,
+    fontWeight: '600'
+  },
+  profileImage: {
+    width: '100%', height: '100%'
   },
 
   primaryBtn: {

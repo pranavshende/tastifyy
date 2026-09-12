@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
-import { Eye, EyeOff, UtensilsCrossed } from 'lucide-react';
+import { Eye, EyeOff, UtensilsCrossed, Camera } from 'lucide-react';
 import { Logo } from '../../components/ui/Logo';
 import { GoogleLogin } from '@react-oauth/google';
 
@@ -13,6 +13,12 @@ export default function CustomerLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [dob, setDob] = useState('');
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const [addressLine, setAddressLine] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [pincode, setPincode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -45,7 +51,22 @@ export default function CustomerLogin() {
     try {
       let res;
       if (isRegister) {
-        res = await api.post('/auth/register', { email, password, name, phone, role: 'customer' });
+        const formData = new FormData();
+        formData.append('email', email);
+        formData.append('password', password);
+        formData.append('name', name);
+        formData.append('phone', phone);
+        formData.append('role', 'customer');
+        if (dob) formData.append('dob', dob);
+        if (addressLine) formData.append('address_line', addressLine);
+        if (city) formData.append('city', city);
+        if (state) formData.append('state', state);
+        if (pincode) formData.append('pincode', pincode);
+        if (profilePhoto) formData.append('profile_photo', profilePhoto);
+
+        res = await api.post('/auth/register', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
       } else {
         res = await api.post('/auth/login', { email, password });
       }
@@ -139,6 +160,25 @@ export default function CustomerLogin() {
             <form onSubmit={handleSubmit} className="space-y-5">
               {isRegister && (
                 <>
+                  <div className="flex justify-center mb-4">
+                    <div className="relative w-24 h-24 rounded-full border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden hover:border-brand-primary transition-colors group">
+                      {profilePhoto ? (
+                        <img 
+                          src={URL.createObjectURL(profilePhoto)} 
+                          alt="Profile Preview" 
+                          className="w-full h-full object-cover" 
+                        />
+                      ) : (
+                        <Camera className="w-8 h-8 text-gray-400 group-hover:text-brand-primary transition-colors" />
+                      )}
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        onChange={e => setProfilePhoto(e.target.files?.[0] || null)}
+                      />
+                    </div>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                     <input
@@ -150,16 +190,60 @@ export default function CustomerLogin() {
                       placeholder="John Doe"
                     />
                   </div>
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                      <input
+                        type="tel"
+                        required
+                        value={phone}
+                        onChange={e => setPhone(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
+                        placeholder="+91 9876543210"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                      <input
+                        type="date"
+                        value={dob}
+                        onChange={e => setDob(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Default Delivery Address</label>
                     <input
-                      type="tel"
-                      required
-                      value={phone}
-                      onChange={e => setPhone(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
-                      placeholder="+91 9876543210"
+                      type="text"
+                      value={addressLine}
+                      onChange={e => setAddressLine(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all mb-3"
+                      placeholder="Street address, apartment, suite, etc."
                     />
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        value={city}
+                        onChange={e => setCity(e.target.value)}
+                        className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
+                        placeholder="City"
+                      />
+                      <input
+                        type="text"
+                        value={state}
+                        onChange={e => setState(e.target.value)}
+                        className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
+                        placeholder="State"
+                      />
+                      <input
+                        type="text"
+                        value={pincode}
+                        onChange={e => setPincode(e.target.value)}
+                        className="w-24 px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
+                        placeholder="PIN"
+                      />
+                    </div>
                   </div>
                 </>
               )}

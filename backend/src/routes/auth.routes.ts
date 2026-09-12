@@ -4,8 +4,14 @@ import { register, login, me, logout, sendOtp, verifyOtp, googleLogin } from '..
 const router = Router();
 
 import { authenticate } from '../middlewares/auth.js';
+import multer from 'multer';
 
-router.post('/register', register);
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
+
+router.post('/register', upload.single('profile_photo'), register);
 router.post('/login', login);
 router.post('/google', googleLogin);
 router.post('/otp/send', sendOtp);

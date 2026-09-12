@@ -4,7 +4,7 @@ import { supabase } from '../utils/supabase.js';
 import { sendOTP } from '../services/sms.service.js';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
-import { getPublicUrl } from '../services/storage.service.js';
+import { getPublicUrl, uploadFile, validateFile, generateFilename } from '../services/storage.service.js';
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -149,7 +149,8 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
 };
 
 export const register = async (req: Request, res: Response): Promise<void> => {
-  const { email, password, phone, name, role } = req.body;
+  const { email, password, phone, name, role, dob, address_line, city, state, pincode } = req.body;
+  const file = req.file;
 
   if (!email || !password || !phone || !name || !role) {
     res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Email, password, phone, name, and role are required' } });
@@ -160,6 +161,14 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   if (role === 'admin') {
     res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Admin accounts cannot be self-registered' } });
     return;
+  }
+
+  if (file) {
+    const validation = validateFile(file.buffer, file.mimetype, file.size);
+    if (!validation.valid) {
+      res.status(400).json({ success: false, error: { code: 'INVALID_FILE', message: validation.error } });
+      return;
+    }
   }
 
   try {
@@ -186,9 +195,42 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    let profile_photo_url = null;
+    if (file) {
+      const filename = generateFilename(file.originalname, 'profile');
+      const uploadRes = await uploadFile(authData.user.id, 'profile', filename, file.buffer, file.mimetype);
+      profile_photo_url = uploadRes.path;
+    }
+
+    const parsedDob = dob ? new Date(dob) : null;
+
     const user = await prisma.user.create({
-      data: { id: authData.user.id, email, phone, name, role }
+      data: { 
+        id: authData.user.id, 
+        email, 
+        phone, 
+        name, 
+        role,
+        dob: parsedDob,
+        profile_photo_url
+      }
     });
+
+    if (address_line && city && state && pincode) {
+      await prisma.address.create({
+        data: {
+          user_id: user.id,
+          label: 'home',
+          address_line,
+          city,
+          state,
+          pincode,
+          latitude: 0,
+          longitude: 0,
+          is_default: true
+        }
+      });
+    }
 
     res.status(201).json({ 
       success: true, 
@@ -308,11 +350,21 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
       // Or just create it directly in prisma with the googleId.
       const dummyPassword = Math.random().toString(36).slice(-10) + 'A1!'; 
       
-      const { data: adminData, error: adminError } = await supabase.auth.admin.createUser({
+      let { data: adminData, error: adminError } = await supabase.auth.admin.createUser({
         email: email,
         password: dummyPassword,
         email_confirm: true
       });
+
+      if (adminError && (adminError.code === 'email_exists' || adminError.message?.includes('already been registered'))) {
+        // Attempt to find the orphaned Supabase user
+        const { data: usersData } = await supabase.auth.admin.listUsers();
+        const existingUser = usersData?.users?.find(u => u.email === email);
+        if (existingUser) {
+          adminData = { user: existingUser } as any;
+          adminError = null;
+        }
+      }
 
       if (adminError) {
         console.error("Supabase create user error:", adminError);
@@ -320,11 +372,18 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
         return;
       }
 
+      if (!adminData?.user) {
+        console.error("Supabase create user error: user is null");
+        res.status(500).json({ success: false, error: { code: 'AUTH_ERROR', message: 'Failed to retrieve user ID from identity provider' } });
+        return;
+      }
+
       supabaseUserId = adminData.user.id;
 
-      // Generate a dummy phone for now, since phone might be unique in Prisma schema
-      // Usually users can update this later
-      const dummyPhone = '+910000000000' + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+      // Generate a dummy phone that is strictly under 15 characters
+      // +91 (3) + 00000 (5) + 6 random digits = 14 characters
+      const randomDigits = Math.floor(100000 + Math.random() * 900000).toString();
+      const dummyPhone = '+9100000' + randomDigits;
 
       dbUser = await prisma.user.create({
         data: {
