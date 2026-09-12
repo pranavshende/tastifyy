@@ -11,6 +11,7 @@ interface LocationModalProps {
 export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
   const { city, selectedZone, setCity, setZone } = useLocationStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLocating, setIsLocating] = useState(false);
 
   if (!isOpen) return null;
 
@@ -26,7 +27,48 @@ export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
     z.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const CITIES: City[] = ['Sakoli', 'Sendurwafa', 'Khairlanji'];
+  const CITIES: City[] = ['Sakoli'];
+
+  const handleGPSLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser');
+      return;
+    }
+    
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          const data = await res.json();
+          
+          let locationName = 'Detected Location';
+          if (data && data.address) {
+            locationName = data.address.suburb || data.address.neighbourhood || data.address.road || data.address.city || 'Detected Location';
+          }
+
+          setZone({
+            id: 'gps',
+            name: locationName,
+            deliveryTime: '20-30 mins',
+            baseFee: 35
+          });
+          onClose();
+        } catch (error) {
+          console.error('Error fetching location:', error);
+          alert('Failed to detect location address.');
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      () => {
+        setIsLocating(false);
+        alert('Failed to get your location. Please ensure location permissions are granted.');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex justify-center items-start pt-[10vh] px-4">
@@ -62,17 +104,23 @@ export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
         <div className="p-6 overflow-y-auto overflow-x-hidden scrollbar-hide flex-1">
           
           {/* GPS Button */}
-          <button className="w-full flex items-center justify-between p-4 mb-6 border border-[#23C16B]/30 bg-[#23C16B]/5 hover:bg-[#23C16B]/10 rounded-2xl transition-colors border-dashed">
+          <button 
+            onClick={handleGPSLocation}
+            disabled={isLocating}
+            className={`w-full flex items-center justify-between p-4 mb-6 border border-[#23C16B]/30 bg-[#23C16B]/5 hover:bg-[#23C16B]/10 rounded-2xl transition-colors border-dashed ${isLocating ? 'opacity-70' : ''}`}
+          >
             <div className="flex items-center gap-3">
               <div className="text-[#23C16B]">
-                <Target className="w-6 h-6" />
+                <Target className={`w-6 h-6 ${isLocating ? 'animate-pulse' : ''}`} />
               </div>
               <div className="text-left">
-                <p className="font-bold text-[#148F4D] text-[15px]">Use Current GPS Location</p>
+                <p className="font-bold text-[#148F4D] text-[15px]">
+                  {isLocating ? 'Locating...' : 'Use Current GPS Location'}
+                </p>
                 <p className="text-xs font-semibold text-[#23C16B]">Auto-detect locality via device GPS</p>
               </div>
             </div>
-            <ArrowRight className="w-5 h-5 text-[#23C16B]" />
+            {!isLocating && <ArrowRight className="w-5 h-5 text-[#23C16B]" />}
           </button>
 
           {/* Search */}
