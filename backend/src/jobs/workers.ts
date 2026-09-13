@@ -1,5 +1,5 @@
-import { Worker } from 'bullmq';
-import { redisClient } from '../utils/redis.js';
+import { Worker } from '../utils/memoryQueue.js';
+// import { redisClient } from '../utils/redis.js';
 import { prisma } from '../utils/prisma.js';
 import { getIO } from '../socket.js';
 import { processRefund } from '../controllers/payment.controller.js';
@@ -90,7 +90,7 @@ export const orderTimeoutWorker = new Worker('order-timeout', async (job) => {
     console.error('[Order Timeout] Socket emit failed', e);
   }
 
-}, { connection: redisClient });
+});
 
 // Payout Worker
 export const payoutWorker = new Worker('delivery-payout', async (job) => {
@@ -124,20 +124,6 @@ export const payoutWorker = new Worker('delivery-payout', async (job) => {
   
   console.log(`[Payout Worker] Process payout for ${assignment_id} - Logic to be extracted to service`);
 
-}, { connection: redisClient });
-
-// Event Listeners for logging
-orderTimeoutWorker.on('completed', job => {
-  console.log(`[BullMQ] Job ${job.id} has completed!`);
-});
-orderTimeoutWorker.on('failed', (job, err) => {
-  console.error(`[BullMQ] Job ${job?.id} has failed with ${err.message}`);
-});
-payoutWorker.on('completed', job => {
-  console.log(`[BullMQ] Job ${job.id} has completed!`);
-});
-payoutWorker.on('failed', (job, err) => {
-  console.error(`[BullMQ] Job ${job?.id} has failed with ${err.message}`);
 });
 
 // SMS Worker
@@ -149,7 +135,7 @@ export const smsWorker = new Worker('sms', async (job) => {
   } else if (type === 'delivery') {
     await sendDeliveryOTP(phone, otp);
   }
-}, { connection: redisClient });
+});
 
 // Notification Worker
 export const notificationWorker = new Worker('notification', async (job) => {
@@ -162,14 +148,14 @@ export const notificationWorker = new Worker('notification', async (job) => {
   if (type === 'db_only' || type === 'both') {
     await createNotification(userId, userRole, 'system', title, body, data);
   }
-}, { connection: redisClient });
+});
 
 // Assignment Worker
 export const assignmentWorker = new Worker('assignment', async (job) => {
   const { orderId } = job.data;
   console.log(`[Assignment Worker] Processing assignment for order ${orderId}`);
   await assignDeliveryPartner(orderId);
-}, { connection: redisClient });
+});
 
 // Refund Worker
 export const refundWorker = new Worker('refund', async (job) => {
@@ -183,10 +169,4 @@ export const refundWorker = new Worker('refund', async (job) => {
     // However, it's safer to leave it cancelled and flag it for manual review
     throw new Error(`Refund failed: ${refundResult.error}`);
   }
-}, { connection: redisClient });
-
-[smsWorker, notificationWorker, assignmentWorker, refundWorker].forEach(worker => {
-  worker.on('failed', (job, err) => {
-    console.error(`[BullMQ] ${worker.name} Job ${job?.id} failed: ${err.message}`);
-  });
 });

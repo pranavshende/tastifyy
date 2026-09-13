@@ -1,8 +1,8 @@
-import { Queue } from 'bullmq';
-import { redisClient } from '../utils/redis.js';
+import { Queue } from '../utils/memoryQueue.js';
+// import { redisClient } from '../utils/redis.js'; // Disabled to avoid Redis dependency
 
 // Order Timeout Queue: Handles auto-cancellation if restaurant doesn't respond
-export const orderTimeoutQueue = new Queue('order-timeout', { connection: redisClient });
+export const orderTimeoutQueue = new Queue('order-timeout');
 
 export async function scheduleOrderTimeout(orderId: string, delayMs: number) {
   await orderTimeoutQueue.add('check-timeout', { orderId }, {
@@ -19,16 +19,16 @@ export async function cancelOrderTimeout(orderId: string) {
 }
 
 // Delivery Payout Queue: Handles triggering RazorpayX payout after delivery
-export const payoutQueue = new Queue('delivery-payout', { connection: redisClient });
+export const payoutQueue = new Queue('delivery-payout');
 
 // SMS Queue: Handles asynchronous Auth and Delivery SMS sending
-export const smsQueue = new Queue('sms', { connection: redisClient });
+export const smsQueue = new Queue('sms');
 
 // Notification Queue: Handles Push Notifications (FCM) and DB Notifications
-export const notificationQueue = new Queue('notification', { connection: redisClient });
+export const notificationQueue = new Queue('notification');
 
 // Assignment Queue: Handles geospatial delivery partner assignment
-export const assignmentQueue = new Queue('assignment', { connection: redisClient });
+export const assignmentQueue = new Queue('assignment');
 
 // Refund Queue: Handles Razorpay refunds asynchronously
-export const refundQueue = new Queue('refund', { connection: redisClient });
+export const refundQueue = new Queue('refund');

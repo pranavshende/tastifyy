@@ -1,17 +1,34 @@
-import { Redis } from 'ioredis';
-// Create a single shared Redis client instance
-const redisUrl = process.env.REDIS_URL;
-if (!redisUrl) {
-    console.warn('[Redis] REDIS_URL not set in environment. Background jobs and OTP will fail.');
+// In-memory substitute for Redis to bypass limits and avoid external dependencies
+class MemoryRedis {
+    store = new Map();
+    async setex(key, seconds, value) {
+        if (this.store.has(key)) {
+            const existing = this.store.get(key);
+            if (existing?.expiry)
+                clearTimeout(existing.expiry);
+        }
+        const timer = setTimeout(() => {
+            this.store.delete(key);
+        }, seconds * 1000);
+        this.store.set(key, { value, expiry: timer });
+    }
+    async get(key) {
+        const record = this.store.get(key);
+        return record ? record.value : null;
+    }
+    async del(key) {
+        const record = this.store.get(key);
+        if (record?.expiry) {
+            clearTimeout(record.expiry);
+        }
+        this.store.delete(key);
+    }
+    on(event, cb) {
+        if (event === 'connect') {
+            setImmediate(cb);
+        }
+    }
 }
-// We use maxRetriesPerRequest: null because BullMQ requires it
-export const redisClient = new Redis(redisUrl || 'redis://localhost:6379', {
-    maxRetriesPerRequest: null,
-});
-redisClient.on('error', (err) => {
-    console.error('[Redis] Connection Error:', err);
-});
-redisClient.on('connect', () => {
-    console.log('[Redis] Connected successfully');
-});
+export const redisClient = new MemoryRedis();
+console.log('[Redis] Using In-Memory Redis substitute to bypass free tier limits.');
 //# sourceMappingURL=redis.js.map
