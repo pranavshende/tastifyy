@@ -233,11 +233,18 @@ export default function DeliveryDashboard() {
                         <p className="text-xs font-bold text-brand-primary uppercase tracking-wider mb-1">1. Pickup Location</p>
                         <h4 className="font-black text-lg text-gray-900">{activeOrder.restaurant?.name}</h4>
                         <p className="text-sm text-gray-600 mt-1">{activeOrder.restaurant?.address_line}, {activeOrder.restaurant?.city}</p>
-                        {activeOrder.restaurant?.phone && (
-                          <a href={`tel:${activeOrder.restaurant.phone}`} className="inline-flex items-center mt-3 text-sm font-bold text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg hover:bg-gray-200">
-                            <Phone className="w-4 h-4 mr-2" /> Call Restaurant
-                          </a>
-                        )}
+                        <div className="flex gap-2 flex-wrap">
+                          {activeOrder.restaurant?.phone && (
+                            <a href={`tel:${activeOrder.restaurant.phone}`} className="inline-flex items-center mt-3 text-sm font-bold text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg hover:bg-gray-200">
+                              <Phone className="w-4 h-4 mr-2" /> Call
+                            </a>
+                          )}
+                          {activeOrder.restaurant && (
+                            <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${activeOrder.restaurant.latitude},${activeOrder.restaurant.longitude}`)}`} target="_blank" rel="noreferrer" className="inline-flex items-center mt-3 text-sm font-bold text-brand-primary bg-brand-primary/10 px-3 py-1.5 rounded-lg hover:bg-brand-primary/20">
+                              <MapPin className="w-4 h-4 mr-2" /> Navigate
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -254,11 +261,18 @@ export default function DeliveryDashboard() {
                           {activeOrder.delivery_address?.apartment && <>{activeOrder.delivery_address.apartment}<br/></>}
                           {activeOrder.delivery_address?.landmark && <span className="text-gray-400">Landmark: {activeOrder.delivery_address.landmark}</span>}
                         </p>
-                        {activeOrder.customer?.phone && (
-                          <a href={`tel:${activeOrder.customer.phone}`} className="inline-flex items-center mt-3 text-sm font-bold text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg hover:bg-gray-200">
-                            <Phone className="w-4 h-4 mr-2" /> Call Customer
-                          </a>
-                        )}
+                        <div className="flex gap-2 flex-wrap">
+                          {activeOrder.customer?.phone && (
+                            <a href={`tel:${activeOrder.customer.phone}`} className="inline-flex items-center mt-3 text-sm font-bold text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg hover:bg-gray-200">
+                              <Phone className="w-4 h-4 mr-2" /> Call
+                            </a>
+                          )}
+                          {activeOrder.delivery_address && (
+                            <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${activeOrder.delivery_address.latitude},${activeOrder.delivery_address.longitude}`)}`} target="_blank" rel="noreferrer" className="inline-flex items-center mt-3 text-sm font-bold text-brand-primary bg-brand-primary/10 px-3 py-1.5 rounded-lg hover:bg-brand-primary/20">
+                              <Navigation className="w-4 h-4 mr-2" /> Navigate
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

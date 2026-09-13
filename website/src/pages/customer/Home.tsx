@@ -23,6 +23,7 @@ interface Restaurant {
 
 export default function CustomerHome() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,20 +35,49 @@ export default function CustomerHome() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchRestaurants = async () => {
+    const fetchRestaurantsAndFavorites = async () => {
       try {
-        const response = await api.get('/restaurants');
-        setRestaurants(response.data);
+        const [res, favs] = await Promise.all([
+          api.get('/restaurants'),
+          api.get('/customer/favorites')
+        ]);
+        setRestaurants(res.data);
+        if (favs.data.success) {
+          setFavoriteIds(new Set(favs.data.data.map((f: any) => f.id)));
+        }
       } catch (err: any) {
-        console.error('Failed to load restaurants', err);
+        console.error('Failed to load data', err);
         setError('Failed to load restaurants nearby. Please try again.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRestaurants();
+    fetchRestaurantsAndFavorites();
   }, []);
+
+  const toggleFavorite = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    const isFav = favoriteIds.has(id);
+    
+    // Optimistic UI update
+    const newFavs = new Set(favoriteIds);
+    if (isFav) newFavs.delete(id);
+    else newFavs.add(id);
+    setFavoriteIds(newFavs);
+
+    try {
+      if (isFav) {
+        await api.delete(`/customer/favorites/${id}`);
+      } else {
+        await api.post(`/customer/favorites/${id}`);
+      }
+    } catch (err) {
+      // Revert on error
+      setFavoriteIds(favoriteIds);
+      console.error('Failed to toggle favorite', err);
+    }
+  };
 
   const cuisines = [
     { name: 'North Indian', image: 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?q=80&w=200&auto=format&fit=crop' },
@@ -276,6 +306,10 @@ export default function CustomerHome() {
                     city={restaurant.city}
                     rating={restaurant.rating}
                     prepTime={restaurant.avg_preparation_time_mins}
+                    distance="1.2 km" // Mock
+                    reviewsCount="500+" // Mock
+                    isFavorite={favoriteIds.has(restaurant.id)}
+                    onToggleFavorite={(e) => toggleFavorite(e, restaurant.id)}
                   />
                 </div>
               ))

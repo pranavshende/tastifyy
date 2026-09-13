@@ -38,6 +38,10 @@ import CustomerProfile from './pages/customer/Profile';
 
 import DeliveryDashboardLayout from './pages/delivery/DashboardLayout';
 import DeliveryProfile from './pages/delivery/Profile';
+import DeliveryEarnings from './pages/delivery/Earnings';
+import RestaurantAnalytics from './pages/restaurant/Analytics';
+import RestaurantReviews from './pages/restaurant/Reviews';
+import RestaurantCoupons from './pages/restaurant/Coupons';
 
 function AppRoutes() {
   const { user } = useAuthStore();
@@ -185,6 +189,9 @@ function AppRoutes() {
         <Route path="/restaurant/menu" element={<MenuManager />} />
         <Route path="/restaurant/profile" element={<RestaurantProfile />} />
         <Route path="/restaurant/transactions" element={<RestaurantTransactions />} />
+        <Route path="/restaurant/analytics" element={<RestaurantAnalytics />} />
+        <Route path="/restaurant/reviews" element={<RestaurantReviews />} />
+        <Route path="/restaurant/coupons" element={<RestaurantCoupons />} />
       </Route>
 
       {/* Delivery Routes */}
@@ -197,6 +204,7 @@ function AppRoutes() {
       >
         <Route path="/delivery/dashboard" element={<DeliveryDashboard />} />
         <Route path="/delivery/profile" element={<DeliveryProfile />} />
+        <Route path="/delivery/earnings" element={<DeliveryEarnings />} />
       </Route>
 
       {/* Onboarding Routes */}

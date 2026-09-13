@@ -5,8 +5,10 @@ import Header from '../../components/customer/Header';
 import StatusBadge from '../../components/ui/StatusBadge';
 import LoadingSkeleton from '../../components/ui/LoadingSkeleton';
 import EmptyState from '../../components/ui/EmptyState';
-import { ArrowLeft, MapPin, Receipt, Phone, AlertCircle, RefreshCw, MessageSquareWarning, Star, CheckCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Receipt, Phone, AlertCircle, RefreshCw, MessageSquareWarning, Star, CheckCircle, RotateCcw } from 'lucide-react';
 import socketService from '../../api/socket';
+import { useCartStore } from '../../store/cartStore';
+import { useNavigate } from 'react-router-dom';
 
 export default function OrderDetails() {
   const { id } = useParams();
@@ -14,6 +16,22 @@ export default function OrderDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
+  
+  const cart = useCartStore();
+  const navigate = useNavigate();
+
+  const handleReorder = () => {
+    cart.clearCart();
+    order.order_items.forEach((item: any) => {
+      cart.addItem({
+        menu_item_id: item.menu_item_id,
+        name: item.name_snapshot,
+        price: Number(item.price_snapshot),
+        quantity: item.quantity
+      }, order.restaurant_id);
+    });
+    navigate('/customer/checkout');
+  };
 
   // UI States for Modals
   const [showSupportModal, setShowSupportModal] = useState(false);
@@ -233,8 +251,8 @@ export default function OrderDetails() {
           )}
         </div>
 
-        {/* Action Buttons (Rating & Support) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Action Buttons (Rating, Support, Reorder) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <button 
             onClick={() => setShowSupportModal(true)}
             className="bg-white border border-gray-200 hover:border-gray-300 p-4 rounded-xl flex items-center gap-4 text-left transition-colors shadow-sm"
@@ -263,6 +281,24 @@ export default function OrderDetails() {
             <div>
               <h4 className="font-bold text-gray-900">{order.rating ? 'Rated' : 'Rate Order'}</h4>
               <p className="text-sm text-gray-500 font-medium">{order.rating ? `${order.rating.food_rating} Stars Given` : 'Share your experience'}</p>
+            </div>
+          </button>
+
+          <button 
+            onClick={handleReorder}
+            disabled={order.status !== 'delivered'}
+            className={`p-4 rounded-xl flex items-center gap-4 text-left transition-colors shadow-sm ${
+              order.status === 'delivered'
+                ? 'bg-white border border-gray-200 hover:border-gray-300 cursor-pointer' 
+                : 'bg-gray-50 border border-gray-200 opacity-80 cursor-not-allowed'
+            }`}
+          >
+            <div className={`p-2.5 rounded-xl ${order.status === 'delivered' ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-400'}`}>
+              <RotateCcw className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-gray-900">Reorder</h4>
+              <p className="text-sm text-gray-500 font-medium">Order these items again</p>
             </div>
           </button>
         </div>

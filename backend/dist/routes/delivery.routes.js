@@ -301,5 +301,101 @@ router.get('/dashboard', async (req, res) => {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch dashboard' } });
     }
 });
+// GET /delivery/earnings — aggregated earnings summary
+router.get('/earnings', async (req, res) => {
+    const user = req.user;
+    try {
+        const partner = await getPartner(user.id);
+        if (!partner)
+            return res.status(404).json({ success: false, error: { code: 'NOT_FOUND' } });
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const [todayAgg, weekAgg, monthAgg, totalAgg, recentAssignments] = await Promise.all([
+            prisma.deliveryAssignment.aggregate({
+                where: { partner_id: partner.id, status: 'delivered', updated_at: { gte: todayStart } },
+                _sum: { earning_amount: true }, _count: true
+            }),
+            prisma.deliveryAssignment.aggregate({
+                where: { partner_id: partner.id, status: 'delivered', updated_at: { gte: sevenDaysAgo } },
+                _sum: { earning_amount: true }, _count: true
+            }),
+            prisma.deliveryAssignment.aggregate({
+                where: { partner_id: partner.id, status: 'delivered', updated_at: { gte: thirtyDaysAgo } },
+                _sum: { earning_amount: true }, _count: true
+            }),
+            prisma.deliveryAssignment.aggregate({
+                where: { partner_id: partner.id, status: 'delivered' },
+                _sum: { earning_amount: true }, _count: true
+            }),
+            prisma.deliveryAssignment.findMany({
+                where: { partner_id: partner.id, status: 'delivered', updated_at: { gte: sevenDaysAgo } },
+                select: { earning_amount: true, updated_at: true },
+                orderBy: { updated_at: 'asc' }
+            })
+        ]);
+        const dailyData = {};
+        for (let i = 0; i <= 6; i++) {
+            const d = new Date(sevenDaysAgo);
+            d.setDate(d.getDate() + i);
+            dailyData[d.toISOString().split('T')[0]] = { earnings: 0, deliveries: 0 };
+        }
+        recentAssignments.forEach(a => {
+            const dateStr = new Date(a.updated_at).toISOString().split('T')[0];
+            if (dailyData[dateStr]) {
+                dailyData[dateStr].earnings += Number(a.earning_amount || 0);
+                dailyData[dateStr].deliveries += 1;
+            }
+        });
+        res.json({
+            success: true,
+            data: {
+                today: { earnings: Number(todayAgg._sum.earning_amount || 0), deliveries: todayAgg._count },
+                week: { earnings: Number(weekAgg._sum.earning_amount || 0), deliveries: weekAgg._count },
+                month: { earnings: Number(monthAgg._sum.earning_amount || 0), deliveries: monthAgg._count },
+                allTime: { earnings: Number(totalAgg._sum.earning_amount || 0), deliveries: totalAgg._count },
+                chartData: Object.keys(dailyData).sort().map(date => ({ date, ...dailyData[date] }))
+            }
+        });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch earnings' } });
+    }
+});
+// GET /delivery/orders/history — completed deliveries
+router.get('/orders/history', async (req, res) => {
+    const user = req.user;
+    const page = parseInt(req.query.page || '1');
+    const limit = parseInt(req.query.limit || '20');
+    try {
+        const partner = await getPartner(user.id);
+        if (!partner)
+            return res.status(403).json({ success: false, error: { code: 'FORBIDDEN' } });
+        const [assignments, total] = await Promise.all([
+            prisma.deliveryAssignment.findMany({
+                where: { partner_id: partner.id, status: 'delivered' },
+                include: {
+                    order: {
+                        include: {
+                            restaurant: { select: { name: true, city: true } },
+                            delivery_address: { select: { address_line: true, city: true } }
+                        }
+                    }
+                },
+                orderBy: { updated_at: 'desc' },
+                skip: (page - 1) * limit,
+                take: limit
+            }),
+            prisma.deliveryAssignment.count({ where: { partner_id: partner.id, status: 'delivered' } })
+        ]);
+        res.json({ success: true, data: assignments, total, page });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch history' } });
+    }
+});
 export default router;
 //# sourceMappingURL=delivery.routes.js.map

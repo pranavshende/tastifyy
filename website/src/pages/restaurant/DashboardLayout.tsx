@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { LogOut, LayoutDashboard, UtensilsCrossed, User, Wallet } from 'lucide-react';
+import { LogOut, LayoutDashboard, UtensilsCrossed, User, Wallet, TrendingUp, Star, Ticket } from 'lucide-react';
 import { Logo } from '../../components/ui/Logo';
 import api from '../../api/axios';
 import { getStorageUrl } from '../../lib/supabase';
@@ -38,7 +38,10 @@ export default function DashboardLayout() {
   const navItems = [
     { path: '/restaurant/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
     { path: '/restaurant/menu', label: 'Menu Manager', icon: <UtensilsCrossed className="w-5 h-5" /> },
+    { path: '/restaurant/analytics', label: 'Analytics', icon: <TrendingUp className="w-5 h-5" /> },
+    { path: '/restaurant/reviews', label: 'Reviews', icon: <Star className="w-5 h-5" /> },
     { path: '/restaurant/transactions', label: 'Transactions', icon: <Wallet className="w-5 h-5" /> },
+    { path: '/restaurant/coupons', label: 'Coupons', icon: <Ticket className="w-5 h-5" /> },
     { path: '/restaurant/profile', label: 'Profile', icon: <User className="w-5 h-5" /> },
   ];
 

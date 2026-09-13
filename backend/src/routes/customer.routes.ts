@@ -55,6 +55,65 @@ router.patch('/notifications/:id/read', async (req: Request, res: Response) => {
   }
 });
 
+// ─── FAVORITES ───────────────────────────────────────────────────────────────
+
+router.get('/favorites', async (req: Request, res: Response) => {
+  try {
+    const favorites = await prisma.userFavorite.findMany({
+      where: { user_id: (req.user as any).id },
+      include: {
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            logo_url: true,
+            cover_image_url: true,
+            cuisine_tags: true,
+            avg_preparation_time_mins: true,
+            address_line: true,
+            city: true
+          }
+        }
+      },
+      orderBy: { created_at: 'desc' }
+    });
+    res.json({ success: true, data: favorites.map(f => f.restaurant) });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch favorites' } });
+  }
+});
+
+router.post('/favorites/:restaurantId', async (req: Request, res: Response) => {
+  try {
+    const fav = await prisma.userFavorite.create({
+      data: {
+        user_id: (req.user as any).id,
+        restaurant_id: req.params.restaurantId as string
+      }
+    });
+    res.json({ success: true, data: fav });
+  } catch (error: any) {
+    if (error.code === 'P2002') return res.json({ success: true, message: 'Already favorited' });
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to add favorite' } });
+  }
+});
+
+router.delete('/favorites/:restaurantId', async (req: Request, res: Response) => {
+  try {
+    await prisma.userFavorite.deleteMany({
+      where: {
+        user_id: (req.user as any).id,
+        restaurant_id: req.params.restaurantId as string
+      }
+    });
+    res.json({ success: true, message: 'Removed from favorites' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to remove favorite' } });
+  }
+});
+
+// ─── PROFILE ─────────────────────────────────────────────────────────────────
+
 router.get('/profile', async (req: Request, res: Response) => {
   try {
     const user = await prisma.user.findUnique({

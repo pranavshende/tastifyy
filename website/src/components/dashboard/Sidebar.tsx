@@ -58,6 +58,7 @@ export default function Sidebar({ role, activeTab, onTabChange, title, items, ba
         baseRoute: '/delivery',
         items: [
           { name: 'Dashboard', id: 'dashboard', path: '/delivery/dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+          { name: 'Earnings', id: 'earnings', path: '/delivery/earnings', icon: <UtensilsCrossed className="w-5 h-5" /> },
           { name: 'Profile', id: 'profile', path: '/delivery/profile', icon: <Settings className="w-5 h-5" /> },
         ]
       };

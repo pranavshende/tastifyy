@@ -14,10 +14,12 @@ interface RestaurantCardProps {
   city: string;
   distance?: string;
   reviewsCount?: string;
+  isFavorite?: boolean;
+  onToggleFavorite?: (e: React.MouseEvent) => void;
 }
 
 export default function RestaurantCard({
-  id, name, coverImage, cuisineTags, rating, prepTime, isOpen, isPureVeg, distance = "2.1 km", reviewsCount = "1.2k"
+  id, name, coverImage, cuisineTags, rating, prepTime, isOpen, isPureVeg, distance = "2.1 km", reviewsCount = "1.2k", isFavorite = false, onToggleFavorite
 }: RestaurantCardProps) {
   return (
     <Link to={`/customer/restaurants/${id}`} className="group bg-white rounded-[20px] overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300 border border-gray-100/80 flex flex-col cursor-pointer block relative">
@@ -62,8 +64,13 @@ export default function RestaurantCard({
               </div>
             )}
           </div>
-          <button className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center hover:bg-black/40 transition-colors border border-white/20">
-            <Heart className="w-4 h-4 text-white" />
+          <button 
+            onClick={(e) => {
+              if (onToggleFavorite) onToggleFavorite(e);
+            }}
+            className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-sm border border-gray-100 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-100 shadow-sm transition-all"
+          >
+            <Heart className={`w-4 h-4 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
           </button>
         </div>
 

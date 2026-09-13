@@ -19,6 +19,65 @@ router.use(authenticate);
 
 // ─── CUSTOMER ROUTES ─────────────────────────────────────────────────────────
 
+// POST /api/orders/validate-coupon
+router.post('/validate-coupon', authorizeRole(['customer']), async (req: Request, res: Response) => {
+  const user = req.user as any;
+  const { code, restaurant_id, item_subtotal } = req.body;
+
+  try {
+    const coupon = await prisma.coupon.findUnique({ where: { code: code.toUpperCase() } });
+
+    if (!coupon || !coupon.is_active) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_COUPON', message: 'Invalid or expired coupon' } });
+    }
+
+    const now = new Date();
+    if (coupon.valid_until && coupon.valid_until < now) {
+      return res.status(400).json({ success: false, error: { code: 'EXPIRED_COUPON', message: 'This coupon has expired' } });
+    }
+    if (coupon.valid_from && coupon.valid_from > now) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_COUPON', message: 'This coupon is not yet active' } });
+    }
+
+    if (coupon.restaurant_id && coupon.restaurant_id !== restaurant_id) {
+      return res.status(400).json({ success: false, error: { code: 'RESTAURANT_MISMATCH', message: 'This coupon is not valid for this restaurant' } });
+    }
+
+    if (item_subtotal < Number(coupon.min_order_value || 0)) {
+      return res.status(400).json({ success: false, error: { code: 'MIN_VALUE_NOT_MET', message: `Minimum order value of ₹${coupon.min_order_value} required` } });
+    }
+
+    const usageCount = await prisma.order.count({ where: { customer_id: user.id, coupon_id: coupon.id, status: { notIn: ['cancelled', 'rejected'] } } });
+    if (coupon.max_uses_per_user && usageCount >= coupon.max_uses_per_user) {
+      return res.status(400).json({ success: false, error: { code: 'MAX_USES_REACHED', message: 'You have reached the maximum usage limit for this coupon' } });
+    }
+    
+    if (coupon.max_uses_total) {
+      const totalUsage = await prisma.order.count({ where: { coupon_id: coupon.id, status: { notIn: ['cancelled', 'rejected'] } } });
+      if (totalUsage >= coupon.max_uses_total) {
+        return res.status(400).json({ success: false, error: { code: 'COUPON_DEPLETED', message: 'This coupon is fully redeemed' } });
+      }
+    }
+
+    let discount_amount = 0;
+    if (coupon.discount_type === 'flat') {
+      discount_amount = Number(coupon.discount_value);
+    } else if (coupon.discount_type === 'percentage') {
+      discount_amount = (item_subtotal * Number(coupon.discount_value)) / 100;
+      if (coupon.max_discount_cap) {
+        discount_amount = Math.min(discount_amount, Number(coupon.max_discount_cap));
+      }
+    }
+
+    // Never discount more than subtotal
+    discount_amount = Math.min(discount_amount, item_subtotal);
+
+    res.json({ success: true, data: { discount_amount, code: coupon.code, id: coupon.id } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to validate coupon' } });
+  }
+});
+
 // POST /api/orders
 router.post('/', authorizeRole(['customer']), async (req: Request, res: Response) => {
   const user = req.user as any;

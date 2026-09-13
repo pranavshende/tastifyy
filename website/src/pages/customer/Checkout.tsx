@@ -63,15 +63,18 @@ export default function Checkout() {
     if (!couponCode) return;
     setCouponError('');
     try {
-      if (couponCode.toUpperCase() === 'COUPON50') {
-        setAppliedCoupon({ code: 'COUPON50', discountAmount: 50 });
-      } else if (couponCode.toUpperCase() === 'WELCOME') {
-        setAppliedCoupon({ code: 'WELCOME', discountAmount: totals.itemSubtotal * 0.1 });
+      const { data } = await api.post('/orders/validate-coupon', {
+        code: couponCode,
+        restaurant_id: cart.restaurantId,
+        item_subtotal: totals.itemSubtotal
+      });
+      if (data.success) {
+        setAppliedCoupon({ code: data.data.code, discountAmount: data.data.discount_amount });
       } else {
         setCouponError('Invalid coupon code');
       }
-    } catch {
-      setCouponError('Failed to validate coupon');
+    } catch (err: any) {
+      setCouponError(err.response?.data?.error?.message || 'Failed to validate coupon');
     }
   };
 

@@ -16,6 +16,23 @@ const upload = multer({
 const router = Router();
 // All admin routes require authentication + admin role
 router.use(authenticate, authorizeRole(['admin']));
+// ─── RESTAURANT MANAGEMENT ──────────────────────────────────────────────────
+router.patch('/restaurants/:id/status', async (req, res) => {
+    const { status } = req.body;
+    if (!['pending', 'active', 'suspended', 'rejected'].includes(status)) {
+        return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+    try {
+        const updated = await prisma.restaurant.update({
+            where: { id: req.params.id },
+            data: { status }
+        });
+        res.json({ success: true, data: updated });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to update status' } });
+    }
+});
 // ─── PROFILE ROUTES ─────────────────────────────────────────────────────────
 router.get('/profile', async (req, res) => {
     try {
@@ -456,6 +473,45 @@ router.get('/payouts', async (req, res) => {
     }
     catch (error) {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch payouts' } });
+    }
+});
+// POST /admin/payouts/:id/retry — retry a failed payout
+router.post('/payouts/:id/retry', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const assignment = await prisma.deliveryAssignment.findUnique({
+            where: { id: id },
+            include: { partner: true }
+        });
+        if (!assignment)
+            return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Assignment not found' } });
+        if (assignment.payout_status === 'success')
+            return res.status(400).json({ success: false, error: { code: 'ALREADY_PAID', message: 'Payout already processed' } });
+        // Reset status and re-enqueue
+        await prisma.deliveryAssignment.update({
+            where: { id: id },
+            data: { payout_status: 'pending', payout_reference_id: null, payout_failure_reason: null }
+        });
+        const { payoutQueue } = await import('../jobs/queues.js');
+        await payoutQueue.add('delivery-payout', { assignment_id: id }, {
+            jobId: `payout-retry-${id}-${Date.now()}`,
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 5000 }
+        });
+        await prisma.adminAuditLog.create({
+            data: {
+                admin_id: req.user.id,
+                action: 'PAYOUT_RETRY',
+                target_type: 'DeliveryAssignment',
+                target_id: String(id),
+                details: { partner_id: assignment.partner_id }
+            }
+        });
+        res.json({ success: true, message: 'Payout retry queued successfully' });
+    }
+    catch (error) {
+        console.error('Payout retry error:', error);
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to retry payout' } });
     }
 });
 export default router;

@@ -192,6 +192,7 @@ model User {
   support_tickets    SupportTicket[]
   admin_configs      AdminConfig[]
   admin_audit_logs   AdminAuditLog[]
+  favorites          UserFavorite[]
 
   @@map("users")
 }
@@ -260,6 +261,7 @@ model Restaurant {
   orders          Order[]
   coupons         Coupon[]
   ratings         Rating[]
+  favorited_by    UserFavorite[]
 
   @@map("restaurants")
 }
@@ -427,40 +429,40 @@ model DeliveryPartnerDocument {
 }
 
 model Order {
-  id                    String          @id @default(uuid()) @db.Uuid
-  customer_id           String          @db.Uuid
-  restaurant_id         String          @db.Uuid
-  delivery_partner_id   String?         @db.Uuid
-  delivery_address_id   String          @db.Uuid
-  status                OrderStatus
-  item_subtotal         Decimal         @db.Decimal(10, 2)
-  delivery_fee          Decimal         @db.Decimal(10, 2)
-  platform_fee          Decimal         @db.Decimal(10, 2)
-  discount_amount       Decimal         @default(0) @db.Decimal(10, 2)
-  tax_amount            Decimal         @default(0) @db.Decimal(10, 2)
+  id                        String          @id @default(uuid()) @db.Uuid
+  customer_id               String          @db.Uuid
+  restaurant_id             String          @db.Uuid
+  delivery_partner_id       String?         @db.Uuid
+  delivery_address_id       String          @db.Uuid
+  status                    OrderStatus
+  item_subtotal             Decimal         @db.Decimal(10, 2)
+  delivery_fee              Decimal         @db.Decimal(10, 2)
+  platform_fee              Decimal         @db.Decimal(10, 2)
+  discount_amount           Decimal         @default(0) @db.Decimal(10, 2)
+  tax_amount                Decimal         @default(0) @db.Decimal(10, 2)
   total_amount              Decimal         @db.Decimal(10, 2)
   restaurant_discount_share Decimal         @default(0) @db.Decimal(10, 2)
   platform_discount_share   Decimal         @default(0) @db.Decimal(10, 2)
   restaurant_commission     Decimal         @default(0) @db.Decimal(10, 2)
   restaurant_transfer       Decimal         @default(0) @db.Decimal(10, 2)
-  payment_method        PaymentMethod
-  payment_status        PaymentStatus
-  razorpay_order_id     String?
-  razorpay_payment_id   String?
-  razorpay_transfer_id  String?
-  razorpay_refund_id    String?
-  refund_status         RefundStatus?
-  refund_failure_reason String?
-  razorpay_reversal_id  String?
-  reversal_status       ReversalStatus?
-  idempotency_key       String          @unique
-  coupon_id             String?         @db.Uuid
-  special_instructions  String?
-  cancelled_by          CancelledBy?
-  cancellation_reason   String?
-  delivery_otp          String?         @db.VarChar(4)
-  created_at            DateTime        @default(now()) @db.Timestamptz
-  updated_at            DateTime        @default(now()) @updatedAt @db.Timestamptz
+  payment_method            PaymentMethod
+  payment_status            PaymentStatus
+  razorpay_order_id         String?
+  razorpay_payment_id       String?
+  razorpay_transfer_id      String?
+  razorpay_refund_id        String?
+  refund_status             RefundStatus?
+  refund_failure_reason     String?
+  razorpay_reversal_id      String?
+  reversal_status           ReversalStatus?
+  idempotency_key           String          @unique
+  coupon_id                 String?         @db.Uuid
+  special_instructions      String?
+  cancelled_by              CancelledBy?
+  cancellation_reason       String?
+  delivery_otp              String?         @db.VarChar(4)
+  created_at                DateTime        @default(now()) @db.Timestamptz
+  updated_at                DateTime        @default(now()) @updatedAt @db.Timestamptz
 
   customer         User             @relation(fields: [customer_id], references: [id])
   restaurant       Restaurant       @relation(fields: [restaurant_id], references: [id])
@@ -607,7 +609,20 @@ model AdminAuditLog {
 
   admin User @relation(fields: [admin_id], references: [id])
 
-  @@map("admin_audit_log")
+  @@map("admin_audit_logs")
+}
+
+model UserFavorite {
+  id            String   @id @default(uuid()) @db.Uuid
+  user_id       String   @db.Uuid
+  restaurant_id String   @db.Uuid
+  created_at    DateTime @default(now()) @db.Timestamptz
+
+  user       User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  restaurant Restaurant @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, restaurant_id])
+  @@map("user_favorites")
 }
 
 model DeliveryAssignment {

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
-import { Clock, ChevronRight, ArrowLeft, ReceiptText, Star } from 'lucide-react';
+import { Clock, ChevronRight, ArrowLeft, ReceiptText, Star, RotateCcw } from 'lucide-react';
+import { useCartStore } from '../../store/cartStore';
 import socketService from '../../api/socket';
 import ImageWithFallback from '../../components/ui/ImageWithFallback';
 import MobileNav from '../../components/customer/MobileNav';
@@ -11,6 +12,22 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'active' | 'past'>('all');
+  const navigate = useNavigate();
+  const cart = useCartStore();
+
+  const handleReorder = (e: React.MouseEvent, order: any) => {
+    e.preventDefault();
+    cart.clearCart();
+    order.order_items.forEach((item: any) => {
+      cart.addItem({
+        menu_item_id: item.menu_item_id,
+        name: item.name_snapshot,
+        price: Number(item.price_snapshot),
+        quantity: item.quantity
+      }, order.restaurant_id);
+    });
+    navigate('/customer/checkout');
+  };
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -190,9 +207,19 @@ export default function Orders() {
                         </span>
                       )
                     )}
-                    <div className="flex items-center text-sm font-medium text-brand-primary">
-                      View Details
-                      <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                    <div className="flex gap-2">
+                      {order.status === 'delivered' && (
+                        <button 
+                          onClick={(e) => handleReorder(e, order)}
+                          className="text-xs font-bold text-gray-700 bg-white border border-gray-200 px-3 py-1.5 rounded-lg flex items-center hover:bg-gray-50 transition-colors"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reorder
+                        </button>
+                      )}
+                      <div className="flex items-center text-sm font-medium text-brand-primary">
+                        View Details
+                        <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                      </div>
                     </div>
                   </div>
                 </div>

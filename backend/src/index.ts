@@ -23,6 +23,7 @@ import analyticsRoutes from './routes/analytics.routes.js';
 import aiRoutes from './routes/ai.routes.js';
 import profileRoutes from './routes/profile.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
+import couponRoutes from './routes/coupon.routes.js';
 
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -98,6 +99,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/coupons', couponRoutes);
 
 // Health check (Root)
 app.get('/', (_req, res) => {
