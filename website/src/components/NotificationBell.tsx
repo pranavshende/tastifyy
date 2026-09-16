@@ -25,7 +25,7 @@ export default function NotificationBell() {
     // Fetch initial notifications
     const fetchNotifications = async () => {
       try {
-        const response = await api.get('/customer/notifications');
+        const response = await api.get('/notifications');
         if (response.data.success) {
           setNotifications(response.data.data);
         }
@@ -36,11 +36,14 @@ export default function NotificationBell() {
     fetchNotifications();
 
     // Socket.io for real-time updates
-    const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
     const socket = io(socketUrl, {
       auth: { token },
-      path: '/socket.io/',
       transports: ['websocket'],
+    });
+
+    socket.on('connect', () => {
+      socket.emit('join', { role: user.role, id: user.id });
     });
 
     socket.on('notification:new', (notification: Notification) => {
@@ -67,7 +70,7 @@ export default function NotificationBell() {
   const markAllAsRead = async () => {
     if (unreadCount === 0) return;
     try {
-      await api.patch('/customer/notifications/read-all');
+      await api.patch('/notifications/read-all');
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     } catch (err) {
       console.error('Failed to mark all as read', err);
@@ -76,7 +79,7 @@ export default function NotificationBell() {
 
   const markAsRead = async (id: string) => {
     try {
-      await api.patch(`/customer/notifications/${id}/read`);
+      await api.patch(`/notifications/${id}/read`);
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
       );

@@ -18,3 +18,38 @@ export async function findRestaurantPartner(user: PartnerIdentity) {
     include: { restaurant: true },
   });
 }
+
+export async function findRestaurantPartnerUser(user: PartnerIdentity) {
+  const partner = await findRestaurantPartner(user);
+  if (!partner) return null;
+
+  const partnerUser = await prisma.user.findFirst({
+    where: {
+      role: 'restaurant_partner',
+      OR: [
+        { id: partner.id },
+        ...(partner.phone ? [{ phone: partner.phone }] : []),
+        ...(partner.email ? [{ email: partner.email }] : []),
+      ],
+    },
+  });
+
+  return partnerUser ? { partner, user: partnerUser } : { partner, user: null };
+}
+
+export async function findRestaurantUserByRestaurantId(restaurantId: string) {
+  const partner = await prisma.restaurantPartner.findFirst({
+    where: { restaurant_id: restaurantId, is_active: true },
+  });
+  if (!partner) return null;
+
+  return prisma.user.findFirst({
+    where: {
+      role: 'restaurant_partner',
+      OR: [
+        ...(partner.phone ? [{ phone: partner.phone }] : []),
+        ...(partner.email ? [{ email: partner.email }] : []),
+      ],
+    },
+  });
+}

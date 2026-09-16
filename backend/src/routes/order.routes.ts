@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate, authorizeRole } from '../middlewares/auth.js';
 import { prisma } from '../utils/prisma.js';
-import { findRestaurantPartner } from '../utils/restaurantPartner.js';
+import { findRestaurantPartner, findRestaurantUserByRestaurantId } from '../utils/restaurantPartner.js';
 import { getIO } from '../socket.js';
 import type { Request, Response } from 'express';
 import crypto, { randomUUID } from 'crypto';
@@ -85,6 +85,10 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
   const { restaurant_id, items, payment_method, special_instructions, idempotency_key } = req.body;
 
   try {
+    if (!restaurant_id || !Array.isArray(items) || items.length === 0) {
+      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Restaurant and at least one item are required.' } });
+      return;
+    }
     let address;
     if (req.body.delivery_address_id) {
       address = await prisma.address.findUnique({
@@ -115,10 +119,20 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
       res.status(400).json({ success: false, error: { code: 'INVALID_ITEM', message: 'Item not found' } });
       return;
     }
-    const restaurant = await prisma.restaurant.findUnique({ where: { id: firstItem.restaurant_id } });
+    const restaurant = await prisma.restaurant.findUnique({ where: { id: restaurant_id } });
 
     if (!restaurant) {
       res.status(400).json({ success: false, error: { code: 'INVALID_RESTAURANT', message: 'Restaurant not found' } });
+      return;
+    }
+
+    if (restaurant.status !== 'active') {
+      res.status(400).json({ success: false, error: { code: 'RESTAURANT_INACTIVE', message: 'This restaurant is not currently available.' } });
+      return;
+    }
+
+    if (!restaurant.is_open) {
+      res.status(400).json({ success: false, error: { code: 'RESTAURANT_CLOSED', message: 'This restaurant is not accepting orders right now.' } });
       return;
     }
 
@@ -143,7 +157,7 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
 
     for (const item of items) {
       const dbItem = await prisma.menuItem.findUnique({ where: { id: item.menu_item_id } });
-      if (!dbItem || !dbItem.is_available) {
+      if (!dbItem || dbItem.restaurant_id !== restaurant_id || !dbItem.is_available) {
         res.status(400).json({ success: false, error: { code: 'ITEM_UNAVAILABLE', message: `Item ${item.name} is unavailable` } });
         return;
       }
@@ -362,6 +376,21 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
 
     io.to(`restaurant_${restaurant_id}`).emit('order:created', orderCreatedPayload);
     io.to('admin').emit('order:created', orderCreatedPayload);
+
+    const restaurantUser = await findRestaurantUserByRestaurantId(restaurant_id);
+    if (restaurantUser) {
+      await notificationQueue.add('notify', {
+        type: 'both', userId: restaurantUser.id, userRole: 'restaurant_partner',
+        title: 'New Order Received!',
+        body: `Order #${order.id.slice(0, 8).toUpperCase()} has been placed for ₹${Number(order.total_amount).toFixed(2)}.`,
+        data: { type: 'order_created', orderId: order.id }
+      });
+    }
+    await notificationQueue.add('notify', {
+      type: 'both', userId: user.id, userRole: 'customer',
+      title: 'Order Placed', body: 'Your order has been sent to the restaurant.',
+      data: { type: 'order_placed', orderId: order.id }
+    });
 
     const timeoutMins = parseInt(configMap['ORDER_ACCEPT_TIMEOUT_MINS'] || '5');
     await scheduleOrderTimeout(order.id, timeoutMins * 60 * 1000);
@@ -706,6 +735,35 @@ router.put('/:id/status', authorizeRole(['restaurant_partner', 'delivery_partner
       }
     });
 
+    const statusMessages: Record<string, { title: string; body: string }> = {
+      restaurant_confirmed: { title: 'Restaurant Accepted', body: 'The restaurant accepted your order.' },
+      preparing: { title: 'Food Preparing', body: 'Your food is being prepared.' },
+      ready: { title: 'Order Ready', body: 'Your order is ready for pickup.' },
+      rider_assigned: { title: 'Rider Assigned', body: 'A delivery partner has been assigned to your order.' },
+      picked_up: { title: 'Order Picked Up', body: 'Your delivery partner picked up the order.' },
+      out_for_delivery: { title: 'Out for Delivery', body: 'Your order is on the way.' },
+      delivered: { title: 'Order Delivered', body: 'Your order has been delivered. Enjoy your meal!' },
+      cancelled: { title: 'Order Cancelled', body: 'Your order was cancelled.' },
+      rejected: { title: 'Order Rejected', body: 'The restaurant could not accept your order.' },
+    };
+    const message = statusMessages[status];
+    if (message) {
+      await notificationQueue.add('notify', {
+        type: 'both', userId: order.customer_id, userRole: 'customer',
+        title: message.title, body: message.body,
+        data: { type: 'order_status', orderId: order.id, status }
+      });
+      const restaurantUser = await findRestaurantUserByRestaurantId(order.restaurant_id);
+      if (restaurantUser) {
+        await notificationQueue.add('notify', {
+          type: 'both', userId: restaurantUser.id, userRole: 'restaurant_partner',
+          title: `Order ${status.replaceAll('_', ' ')}`,
+          body: `Order #${order.id.slice(0, 8).toUpperCase()} status changed to ${status.replaceAll('_', ' ')}.`,
+          data: { type: 'order_status', orderId: order.id, status }
+        });
+      }
+    }
+
     if (['restaurant_confirmed', 'cancelled', 'rejected'].includes(status)) {
       await cancelOrderTimeout(order.id);
     }
@@ -723,12 +781,7 @@ router.put('/:id/status', authorizeRole(['restaurant_partner', 'delivery_partner
     }
 
     // Push Notifications for Customers
-    if (status === 'picked_up' && order.status !== 'picked_up') {
-      await notificationQueue.add('notify', { type: 'both', userId: order.customer_id, userRole: 'customer', title: 'Order on the way!', body: 'Your delivery partner has picked up your food.' });
-    }
     if (status === 'delivered' && order.status !== 'delivered') {
-      await notificationQueue.add('notify', { type: 'both', userId: order.customer_id, userRole: 'customer', title: 'Food arrived!', body: 'Enjoy your meal from Tastifyy!' });
-      
       const assignment = await prisma.deliveryAssignment.findUnique({ where: { order_id: order.id } });
       if (assignment) {
         await payoutQueue.add('delivery-payout', { assignment_id: assignment.id }, {
@@ -791,6 +844,11 @@ router.put('/:id/status', authorizeRole(['restaurant_partner', 'delivery_partner
     };
     
     io.to(`customer_${order.customer_id}`).emit(customerEventName, payload);
+    io.to(`restaurant_${order.restaurant_id}`).emit(`order:${updated.status}`, payload);
+    if (updated.delivery_partner_id) {
+      const deliveryPartner = await prisma.deliveryPartner.findUnique({ where: { id: updated.delivery_partner_id } });
+      if (deliveryPartner) io.to(`delivery_partner_${deliveryPartner.user_id}`).emit(`order:${updated.status}`, payload);
+    }
     io.to('admin').emit(`order:${updated.status}`, payload);
 
     res.json({ success: true, data: updated });

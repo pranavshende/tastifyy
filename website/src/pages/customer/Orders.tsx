@@ -56,7 +56,11 @@ export default function Orders() {
         setOrders(prev => prev.map(o => o.id === payload.orderId ? { ...o, status: payload.status, cancellation_reason: payload.cancellation_reason || o.cancellation_reason } : o));
       };
 
-      const events = ['order:accepted', 'order:rejected', 'order:preparing', 'order:ready_for_pickup', 'order:delivered', 'order:cancelled'];
+      const events = [
+        'order:restaurant_confirmed', 'order:preparing', 'order:ready',
+        'order:rider_assigned', 'order:picked_up', 'order:out_for_delivery',
+        'order:delivered', 'order:rejected', 'order:cancelled'
+      ];
       events.forEach(event => socket.on(event, handleStatusUpdate));
 
       return () => {

@@ -5,6 +5,7 @@ import { LogOut, LayoutDashboard, UtensilsCrossed, User, Wallet, TrendingUp, Sta
 import { Logo } from '../../components/ui/Logo';
 import api from '../../api/axios';
 import { getStorageUrl } from '../../lib/supabase';
+import NotificationBell from '../../components/NotificationBell';
 
 export default function DashboardLayout() {
   const location = useLocation();
@@ -121,6 +122,7 @@ export default function DashboardLayout() {
           
           {/* Top right */}
           <div className="ml-auto flex items-center gap-3 sm:gap-4">
+            <NotificationBell />
             <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full border border-green-200">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
               <span className="text-xs font-bold text-green-700 hidden sm:block">Accepting Orders</span>

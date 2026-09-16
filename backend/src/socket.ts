@@ -1,5 +1,7 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HttpServer } from 'http';
+import { verifyToken } from './utils/jwt.js';
+import { prisma } from './utils/prisma.js';
 
 let io: SocketIOServer;
 
@@ -16,8 +18,21 @@ export const initSocket = (server: HttpServer) => {
   io.on('connection', (socket: Socket) => {
     console.log(`Socket connected: ${socket.id}`);
 
+    const authToken = socket.handshake.auth?.token;
+    let authenticatedUser: any = null;
+    if (authToken) {
+      try {
+        const claims: any = verifyToken(authToken);
+        authenticatedUser = { id: claims.sub || claims.id, role: claims.role };
+      } catch {
+        socket.disconnect(true);
+        return;
+      }
+    }
+
     // Roles join their respective rooms
     socket.on('join', (data: { role: string, id: string }) => {
+      if (!authenticatedUser || data.id !== authenticatedUser.id || data.role !== authenticatedUser.role) return;
       const room = `${data.role}_${data.id}`;
       socket.join(room);
       if (data.role === 'admin') {
@@ -27,7 +42,12 @@ export const initSocket = (server: HttpServer) => {
     });
 
     // Restaurant partners also join their restaurant-specific room
-    socket.on('join_restaurant', (data: { restaurant_id: string }) => {
+    socket.on('join_restaurant', async (data: { restaurant_id: string }) => {
+      if (!authenticatedUser || authenticatedUser.role !== 'restaurant_partner') return;
+      const partner = await prisma.restaurantPartner.findFirst({
+        where: { restaurant_id: data.restaurant_id, is_active: true, OR: [{ phone: (await prisma.user.findUnique({ where: { id: authenticatedUser.id } }))?.phone || '' }] }
+      });
+      if (!partner) return;
       const room = `restaurant_${data.restaurant_id}`;
       socket.join(room);
       console.log(`Socket ${socket.id} joined restaurant room ${room}`);

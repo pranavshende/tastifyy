@@ -89,9 +89,23 @@ router.post('/restaurant', async (req: Request, res: Response) => {
       const restaurant = await prisma.restaurant.update({
         where: { id: existingPartner.restaurant_id },
         data: {
-          name, type, owner_name, phone, email, address_line, city, state, pincode,
-          latitude, longitude, service_radius_km, avg_preparation_time_mins,
-          is_pure_veg, cuisine_tags
+          ...(name !== undefined && { name }),
+          ...(type !== undefined && { type }),
+          ...(owner_name !== undefined && { owner_name }),
+          ...(phone !== undefined && { phone }),
+          ...(email !== undefined && { email }),
+          ...(address_line !== undefined && { address_line }),
+          ...(city !== undefined && { city }),
+          ...(state !== undefined && { state }),
+          ...(pincode !== undefined && { pincode }),
+          ...(latitude !== undefined && { latitude }),
+          ...(longitude !== undefined && { longitude }),
+          ...(service_radius_km !== undefined && { service_radius_km }),
+          ...(avg_preparation_time_mins !== undefined && { avg_preparation_time_mins }),
+          ...(is_pure_veg !== undefined && { is_pure_veg }),
+          ...(cuisine_tags !== undefined && { cuisine_tags }),
+          status: 'active',
+          is_open: true,
         }
       });
       res.json({ success: true, data: restaurant, onboarding_step });
@@ -115,6 +129,8 @@ router.post('/restaurant', async (req: Request, res: Response) => {
           is_pure_veg: is_pure_veg || false,
           cuisine_tags: cuisine_tags || [],
           commission_rate: 15.0,
+          status: 'active',
+          is_open: true,
           partners: {
             create: {
               name: owner_name || user.name,

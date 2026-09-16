@@ -93,6 +93,12 @@ export async function assignDeliveryPartner(orderId: string): Promise<boolean> {
       pickupDistance: closestPartner.distance,
       earningAmount: order.delivery_fee
     });
+    io.to(`delivery_partner_${closestPartner.user_id}`).emit('delivery:assigned', {
+      orderId: order.id,
+      restaurantName: order.restaurant.name,
+      pickupDistance: closestPartner.distance,
+      earningAmount: order.delivery_fee
+    });
 
     // Notify Restaurant that rider is assigned
     io.to(`restaurant_${order.restaurant_id}`).emit('order:rider_assigned', {
@@ -101,10 +107,11 @@ export async function assignDeliveryPartner(orderId: string): Promise<boolean> {
       partnerPhone: closestPartner.phone
     });
 
-    // Queue Push Notification via BullMQ
+    // Persist and deliver the assignment notification through the common worker.
     await notificationQueue.add('notify', {
-      type: 'push_only',
+      type: 'both',
       userId: closestPartner.user_id,
+      userRole: 'delivery_partner',
       title: 'New Order Assigned!',
       body: `You have been assigned an order from ${order.restaurant.name}. Pickup is ${closestPartner.distance.toFixed(1)}km away.`,
       data: { type: 'order_assigned', orderId: order.id }

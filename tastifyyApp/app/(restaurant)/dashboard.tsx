@@ -6,7 +6,7 @@ import { io, Socket } from 'socket.io-client';
 import { SOCKET_URL } from '../../constants/config';
 
 export default function RestaurantDashboard() {
-  const { user } = useAuthStore();
+  const { user, token } = useAuthStore();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -25,27 +25,30 @@ export default function RestaurantDashboard() {
   useEffect(() => {
     fetchActiveOrders();
 
-    const newSocket = io(SOCKET_URL);
+    const newSocket = io(SOCKET_URL, { auth: { token } });
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
-      api.get('/restaurants/my-restaurants').then(res => {
-        if (res.data && res.data.length > 0) {
-          const restId = res.data[0].id;
-          newSocket.emit('join', { role: 'restaurant', id: restId });
-        }
+      api.get('/menu/info').then(res => {
+        const restId = res.data?.data?.restaurant_id;
+        if (restId) newSocket.emit('join_restaurant', { restaurant_id: restId });
+        newSocket.emit('join', { role: 'restaurant_partner', id: user?.id });
       });
     });
 
-    newSocket.on('new_order', (data) => {
-      Alert.alert('🔔 New Order!', `Order received from ${data.customerName}`);
+    newSocket.on('order:created', (data) => {
+      Alert.alert('New Order!', `Order #${String(data.orderId).slice(-6).toUpperCase()} received.`);
       fetchActiveOrders();
+    });
+
+    newSocket.on('notification:new', (notification) => {
+      Alert.alert(notification.title, notification.body);
     });
 
     return () => {
       newSocket.disconnect();
     };
-  }, []);
+  }, [token, user?.id]);
 
   const updateStatus = async (orderId: string, status: string) => {
     try {
@@ -111,20 +114,20 @@ export default function RestaurantDashboard() {
                   <TouchableOpacity style={styles.rejectBtn} onPress={() => updateStatus(order.id, 'cancelled')}>
                     <Text style={styles.rejectText}>Reject</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.acceptBtn} onPress={() => updateStatus(order.id, 'accepted')}>
+                  <TouchableOpacity style={styles.acceptBtn} onPress={() => updateStatus(order.id, 'restaurant_confirmed')}>
                     <Text style={styles.acceptText}>Accept Order</Text>
                   </TouchableOpacity>
                 </View>
               )}
 
-              {order.status === 'accepted' && (
+              {order.status === 'restaurant_confirmed' && (
                 <TouchableOpacity style={styles.primaryBtn} onPress={() => updateStatus(order.id, 'preparing')}>
                   <Text style={styles.primaryBtnText}>Start Preparing</Text>
                 </TouchableOpacity>
               )}
 
               {order.status === 'preparing' && (
-                <TouchableOpacity style={styles.successBtn} onPress={() => updateStatus(order.id, 'ready_for_pickup')}>
+                <TouchableOpacity style={styles.successBtn} onPress={() => updateStatus(order.id, 'ready')}>
                   <Text style={styles.successBtnText}>Mark Ready for Pickup</Text>
                 </TouchableOpacity>
               )}
