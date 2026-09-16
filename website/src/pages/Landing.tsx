@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, MapPin, Star, Clock, ArrowRight, Bike, CheckCircle, ChefHat, Zap, ShieldCheck } from 'lucide-react';
+import { Search, MapPin, Star, Clock, ArrowRight, Bike, CheckCircle, ChefHat, Zap, ShieldCheck, Download, X } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
 import api from '../api/axios';
 import RestaurantCard from '../components/customer/RestaurantCard';
@@ -27,9 +27,45 @@ export default function Landing() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [showInstallHelp, setShowInstallHelp] = useState(false);
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const userLocation = useUserLocation();
+
+  useEffect(() => {
+    const handleInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event);
+    };
+    window.addEventListener('beforeinstallprompt', handleInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
+  }, []);
+
+  const handleAppDownload = async () => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isAndroid = userAgent.includes('android');
+    const isAppleMobile = /iphone|ipad|ipod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const nativeStoreUrl = isAndroid
+      ? import.meta.env.VITE_ANDROID_APP_URL
+      : isAppleMobile
+        ? import.meta.env.VITE_IOS_APP_URL
+        : undefined;
+
+    if (nativeStoreUrl) {
+      window.open(nativeStoreUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    if (installPrompt) {
+      await installPrompt.prompt();
+      await installPrompt.userChoice;
+      setInstallPrompt(null);
+      return;
+    }
+
+    setShowInstallHelp(true);
+  };
 
   useEffect(() => {
     const fetchRestaurants = async () => {
@@ -152,9 +188,12 @@ export default function Landing() {
                             <Link to="/customer/home" className="inline-flex items-center px-4 py-2.5 rounded-xl bg-gray-900 text-white font-bold text-sm hover:bg-black transition-colors">
                               Use Web App
                             </Link>
-                            <a href="https://play.google.com/store/apps" target="_blank" rel="noreferrer" className="inline-flex items-center px-4 py-2.5 rounded-xl bg-white text-gray-800 border border-gray-200 font-bold text-sm hover:border-brand-primary hover:text-brand-primary transition-colors">
-                              Download Application
-                            </a>
+                            <button onClick={handleAppDownload} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-gray-800 border border-gray-200 font-bold text-sm hover:border-brand-primary hover:text-brand-primary transition-colors">
+                              <Download className="w-4 h-4" /> Download Application
+                            </button>
+                            <button onClick={handleAppDownload} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-50 text-brand-primary border border-orange-100 font-bold text-sm hover:bg-orange-100 transition-colors">
+                              <Download className="w-4 h-4" /> Install Web App
+                            </button>
                           </div>
             </div>
 
@@ -436,6 +475,23 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+
+      {showInstallHelp && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setShowInstallHelp(false)}>
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl" onClick={event => event.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-black text-gray-900">Install Tastifyy App</h2>
+              <button onClick={() => setShowInstallHelp(false)} aria-label="Close install instructions"><X className="w-5 h-5 text-gray-400" /></button>
+            </div>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              {(/iphone|ipad|ipod/i.test(navigator.userAgent))
+                ? 'Safari mein Share button tap karein, phir Add to Home Screen select karein.'
+                : 'Browser menu open karein aur Install Tastifyy ya Add to Home Screen select karein.'}
+            </p>
+            <button onClick={() => setShowInstallHelp(false)} className="mt-5 w-full py-3 rounded-xl bg-brand-primary text-white font-bold">Done</button>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav />
