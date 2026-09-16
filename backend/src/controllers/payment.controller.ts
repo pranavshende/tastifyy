@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { prisma } from '../utils/prisma.js';
+import { findRestaurantPartner } from '../utils/restaurantPartner.js';
 import Razorpay from 'razorpay';
 import { randomUUID, createHmac } from 'crypto';
 import axios from 'axios';
@@ -20,7 +21,7 @@ export const createLinkedAccount = async (req: Request, res: Response): Promise<
   const user = req.user as any;
 
   try {
-    const partner = await prisma.restaurantPartner.findFirst({ where: { phone: user.phone } });
+    const partner = await findRestaurantPartner(user);
     if (!partner) {
       res.status(403).json({ success: false, error: 'Not a restaurant partner' });
       return;
@@ -84,7 +85,7 @@ export const createStakeholder = async (req: Request, res: Response): Promise<vo
   const user = req.user as any;
 
   try {
-    const partner = await prisma.restaurantPartner.findFirst({ where: { phone: user.phone } });
+    const partner = await findRestaurantPartner(user);
     if (!partner) {
       res.status(403).json({ success: false, error: 'Not a restaurant partner' });
       return;
@@ -128,7 +129,7 @@ export const configureRouteProduct = async (req: Request, res: Response): Promis
   const user = req.user as any;
 
   try {
-    const partner = await prisma.restaurantPartner.findFirst({ where: { phone: user.phone } });
+    const partner = await findRestaurantPartner(user);
     if (!partner) {
       res.status(403).json({ success: false, error: 'Not a restaurant partner' });
       return;

@@ -21,7 +21,7 @@ export default function CartScreen() {
   const itemTotal = useCartStore(state => state.getTotal());
   const deliveryFee = 20;
   const platformFee = 5;
-  const taxAmount = itemTotal * 0.05;
+  const taxAmount = itemTotal * 0.02;
   const [couponCode, setCouponCode] = useState('');
   const [discountAmount, setDiscountAmount] = useState(0);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
@@ -100,7 +100,9 @@ export default function CartScreen() {
       if (res.data.success) {
         if (paymentMethod === 'cod') {
           clearCart();
-          router.replace('/(customer)/orders');
+          Alert.alert('Order Placed', 'Your order has been placed successfully.', [
+            { text: 'View Orders', onPress: () => router.replace('/(customer)/orders') }
+          ]);
         } else if (res.data.data.razorpay_order_id) {
           const orderData = res.data.data;
           const options = {
@@ -123,7 +125,9 @@ export default function CartScreen() {
               });
               if (verifyRes.data.success) {
                 clearCart();
-                router.replace('/(customer)/orders');
+                Alert.alert('Order Placed', 'Your payment was successful and your order is confirmed.', [
+                  { text: 'View Orders', onPress: () => router.replace('/(customer)/orders') }
+                ]);
               }
             } catch (verifyErr) {
               Alert.alert('Payment Error', 'Payment verification failed on server.');
@@ -281,11 +285,6 @@ export default function CartScreen() {
           <View style={styles.billRow}>
             <Text style={styles.billLabel}>Platform Fee</Text>
             <Text style={styles.billValue}>₹{platformFee.toFixed(2)}</Text>
-          </View>
-
-          <View style={styles.billRow}>
-            <Text style={styles.billLabel}>Taxes (5%)</Text>
-            <Text style={styles.billValue}>₹{taxAmount.toFixed(2)}</Text>
           </View>
 
           {discountAmount > 0 && (

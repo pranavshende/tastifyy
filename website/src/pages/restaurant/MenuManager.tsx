@@ -308,6 +308,7 @@ export default function MenuManager() {
   const [showCatModal, setShowCatModal] = useState(false);
   const [showItemModal, setShowItemModal] = useState(false);
   const [activeCatId, setActiveCatId] = useState<string | null>(null);
+  const [editingCategory, setEditingCategory] = useState<any>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
 
   const [newCatName, setNewCatName] = useState('');
@@ -337,12 +338,19 @@ export default function MenuManager() {
     e.preventDefault();
     if (!newCatName.trim()) return;
     try {
-      await api.post('/menu/categories', { name: newCatName, display_order: categories.length });
+      if (editingCategory) {
+        await api.put(`/menu/categories/${editingCategory.id}`, {
+          name: newCatName.trim(), display_order: editingCategory.display_order, is_active: editingCategory.is_active
+        });
+      } else {
+        await api.post('/menu/categories', { name: newCatName.trim(), display_order: categories.length });
+      }
       setNewCatName('');
+      setEditingCategory(null);
       setShowCatModal(false);
       fetchMenu();
-    } catch {
-      alert('Failed to add category');
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || 'Failed to save category');
     }
   };
 
@@ -474,6 +482,13 @@ export default function MenuManager() {
                       + Add Item
                     </button>
                     <button
+                      onClick={() => { setEditingCategory(cat); setNewCatName(cat.name); setShowCatModal(true); }}
+                      className="text-gray-400 hover:text-brand-primary transition-colors"
+                      title="Edit category"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={() => handleDeleteCategory(cat.id, cat.menu_items?.length || 0)}
                       className="text-gray-400 hover:text-red-500 transition-colors"
                     >
@@ -564,7 +579,7 @@ export default function MenuManager() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCatModal(false)}></div>
           <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-md relative z-10">
-            <h2 className="text-2xl font-black text-gray-900 mb-6">Add New Category</h2>
+            <h2 className="text-2xl font-black text-gray-900 mb-6">{editingCategory ? 'Edit Category' : 'Add New Category'}</h2>
             <form onSubmit={handleAddCategory}>
               <div className="mb-6">
                 <label className="block text-sm font-bold text-gray-700 mb-2">Category Name</label>
@@ -576,7 +591,7 @@ export default function MenuManager() {
                 />
               </div>
               <div className="flex gap-3">
-                <button type="button" onClick={() => setShowCatModal(false)}
+                <button type="button" onClick={() => { setShowCatModal(false); setEditingCategory(null); setNewCatName(''); }}
                         className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200">
                   Cancel
                 </button>

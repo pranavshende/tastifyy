@@ -18,7 +18,7 @@ export default function OrderDetailsScreen() {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const res = await api.get(`/orders/${id}`);
+        const res = await api.get(`/orders/customer/${id}`);
         setOrder(res.data.data);
       } catch (err) {
         console.error(err);
@@ -130,11 +130,15 @@ export default function OrderDetailsScreen() {
           <Text style={styles.sectionTitle}>Bill Summary</Text>
           <View style={styles.billRow}>
             <Text style={styles.billLabel}>Item Total</Text>
-            <Text style={styles.billValue}>₹{(parseFloat(order.total_amount) - 25).toFixed(2)}</Text>
+            <Text style={styles.billValue}>₹{parseFloat(order.item_subtotal).toFixed(2)}</Text>
           </View>
           <View style={styles.billRow}>
-            <Text style={styles.billLabel}>Taxes & Fees</Text>
-            <Text style={styles.billValue}>₹25.00</Text>
+            <Text style={styles.billLabel}>Delivery Fee</Text>
+            <Text style={styles.billValue}>₹{parseFloat(order.delivery_fee).toFixed(2)}</Text>
+          </View>
+          <View style={styles.billRow}>
+            <Text style={styles.billLabel}>Platform Fee</Text>
+            <Text style={styles.billValue}>₹{parseFloat(order.platform_fee).toFixed(2)}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.billRow}>

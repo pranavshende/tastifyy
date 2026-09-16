@@ -15,10 +15,6 @@ export default function CustomerRegister() {
   const [phone, setPhone] = useState('');
   const [dob, setDob] = useState('');
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
-  const [addressLine, setAddressLine] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [pincode, setPincode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -66,10 +62,6 @@ export default function CustomerRegister() {
       formData.append('phone', phone);
       formData.append('role', 'customer');
       if (dob) formData.append('dob', dob);
-      if (addressLine) formData.append('address_line', addressLine);
-      if (city) formData.append('city', city);
-      if (state) formData.append('state', state);
-      if (pincode) formData.append('pincode', pincode);
       if (profilePhoto) formData.append('profile_photo', profilePhoto);
 
       const res = await api.post('/auth/register', formData, {
@@ -216,39 +208,6 @@ export default function CustomerRegister() {
                     value={dob}
                     onChange={e => setDob(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Default Delivery Address</label>
-                <input
-                  type="text"
-                  value={addressLine}
-                  onChange={e => setAddressLine(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all mb-3"
-                  placeholder="Street address, apartment, suite, etc."
-                />
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    value={city}
-                    onChange={e => setCity(e.target.value)}
-                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
-                    placeholder="City"
-                  />
-                  <input
-                    type="text"
-                    value={state}
-                    onChange={e => setState(e.target.value)}
-                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
-                    placeholder="State"
-                  />
-                  <input
-                    type="text"
-                    value={pincode}
-                    onChange={e => setPincode(e.target.value)}
-                    className="w-24 px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all"
-                    placeholder="PIN"
                   />
                 </div>
               </div>

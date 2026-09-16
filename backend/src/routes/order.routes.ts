@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate, authorizeRole } from '../middlewares/auth.js';
 import { prisma } from '../utils/prisma.js';
+import { findRestaurantPartner } from '../utils/restaurantPartner.js';
 import { getIO } from '../socket.js';
 import type { Request, Response } from 'express';
 import crypto, { randomUUID } from 'crypto';
@@ -196,7 +197,7 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
       calculated_delivery_fee = 25;
     }
     const delivery_fee = Math.min(calculated_delivery_fee, 25);
-    const tax_amount = item_subtotal * 0.05;
+    const tax_amount = item_subtotal * 0.02;
     let total_amount = item_subtotal + delivery_fee + platform_fee + tax_amount;
     let discount_amount = 0;
     let valid_coupon_id = null;
@@ -528,7 +529,7 @@ router.post('/:id/rate', authorizeRole(['customer']), async (req: Request, res: 
 router.get('/restaurant/active', authorizeRole(['restaurant_partner']), async (req: Request, res: Response) => {
   const user = req.user as any;
   try {
-    const partner = await prisma.restaurantPartner.findFirst({ where: { phone: user.phone } });
+    const partner = await findRestaurantPartner(user);
     if (!partner) {
       res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not a restaurant partner' } });
       return;
@@ -553,7 +554,7 @@ router.get('/restaurant/active', authorizeRole(['restaurant_partner']), async (r
 router.get('/restaurant/transactions', authorizeRole(['restaurant_partner']), async (req: Request, res: Response) => {
   const user = req.user as any;
   try {
-    const partner = await prisma.restaurantPartner.findFirst({ where: { phone: user.phone } });
+    const partner = await findRestaurantPartner(user);
     if (!partner) {
       res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not a restaurant partner' } });
       return;
@@ -626,7 +627,7 @@ router.put('/:id/status', authorizeRole(['restaurant_partner', 'delivery_partner
     let whereClause: any = { id: id as string };
     
     if (user.role === 'restaurant_partner') {
-      const partner = await prisma.restaurantPartner.findFirst({ where: { phone: user.phone } });
+      const partner = await findRestaurantPartner(user);
       if (!partner) {
         res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not a valid restaurant partner' } });
         return;

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate, authorizeRole } from '../middlewares/auth.js';
 import { prisma } from '../utils/prisma.js';
+import { findRestaurantPartner } from '../utils/restaurantPartner.js';
 import type { Request, Response } from 'express';
 
 const router = Router();
@@ -11,9 +12,7 @@ router.use(authenticate, authorizeRole(['restaurant_partner']));
 router.get('/restaurant', async (req: Request, res: Response) => {
   const user = req.user as any;
   try {
-    const partner = await prisma.restaurantPartner.findUnique({
-      where: { phone: user.phone }
-    });
+    const partner = await findRestaurantPartner(user);
     if (!partner) return res.status(403).json({ success: false, message: 'Not a restaurant partner' });
 
     const coupons = await prisma.coupon.findMany({
@@ -33,9 +32,7 @@ router.post('/', async (req: Request, res: Response) => {
   const { code, discount_type, discount_value, min_order_value, max_discount_cap, max_uses_per_user, max_uses_total, valid_from, valid_until, funded_by } = req.body;
   
   try {
-    const partner = await prisma.restaurantPartner.findUnique({
-      where: { phone: user.phone }
-    });
+    const partner = await findRestaurantPartner(user);
     if (!partner) return res.status(403).json({ success: false, message: 'Not a restaurant partner' });
 
     // Validate code
@@ -71,9 +68,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.patch('/:id/toggle', async (req: Request, res: Response) => {
   const user = req.user as any;
   try {
-    const partner = await prisma.restaurantPartner.findUnique({
-      where: { phone: user.phone }
-    });
+    const partner = await findRestaurantPartner(user);
     if (!partner) return res.status(403).json({ success: false, message: 'Not a restaurant partner' });
 
     const coupon = await prisma.coupon.findUnique({ where: { id: req.params.id as string } });

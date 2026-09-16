@@ -23,10 +23,6 @@ export default function LoginScreen() {
   const [phone, setPhone] = useState('');
   const [dob, setDob] = useState('');
   const [profilePhoto, setProfilePhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
-  const [addressLine, setAddressLine] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [pincode, setPincode] = useState('');
   const [loading, setLoading] = useState(false);
   const { setAuth } = useAuthStore();
 
@@ -51,11 +47,6 @@ export default function LoginScreen() {
         formData.append('phone', phone);
         formData.append('role', 'customer');
         if (dob) formData.append('dob', dob);
-        if (addressLine) formData.append('address_line', addressLine);
-        if (city) formData.append('city', city);
-        if (state) formData.append('state', state);
-        if (pincode) formData.append('pincode', pincode);
-        
         if (profilePhoto) {
           const fileExtension = profilePhoto.uri.split('.').pop();
           const mimeType = profilePhoto.type === 'image' || profilePhoto.mimeType ? profilePhoto.mimeType : `image/${fileExtension}`;
@@ -145,7 +136,7 @@ export default function LoginScreen() {
         {/* Header / Brand */}
         <View style={styles.header}>
           <View style={styles.logo}>
-            <Text style={styles.logoText}>T</Text>
+            <Image source={require('../../assets/images/icon.png')} style={styles.logoImage} />
           </View>
           <Text style={styles.brand}>Tastifyy</Text>
           <Text style={styles.tagline}>
@@ -208,38 +199,6 @@ export default function LoginScreen() {
                 placeholderTextColor="#aaa"
                 value={dob}
                 onChangeText={setDob}
-              />
-              <Text style={styles.label}>Default Address</Text>
-              <TextInput
-                placeholder="Address Line"
-                placeholderTextColor="#aaa"
-                value={addressLine}
-                onChangeText={setAddressLine}
-                style={[styles.input, { marginBottom: 10 }]}
-              />
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TextInput
-                  style={[styles.input, { flex: 1 }]}
-                  placeholder="City"
-                  placeholderTextColor="#aaa"
-                  value={city}
-                  onChangeText={setCity}
-                />
-                <TextInput
-                  style={[styles.input, { flex: 1 }]}
-                  placeholder="State"
-                  placeholderTextColor="#aaa"
-                  value={state}
-                  onChangeText={setState}
-                />
-              </View>
-              <TextInput
-                style={[styles.input, { marginTop: 10 }]}
-                placeholder="PIN Code"
-                placeholderTextColor="#aaa"
-                value={pincode}
-                onChangeText={setPincode}
-                keyboardType="number-pad"
               />
             </>
           )}
@@ -328,6 +287,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12, shadowOffset: { width: 0, height: 6 },
     elevation: 10, marginBottom: 12,
   },
+  logoImage: { width: 64, height: 64, borderRadius: 18 },
   logoText: { color: '#fff', fontSize: 28, fontWeight: '900' },
   brand: { fontSize: 26, fontWeight: '900', color: '#171717', letterSpacing: -0.5, marginBottom: 6 },
   tagline: { fontSize: 15, color: '#888', fontWeight: '500' },

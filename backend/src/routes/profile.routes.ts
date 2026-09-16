@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate, authorizeRole } from '../middlewares/auth.js';
 import { prisma } from '../utils/prisma.js';
 import { uploadFile, deleteFile, validateFile, generateFilename, getPublicUrl } from '../services/storage.service.js';
+import { findRestaurantPartner } from '../utils/restaurantPartner.js';
 import multer from 'multer';
 import type { Request, Response, NextFunction } from 'express';
 
@@ -21,10 +22,7 @@ const upload = multer({
 const attachRestaurant = async (req: Request, res: Response, next: NextFunction) => {
   const user = req.user as any;
   try {
-    const partner = await prisma.restaurantPartner.findFirst({
-      where: { phone: user.phone },
-      include: { restaurant: true },
-    });
+    const partner = await findRestaurantPartner(user);
     if (!partner?.restaurant) {
       res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'No active restaurant found for this user' } });
       return;

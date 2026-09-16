@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate, authorizeRole } from '../middlewares/auth.js';
 import { prisma } from '../utils/prisma.js';
+import { findRestaurantPartner } from '../utils/restaurantPartner.js';
 import type { Request, Response } from 'express';
 
 const router = Router();
@@ -72,7 +73,7 @@ router.get('/admin', authorizeRole(['admin']), async (_req: Request, res: Respon
 router.get('/restaurant', authorizeRole(['restaurant_partner']), async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
-    const partner = await prisma.restaurantPartner.findFirst({ where: { phone: user.phone } });
+    const partner = await findRestaurantPartner(user);
     if (!partner) return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not a restaurant partner' } });
 
     const sevenDaysAgo = new Date();

@@ -24,6 +24,10 @@ export default function Checkout() {
   const [addresses, setAddresses] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
+  const [showAddAddressForm, setShowAddAddressForm] = useState(false);
+  const [newAddress, setNewAddress] = useState({
+    label: 'Home', address_line: '', city: '', state: '', pincode: '', is_default: true
+  });
   const [isAddressConfirmed, setIsAddressConfirmed] = useState(false);
   
   const [profile, setProfile] = useState<any>(null);
@@ -58,6 +62,22 @@ export default function Checkout() {
 
   const totals = cart.getTotals();
   const grandTotal = Math.max(0, totals.totalAmount - (appliedCoupon?.discountAmount || 0));
+
+  const handleAddAddress = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      const { data } = await api.post('/customer/addresses', newAddress);
+      const address = data.data;
+      setAddresses(prev => [address, ...prev]);
+      setSelectedAddressId(address.id);
+      setIsAddressConfirmed(false);
+      setShowAddAddressForm(false);
+      setNewAddress({ label: 'Home', address_line: '', city: '', state: '', pincode: '', is_default: true });
+    } catch (err: any) {
+      setError(err.response?.data?.error?.message || 'Failed to add delivery address');
+    }
+  };
 
   const handleApplyCoupon = async () => {
     if (!couponCode) return;
@@ -298,9 +318,9 @@ export default function Checkout() {
                   })() : (
                     <div className="mt-3">
                       <p className="text-red-500 font-medium text-sm mb-3">No delivery address found.</p>
-                      <Link to="/customer/profile" className="inline-flex items-center gap-2 text-sm font-bold text-white bg-gray-900 px-4 py-2 rounded-lg hover:bg-black transition-colors">
+                      <button onClick={() => { setShowAddressModal(true); setShowAddAddressForm(true); }} className="inline-flex items-center gap-2 text-sm font-bold text-white bg-gray-900 px-4 py-2 rounded-lg hover:bg-black transition-colors">
                         <Plus className="w-4 h-4" /> Add Address
-                      </Link>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -394,10 +414,6 @@ export default function Checkout() {
                   <span>Platform Fee</span>
                   <span className="text-gray-900">₹{totals.platformFee.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Taxes (5%)</span>
-                  <span className="text-gray-900">₹{totals.taxAmount.toFixed(2)}</span>
-                </div>
                 {appliedCoupon && (
                   <div className="flex justify-between text-green-600 font-bold">
                     <span>Discount ({appliedCoupon.code})</span>
@@ -407,7 +423,6 @@ export default function Checkout() {
                 <div className="pt-4 mt-4 border-t border-gray-100 flex justify-between items-end">
                   <div>
                     <div className="text-xl font-black text-gray-900">To Pay</div>
-                    <div className="text-xs text-gray-500">Incl. all taxes and charges</div>
                   </div>
                   <div className="text-2xl font-black text-brand-dark">₹{grandTotal.toFixed(2)}</div>
                 </div>
@@ -490,7 +505,24 @@ export default function Checkout() {
               <button onClick={() => setShowAddressModal(false)} className="text-gray-400 hover:text-gray-600 font-bold text-xl leading-none">&times;</button>
             </div>
             <div className="p-4 max-h-[60vh] overflow-y-auto bg-gray-50/50 space-y-3">
-              {addresses.map((address) => (
+              {showAddAddressForm ? (
+                <form onSubmit={handleAddAddress} className="bg-white rounded-2xl border border-brand-primary/20 p-4 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-bold text-gray-900">Add delivery address</h4>
+                    {addresses.length > 0 && <button type="button" onClick={() => setShowAddAddressForm(false)} className="text-gray-400 text-xl">&times;</button>}
+                  </div>
+                  <select value={newAddress.label} onChange={e => setNewAddress({ ...newAddress, label: e.target.value })} className="w-full border border-gray-200 rounded-xl px-3 py-2">
+                    <option>Home</option><option>Work</option><option>Other</option>
+                  </select>
+                  <input required placeholder="Address line" value={newAddress.address_line} onChange={e => setNewAddress({ ...newAddress, address_line: e.target.value })} className="w-full border border-gray-200 rounded-xl px-3 py-2" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input required placeholder="City" value={newAddress.city} onChange={e => setNewAddress({ ...newAddress, city: e.target.value })} className="border border-gray-200 rounded-xl px-3 py-2" />
+                    <input required placeholder="State" value={newAddress.state} onChange={e => setNewAddress({ ...newAddress, state: e.target.value })} className="border border-gray-200 rounded-xl px-3 py-2" />
+                  </div>
+                  <input required placeholder="Pincode" value={newAddress.pincode} onChange={e => setNewAddress({ ...newAddress, pincode: e.target.value })} className="w-full border border-gray-200 rounded-xl px-3 py-2" />
+                  <button type="submit" className="w-full py-3 rounded-xl bg-brand-primary text-white font-bold">Save Address</button>
+                </form>
+              ) : addresses.map((address) => (
                 <div 
                   key={address.id} 
                   onClick={() => { 
@@ -514,9 +546,9 @@ export default function Checkout() {
               ))}
             </div>
             <div className="p-4 border-t border-gray-100 bg-white">
-              <Link to="/customer/profile" className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-brand-primary border-2 border-brand-primary/20 hover:bg-orange-50 transition-colors">
+              <button onClick={() => setShowAddAddressForm(true)} className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-brand-primary border-2 border-brand-primary/20 hover:bg-orange-50 transition-colors">
                 <Plus className="w-5 h-5" /> Add New Address
-              </Link>
+              </button>
             </div>
           </div>
         </div>

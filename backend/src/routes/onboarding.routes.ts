@@ -4,6 +4,7 @@ import { prisma } from '../utils/prisma.js';
 import type { Request, Response } from 'express';
 import multer from 'multer';
 import { uploadFile } from '../utils/storage.js';
+import { findRestaurantPartner } from '../utils/restaurantPartner.js';
 
 const router = Router();
 
@@ -75,7 +76,12 @@ router.post('/restaurant', async (req: Request, res: Response) => {
   try {
     // Check if restaurant already exists for this user (via RestaurantPartner link)
     const existingPartner = await prisma.restaurantPartner.findFirst({
-      where: { phone: user.phone }
+      where: {
+        OR: [
+          ...(user.phone ? [{ phone: user.phone }] : []),
+          ...(user.email ? [{ email: user.email }] : []),
+        ],
+      }
     });
 
     if (existingPartner) {
@@ -133,7 +139,7 @@ router.post('/restaurant', async (req: Request, res: Response) => {
 router.post('/restaurant/submit', async (req: Request, res: Response) => {
   const user = req.user as any;
   try {
-    const partner = await prisma.restaurantPartner.findFirst({ where: { phone: user.phone } });
+    const partner = await findRestaurantPartner(user);
     if (!partner) {
       res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Restaurant onboarding not started' } });
       return;
@@ -152,10 +158,7 @@ router.post('/restaurant/submit', async (req: Request, res: Response) => {
 router.get('/restaurant/status', async (req: Request, res: Response) => {
   const user = req.user as any;
   try {
-    const partner = await prisma.restaurantPartner.findFirst({
-      where: { phone: user.phone },
-      include: { restaurant: true }
-    });
+    const partner = await findRestaurantPartner(user);
     if (!partner) {
       res.json({ success: true, data: null, message: 'No restaurant onboarding found' });
       return;
@@ -258,7 +261,7 @@ router.post('/restaurant/documents', upload.fields([
   const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
   try {
-    const partner = await prisma.restaurantPartner.findFirst({ where: { phone: user.phone } });
+    const partner = await findRestaurantPartner(user);
     if (!partner) {
       res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Restaurant onboarding not started' } });
       return;

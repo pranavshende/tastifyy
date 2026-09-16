@@ -367,10 +367,6 @@ export default function OrderDetails() {
               <span>Platform Fee</span>
               <span className="text-gray-900">₹{order.platform_fee}</span>
             </div>
-            <div className="flex justify-between">
-              <span>Taxes</span>
-              <span className="text-gray-900">₹{order.tax_amount}</span>
-            </div>
             {Number(order.discount_amount) > 0 && (
               <div className="flex justify-between text-green-600 font-bold">
                 <span>Discount</span>

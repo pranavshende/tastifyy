@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { prisma } from '../utils/prisma.js';
 import { getPublicUrl } from '../services/storage.service.js';
+import { findRestaurantPartner } from '../utils/restaurantPartner.js';
 
 function formatRestaurant(r: any) {
   return {
@@ -89,7 +90,7 @@ export const updateRestaurant = async (req: Request, res: Response): Promise<voi
     }
     const user = req.user as any;
     if (user.role !== 'admin') {
-      const partner = await prisma.restaurantPartner.findFirst({ where: { phone: user.phone } });
+      const partner = await findRestaurantPartner(user);
       if (!partner || partner.restaurant_id !== id) {
         res.status(403).json({ error: 'Forbidden: You do not own this restaurant' });
         return;

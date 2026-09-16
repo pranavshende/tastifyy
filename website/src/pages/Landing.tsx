@@ -148,6 +148,14 @@ export default function Landing() {
                   Find Food
                 </button>
               </form>
+                          <div className="flex flex-wrap justify-center lg:justify-start gap-3 mt-5">
+                            <Link to="/customer/home" className="inline-flex items-center px-4 py-2.5 rounded-xl bg-gray-900 text-white font-bold text-sm hover:bg-black transition-colors">
+                              Use Web App
+                            </Link>
+                            <a href="https://play.google.com/store/apps" target="_blank" rel="noreferrer" className="inline-flex items-center px-4 py-2.5 rounded-xl bg-white text-gray-800 border border-gray-200 font-bold text-sm hover:border-brand-primary hover:text-brand-primary transition-colors">
+                              Download Application
+                            </a>
+                          </div>
             </div>
 
             {/* Right Image */}
@@ -415,7 +423,10 @@ export default function Landing() {
           </div>
           
           <div className="pt-8 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-gray-400 text-sm font-medium">© {new Date().getFullYear()} Tastifyy. All rights reserved.</p>
+            <div className="text-center md:text-left">
+              <p className="text-gray-400 text-sm font-medium">© {new Date().getFullYear()} Tastifyy. All rights reserved.</p>
+              <p className="text-gray-500 text-xs font-bold mt-1">Powered by NKSKILLEDGE PVT LTD</p>
+            </div>
             <div className="flex gap-4">
               {/* Social icons placeholder */}
               <div className="w-8 h-8 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center cursor-pointer hover:text-brand-primary hover:border-brand-primary transition-colors">IG</div>
