@@ -1,0 +1,1207 @@
+import { useState, useEffect } from 'react';
+import api from '../../api/axios';
+import socketService from '../../api/socket';
+import Sidebar from '../../components/dashboard/Sidebar';
+import { 
+  Users, Store, ShoppingBag, Bike, ShieldAlert, 
+  TrendingUp, AlertCircle, RefreshCw, User, Phone, Mail, Save, Loader2
+} from 'lucide-react';
+import { ImageUploadButton } from '../../components/ui/ImageUploadButton';
+
+type Tab = 'overview' | 'restaurants' | 'orders' | 'delivery' | 'users' | 'payouts' | 'support' | 'audit' | 'config' | 'profile';
+
+export default function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState<Tab>('overview');
+
+  return (
+    <div className="min-h-screen bg-brand-light flex font-sans text-brand-dark">
+      <Sidebar role="admin" activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as Tab)} />
+
+      <main className="flex-1 lg:ml-64 p-6 lg:p-8 h-screen overflow-y-auto">
+        <div className="max-w-7xl mx-auto">
+          {activeTab === 'overview' && <OverviewTab />}
+          {activeTab === 'orders' && <OrdersTab />}
+          {activeTab === 'restaurants' && <RestaurantsTab />}
+          {activeTab === 'delivery' && <DeliveryTab />}
+          {activeTab === 'users' && <UsersTab />}
+          {activeTab === 'payouts' && <PayoutsTab />}
+          {activeTab === 'support' && <SupportTab />}
+          {activeTab === 'audit' && <AuditTab />}
+          {activeTab === 'config' && <ConfigTab />}
+          {activeTab === 'profile' && <ProfileTab />}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// ─── OVERVIEW TAB ────────────────────────────────────────────────────────────
+function OverviewTab() {
+  const [metrics, setMetrics] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [analytics, setAnalytics] = useState<any>({ chartData: [], kpis: null });
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/admin/dashboard'),
+      api.get('/analytics/admin')
+    ]).then(([resMetrics, resAnalytics]) => {
+      setMetrics(resMetrics.data.data);
+      setAnalytics(resAnalytics.data.data);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  const cards = [
+    { title: 'Total Users', value: metrics?.totalUsers || 0, icon: <Users />, color: 'bg-blue-50 text-blue-600 border-blue-100' },
+    { title: 'Active Restaurants', value: metrics?.activeRestaurants || 0, icon: <Store />, color: 'bg-green-50 text-green-600 border-green-100' },
+    { title: 'Delivery Fleet', value: metrics?.totalDeliveryPartners || 0, icon: <Bike />, color: 'bg-purple-50 text-purple-600 border-purple-100' },
+    { title: 'Total Orders', value: metrics?.totalOrders || 0, icon: <ShoppingBag />, color: 'bg-brand-primary/10 text-brand-primary border-brand-primary/20' },
+    { title: 'Avg Order Value', value: `₹${analytics.kpis?.aov?.toFixed(0) || 0}`, icon: <TrendingUp />, color: 'bg-indigo-50 text-indigo-600 border-indigo-100' },
+    { title: 'Platform Revenue', value: `₹${analytics.kpis?.estCommission?.toFixed(0) || 0}`, icon: <TrendingUp />, color: 'bg-yellow-50 text-yellow-600 border-yellow-100' },
+  ];
+
+  const chartData = analytics.chartData || [];
+  const maxRevenue = Math.max(...chartData.map((a: any) => a.revenue), 1);
+
+  return (
+    <div className="animate-fade-in-up">
+      <div className="mb-8">
+        <h1 className="text-3xl font-black text-gray-900">Platform Overview</h1>
+        <p className="text-gray-500 font-medium mt-1">Real-time marketplace analytics and health</p>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+        {cards.map((c, i) => (
+          <div key={i} className={`p-6 rounded-3xl border shadow-sm flex flex-col ${c.color}`}>
+            <div className="w-12 h-12 rounded-2xl bg-white/60 flex items-center justify-center mb-4 shadow-sm">
+              {c.icon}
+            </div>
+            <p className="text-sm font-bold opacity-80 uppercase tracking-wider mb-1">{c.title}</p>
+            <p className="text-3xl font-black">{c.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 mb-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h3 className="text-xl font-black text-gray-900 flex items-center">
+              <TrendingUp className="w-6 h-6 mr-2 text-brand-primary" />
+              Revenue Trend (30 Days)
+            </h3>
+            <p className="text-sm text-gray-500 font-medium mt-1">Platform fee generation over time</p>
+          </div>
+        </div>
+        
+        {chartData.length === 0 ? (
+          <div className="bg-gray-50 rounded-2xl border border-dashed border-gray-200 h-64 flex items-center justify-center">
+            <div className="text-gray-400 font-bold text-center">
+              <TrendingUp className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              No revenue data available yet.
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-end h-64 gap-2 px-2">
+            {chartData.map((day: any, idx: number) => {
+              const heightPct = (day.revenue / maxRevenue) * 100;
+              return (
+                <div key={idx} className="flex-1 flex flex-col justify-end items-center group relative h-full pt-10">
+                  <div className="opacity-0 group-hover:opacity-100 absolute top-0 bg-gray-900 text-white text-xs font-bold py-1.5 px-3 rounded-lg pointer-events-none whitespace-nowrap transition-opacity z-10 shadow-xl">
+                    {day.date}: ₹{day.revenue.toFixed(0)}
+                  </div>
+                  <div 
+                    className="w-full bg-brand-primary/20 rounded-t-lg transition-all group-hover:bg-brand-primary" 
+                    style={{ height: `${heightPct}%`, minHeight: '8px' }} 
+                  ></div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── RESTAURANTS TAB ─────────────────────────────────────────────────────────
+function RestaurantsTab() {
+  const [restaurants, setRestaurants] = useState<any[]>([]);
+  const [statusFilter, setStatusFilter] = useState('pending');
+
+  const fetchRestaurants = () => {
+    api.get(`/admin/restaurants?status=${statusFilter === 'all' ? '' : statusFilter}`).then((res) => {
+      setRestaurants(res.data.data);
+    });
+  };
+
+  useEffect(() => {
+    fetchRestaurants();
+    // eslint-disable-next-line
+  }, [statusFilter]);
+
+  const handleAction = async (id: string, action: 'approve' | 'reject' | 'suspend') => {
+    if (window.confirm(`Are you sure you want to ${action} this restaurant?`)) {
+      const payload = action === 'reject' ? { reason: 'Admin rejected' } : {};
+      await api.patch(`/admin/restaurants/${id}/${action}`, payload);
+      fetchRestaurants();
+    }
+  };
+
+  return (
+    <div className="animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-gray-900">Restaurants</h2>
+          <p className="text-gray-500 font-medium mt-1">Manage restaurant partners and approvals</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-1 inline-flex shadow-sm">
+          {['pending', 'active', 'rejected', 'suspended', 'all'].map(status => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`px-4 py-2 rounded-lg text-sm font-bold capitalize transition-colors ${
+                statusFilter === status 
+                  ? 'bg-brand-dark text-white shadow-sm' 
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50/50 text-gray-500 text-xs font-black uppercase tracking-wider border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-4">Restaurant</th>
+                <th className="px-6 py-4">Location</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {restaurants.map((r) => (
+                <tr key={r.id} className="hover:bg-gray-50/50 transition-colors group">
+                  <td className="px-6 py-4">
+                    <p className="font-black text-gray-900 text-base">{r.name}</p>
+                    <p className="text-sm font-medium text-gray-500 mt-0.5">{r.type} {r.is_pure_veg && <span className="text-green-600 ml-1">🌿 Pure Veg</span>}</p>
+                  </td>
+                  <td className="px-6 py-4 text-gray-700 font-medium">
+                    {r.city}, {r.state}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider ${
+                      r.status === 'active' ? 'bg-green-50 text-green-700 border border-green-200' :
+                      r.status === 'pending' ? 'bg-orange-50 text-orange-700 border border-orange-200' :
+                      'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                      {r.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                      {r.status === 'pending' && (
+                        <>
+                          <button onClick={() => handleAction(r.id, 'approve')} className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-green-700 shadow-sm shadow-green-600/20">Approve</button>
+                          <button onClick={() => handleAction(r.id, 'reject')} className="bg-white border-2 border-red-100 text-red-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-red-50">Reject</button>
+                        </>
+                      )}
+                      {r.status === 'active' && (
+                        <button onClick={() => handleAction(r.id, 'suspend')} className="bg-white border-2 border-orange-100 text-orange-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-orange-50">Suspend</button>
+                      )}
+                      {r.status === 'suspended' && (
+                        <button onClick={() => handleAction(r.id, 'approve')} className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-green-700 shadow-sm shadow-green-600/20">Reactivate</button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {restaurants.length === 0 && (
+                <tr><td colSpan={4} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No restaurants found in this category.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── DELIVERY TAB ────────────────────────────────────────────────────────────
+function DeliveryTab() {
+  const [partners, setPartners] = useState<any[]>([]);
+  const [statusFilter, setStatusFilter] = useState('pending');
+
+  const fetchPartners = () => {
+    api.get(`/admin/delivery-partners?status=${statusFilter === 'all' ? '' : statusFilter}`).then((res) => {
+      setPartners(res.data.data);
+    });
+  };
+
+  useEffect(() => {
+    fetchPartners();
+    // eslint-disable-next-line
+  }, [statusFilter]);
+
+  const handleAction = async (id: string, action: 'approve' | 'reject') => {
+    if (window.confirm(`Are you sure you want to ${action} this partner?`)) {
+      const payload = action === 'reject' ? { reason: 'Admin rejected' } : {};
+      await api.patch(`/admin/delivery-partners/${id}/${action}`, payload);
+      fetchPartners();
+    }
+  };
+
+  return (
+    <div className="animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-gray-900">Delivery Fleet</h2>
+          <p className="text-gray-500 font-medium mt-1">Manage delivery partner applications</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-1 inline-flex shadow-sm">
+          {['pending', 'active', 'rejected', 'all'].map(status => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`px-4 py-2 rounded-lg text-sm font-bold capitalize transition-colors ${
+                statusFilter === status 
+                  ? 'bg-brand-dark text-white shadow-sm' 
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50/50 text-gray-500 text-xs font-black uppercase tracking-wider border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-4">Partner</th>
+                <th className="px-6 py-4">Vehicle Details</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {partners.map((p) => (
+                <tr key={p.id} className="hover:bg-gray-50/50 transition-colors group">
+                  <td className="px-6 py-4">
+                    <p className="font-black text-gray-900 text-base">{p.name || 'Unnamed Partner'}</p>
+                    <p className="text-sm font-medium text-gray-500 mt-0.5">{p.phone}</p>
+                  </td>
+                  <td className="px-6 py-4 text-gray-700">
+                    <p className="font-bold text-gray-900 uppercase">{p.vehicle_number}</p>
+                    <p className="text-sm font-medium text-gray-500 capitalize">{p.vehicle_type}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider ${
+                      p.status === 'active' ? 'bg-green-50 text-green-700 border border-green-200' :
+                      p.status === 'pending' ? 'bg-orange-50 text-orange-700 border border-orange-200' :
+                      'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                      {p.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                      {p.status === 'pending' && (
+                        <>
+                          <button onClick={() => handleAction(p.id, 'approve')} className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-green-700 shadow-sm shadow-green-600/20">Approve</button>
+                          <button onClick={() => handleAction(p.id, 'reject')} className="bg-white border-2 border-red-100 text-red-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-red-50">Reject</button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {partners.length === 0 && (
+                <tr><td colSpan={4} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No delivery partners found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── USERS TAB ───────────────────────────────────────────────────────────────
+function UsersTab() {
+  const [users, setUsers] = useState<any[]>([]);
+  const [search, setSearch] = useState('');
+
+  const fetchUsers = () => {
+    api.get(`/admin/users?search=${search}`).then((res) => setUsers(res.data.data));
+  };
+
+  useEffect(() => {
+    fetchUsers();
+    // eslint-disable-next-line
+  }, [search]);
+
+  const handleBlock = async (id: string, currentlyBlocked: boolean) => {
+    if (window.confirm(`Are you sure you want to ${currentlyBlocked ? 'unblock' : 'block'} this user?`)) {
+      await api.patch(`/admin/users/${id}/block`, { block: !currentlyBlocked });
+      fetchUsers();
+    }
+  };
+
+  return (
+    <div className="animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-gray-900">Platform Users</h2>
+          <p className="text-gray-500 font-medium mt-1">Manage all user accounts globally</p>
+        </div>
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search users..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full sm:w-64 bg-white border border-gray-200 rounded-xl pl-4 pr-4 py-3 font-medium text-gray-700 outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary shadow-sm"
+          />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50/50 text-gray-500 text-xs font-black uppercase tracking-wider border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-4">User</th>
+                <th className="px-6 py-4">Role</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {users.map((u) => (
+                <tr key={u.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4">
+                    <p className="font-black text-gray-900 text-base">{u.name}</p>
+                    <p className="text-sm font-medium text-gray-500">{u.email || u.phone}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider">{u.role}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    {u.is_active ? (
+                      <span className="text-green-600 font-bold text-sm bg-green-50 px-3 py-1.5 rounded-lg">Active</span>
+                    ) : (
+                      <span className="text-red-600 font-bold text-sm bg-red-50 px-3 py-1.5 rounded-lg">Blocked</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    {u.role !== 'admin' && (
+                      <button
+                        onClick={() => handleBlock(u.id, !u.is_active)}
+                        className={`px-4 py-2 rounded-xl font-bold text-sm transition-colors ${
+                          u.is_active 
+                            ? 'bg-white border-2 border-red-100 text-red-600 hover:bg-red-50' 
+                            : 'bg-green-600 text-white hover:bg-green-700 shadow-sm shadow-green-600/20'
+                        }`}
+                      >
+                        {u.is_active ? 'Block Access' : 'Unblock Access'}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {users.length === 0 && (
+                <tr><td colSpan={4} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No users found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── SUPPORT TAB ─────────────────────────────────────────────────────────────
+function SupportTab() {
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [statusFilter, setStatusFilter] = useState('open');
+
+  const fetchTickets = () => {
+    api.get(`/admin/support?status=${statusFilter === 'all' ? '' : statusFilter}`).then((res) => setTickets(res.data.data));
+  };
+
+  useEffect(() => {
+    fetchTickets();
+    // eslint-disable-next-line
+  }, [statusFilter]);
+
+  const handleResolve = async (id: string, orderId: string) => {
+    const notes = window.prompt("Enter resolution notes:");
+    if (notes === null) return;
+    
+    let issue_refund = false;
+    if (orderId) {
+      issue_refund = window.confirm("Do you want to issue a refund for this order?");
+    }
+
+    try {
+      await api.patch(`/admin/support/${id}/resolve`, { resolution_notes: notes, issue_refund });
+      fetchTickets();
+    } catch (err) {
+      alert("Failed to resolve ticket");
+    }
+  };
+
+  return (
+    <div className="animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-gray-900">Support Center</h2>
+          <p className="text-gray-500 font-medium mt-1">Resolve customer issues and manage refunds</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-1 inline-flex shadow-sm">
+          {['open', 'resolved', 'all'].map(status => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`px-4 py-2 rounded-lg text-sm font-bold capitalize transition-colors ${
+                statusFilter === status 
+                  ? 'bg-brand-dark text-white shadow-sm' 
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50/50 text-gray-500 text-xs font-black uppercase tracking-wider border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-4">Ticket details</th>
+                <th className="px-6 py-4">Customer Info</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {tickets.map((t) => (
+                <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4 max-w-sm">
+                    <p className="font-black text-gray-900 uppercase tracking-wide flex items-center gap-2">
+                      <ShieldAlert className="w-4 h-4 text-brand-primary" />
+                      {t.category.replace('_', ' ')}
+                    </p>
+                    <p className="text-sm font-medium text-gray-600 mt-2 line-clamp-2">{t.description}</p>
+                    {t.order_id && <p className="text-xs font-bold text-gray-400 mt-2 bg-gray-100 inline-block px-2 py-0.5 rounded">Order: {t.order_id.split('-')[0].toUpperCase()}</p>}
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="font-bold text-gray-900">{t.customer?.name}</p>
+                    <p className="text-sm font-medium text-gray-500">{t.customer?.phone}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider ${
+                      t.status === 'resolved' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-orange-50 text-orange-700 border border-orange-200'
+                    }`}>
+                      {t.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    {t.status === 'open' ? (
+                      <button
+                        onClick={() => handleResolve(t.id, t.order_id)}
+                        className="bg-brand-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-brand-secondary shadow-sm shadow-brand-primary/20"
+                      >
+                        Resolve Ticket
+                      </button>
+                    ) : (
+                      <div className="text-sm font-medium text-gray-500 bg-gray-50 p-3 rounded-xl border border-gray-100 max-w-[200px] ml-auto text-left">
+                        <span className="font-bold text-gray-900 block mb-1">Resolution:</span>
+                        {t.resolution_notes}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {tickets.length === 0 && (
+                <tr><td colSpan={4} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No support tickets found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── ORDERS TAB ──────────────────────────────────────────────────────────────
+function OrdersTab() {
+  const [orders, setOrders] = useState<any[]>([]);
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const fetchOrders = () => {
+    api.get(`/admin/orders?status=${statusFilter === 'all' ? '' : statusFilter}`).then((res) => {
+      setOrders(res.data.data || []);
+    }).catch(err => console.error(err));
+  };
+
+  useEffect(() => {
+    fetchOrders();
+
+    socketService.setReconnectCallback(fetchOrders);
+
+    const socket = socketService.getSocket();
+    if (socket) {
+      const handleNewOrder = (payload: any) => {
+        setOrders(prev => {
+          if (prev.find(o => o.id === payload.orderId)) return prev;
+          const newOrder = {
+            id: payload.orderId,
+            status: payload.status,
+            created_at: payload.created_at,
+            total_amount: payload.totalAmount,
+            customer: payload.customer,
+            restaurant: payload.restaurant,
+          };
+          return [newOrder, ...prev];
+        });
+      };
+
+      const handleStatusUpdate = (payload: any) => {
+        setOrders(prev => prev.map(o => o.id === payload.orderId ? { ...o, status: payload.status } : o));
+      };
+
+      socket.on('order:created', handleNewOrder);
+      const events = ['order:accepted', 'order:rejected', 'order:preparing', 'order:ready_for_pickup', 'order:delivered', 'order:cancelled'];
+      events.forEach(event => socket.on(event, handleStatusUpdate));
+
+      return () => {
+        socket.off('order:created', handleNewOrder);
+        events.forEach(event => socket.off(event, handleStatusUpdate));
+        socketService.setReconnectCallback(null as any);
+      };
+    }
+    // eslint-disable-next-line
+  }, [statusFilter]);
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+      accepted: 'bg-blue-50 text-blue-700 border-blue-200',
+      preparing: 'bg-purple-50 text-purple-700 border-purple-200',
+      ready_for_pickup: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      delivered: 'bg-green-50 text-green-700 border-green-200',
+      cancelled: 'bg-red-50 text-red-700 border-red-200',
+    };
+    return colors[status?.toLowerCase()] || 'bg-gray-50 text-gray-700 border-gray-200';
+  };
+
+  return (
+    <div className="animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-gray-900 flex items-center">
+            Platform Orders 
+            <RefreshCw className="w-5 h-5 ml-3 text-brand-primary animate-spin-slow" />
+          </h2>
+          <p className="text-gray-500 font-medium mt-1">Live monitoring of all marketplace orders</p>
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold text-gray-700 outline-none focus:border-brand-primary shadow-sm"
+        >
+          <option value="all">All Orders</option>
+          <option value="pending">Pending</option>
+          <option value="accepted">Accepted</option>
+          <option value="preparing">Preparing</option>
+          <option value="ready_for_pickup">Ready for Pickup</option>
+          <option value="delivered">Delivered</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50/50 text-gray-500 text-xs font-black uppercase tracking-wider border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-4">Order ID & Time</th>
+                <th className="px-6 py-4">Customer</th>
+                <th className="px-6 py-4">Restaurant</th>
+                <th className="px-6 py-4">Amount</th>
+                <th className="px-6 py-4 text-right">Live Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {orders.map((o) => (
+                <tr key={o.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4">
+                    <p className="font-black text-gray-900">#{o.id?.split('-')[0].toUpperCase()}</p>
+                    <p className="text-sm font-medium text-gray-500 mt-0.5">{new Date(o.created_at).toLocaleString()}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="font-bold text-gray-800">{o.customer?.name}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="font-bold text-gray-800">{o.restaurant?.name}</p>
+                  </td>
+                  <td className="px-6 py-4 font-black text-gray-900 text-lg">
+                    ₹{o.total_amount}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border ${getStatusColor(o.status)}`}>
+                      {o.status?.replace(/_/g, ' ')}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {orders.length === 0 && (
+                <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No orders found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PROFILE TAB ─────────────────────────────────────────────────────────────
+function ProfileTab() {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  
+  const [profile, setProfile] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    profile_photo_url: null as string | null
+  });
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const res = await api.get('/admin/profile');
+      setProfile({
+        name: res.data.data.name || '',
+        phone: res.data.data.phone || '',
+        email: res.data.data.email || '',
+        profile_photo_url: res.data.data.profile_photo_url
+      });
+    } catch (err) {
+      setError('Failed to load profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setError(null);
+    setSuccess(null);
+    setSaving(true);
+    try {
+      await api.put('/admin/profile', {
+        name: profile.name,
+        phone: profile.phone,
+        email: profile.email
+      });
+      setSuccess('Profile updated successfully');
+    } catch (err: any) {
+      setError(err.response?.data?.error?.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePhotoUpload = async (file: File) => {
+    setError(null);
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await api.post('/admin/profile/photo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setProfile(prev => ({ ...prev, profile_photo_url: res.data.data.profile_photo_url }));
+      setSuccess('Photo uploaded successfully');
+    } catch (err: any) {
+      setError(err.response?.data?.error?.message || 'Failed to upload photo');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handlePhotoDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete your profile photo?')) return;
+    setError(null);
+    setUploadingPhoto(true);
+    try {
+      await api.delete('/admin/profile/photo');
+      setProfile(prev => ({ ...prev, profile_photo_url: null }));
+      setSuccess('Photo removed successfully');
+    } catch (err: any) {
+      setError(err.response?.data?.error?.message || 'Failed to remove photo');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-fade-in-up">
+      <div className="mb-8">
+        <h2 className="text-3xl font-black text-gray-900">Admin Profile</h2>
+        <p className="text-gray-500 font-medium mt-1">Manage your administrator account</p>
+      </div>
+
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-2xl flex items-center gap-3 border border-red-100">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          <p className="font-bold text-sm">{error}</p>
+        </div>
+      )}
+      
+      {success && (
+        <div className="mb-6 p-4 bg-green-50 text-green-700 rounded-2xl flex items-center gap-3 border border-green-100">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          <p className="font-bold text-sm">{success}</p>
+        </div>
+      )}
+
+      <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 max-w-3xl">
+        <div className="flex flex-col md:flex-row gap-8 items-start">
+          <div className="flex flex-col items-center">
+            <ImageUploadButton
+              label="Avatar"
+              currentUrl={profile.profile_photo_url}
+              onUpload={handlePhotoUpload}
+              onDelete={handlePhotoDelete}
+              uploading={uploadingPhoto}
+            />
+          </div>
+
+          <div className="flex-1 w-full space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                  <User className="w-4 h-4 text-gray-400" />
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={profile.name}
+                  onChange={e => setProfile({...profile, name: e.target.value})}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-gray-400" />
+                  Phone Number
+                </label>
+                <input
+                  type="text"
+                  value={profile.phone}
+                  onChange={e => setProfile({...profile, phone: e.target.value})}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-gray-400" />
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={profile.email}
+                  onChange={e => setProfile({...profile, email: e.target.value})}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={handleSave}
+                disabled={saving || !profile.name || !profile.phone}
+                className="flex items-center gap-2 bg-brand-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-brand-secondary transition-colors disabled:opacity-50 shadow-sm"
+              >
+                {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── AUDIT LOGS TAB ─────────────────────────────────────────────────────────
+function AuditTab() {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [actionFilter, setActionFilter] = useState('');
+  const limit = 20;
+
+  useEffect(() => {
+    api.get(`/admin/audit-logs?page=${page}&limit=${limit}${actionFilter ? `&action=${actionFilter}` : ''}`)
+      .then(res => {
+        setLogs(res.data.data || []);
+        setTotal(res.data.total || 0);
+      })
+      .catch(console.error);
+  }, [page, actionFilter]);
+
+  const totalPages = Math.ceil(total / limit) || 1;
+
+  return (
+    <div className="animate-fade-in-up">
+      <div className="flex justify-between items-end mb-8">
+        <div>
+          <h2 className="text-3xl font-black text-gray-900">System Audit Logs</h2>
+          <p className="text-gray-500 font-medium mt-1">Immutable record of critical administrative actions.</p>
+        </div>
+        <div className="flex gap-4">
+          <select 
+            value={actionFilter} 
+            onChange={(e) => { setActionFilter(e.target.value); setPage(1); }}
+            className="bg-white border border-gray-200 rounded-xl px-4 py-2 font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+          >
+            <option value="">All Actions</option>
+            <option value="REFUND_PROCESSED">Refunds</option>
+            <option value="ORDER_CANCELLED">Cancellations</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-wider">Timestamp</th>
+                <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-wider">Admin</th>
+                <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-wider">Action</th>
+                <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-wider">Target</th>
+                <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-wider">Details</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {logs.map((log) => (
+                <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-500">
+                    {new Date(log.created_at).toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="font-bold text-gray-900">{log.admin?.name || 'System'}</p>
+                    <p className="text-xs font-medium text-gray-500">{log.admin?.email}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${
+                      log.action === 'REFUND_PROCESSED' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                      {log.action}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="text-sm font-bold text-gray-700">{log.target_type}</p>
+                    <p className="text-xs font-medium text-gray-500 truncate max-w-[120px]" title={log.target_id}>{log.target_id}</p>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600 font-medium">
+                    <pre className="bg-gray-50 p-2 rounded-lg text-xs overflow-x-auto border border-gray-100">
+                      {JSON.stringify(log.details, null, 2)}
+                    </pre>
+                  </td>
+                </tr>
+              ))}
+              {logs.length === 0 && (
+                <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No audit logs found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Pagination Controls */}
+        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
+          <p className="text-sm font-medium text-gray-500">
+            Showing <span className="font-bold text-gray-900">{total === 0 ? 0 : (page - 1) * limit + 1}</span> to <span className="font-bold text-gray-900">{Math.min(page * limit, total)}</span> of <span className="font-bold text-gray-900">{total}</span> entries
+          </p>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-4 py-2 rounded-lg text-sm font-bold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              Previous
+            </button>
+            <button 
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages || total === 0}
+              className="px-4 py-2 rounded-lg text-sm font-bold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── CONFIG TAB ──────────────────────────────────────────────────────────────
+function ConfigTab() {
+  const [configs, setConfigs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState('');
+
+  const fetchConfigs = () => {
+    setLoading(true);
+    api.get('/admin/config').then(res => {
+      const defaultKeys = [
+        { key: 'PLATFORM_FEE_PERCENT', value: '10', description: 'Percentage cut platform takes from each order' },
+        { key: 'BASE_DELIVERY_FEE', value: '30', description: 'Base flat fee charged for delivery' },
+        { key: 'MAX_DELIVERY_RADIUS_KM', value: '10', description: 'Maximum distance allowed for delivery (in km)' }
+      ];
+      const fetched = res.data.data || [];
+      const merged = defaultKeys.map(dk => {
+        const found = fetched.find((f: any) => f.key === dk.key);
+        return found ? found : dk;
+      });
+      setConfigs(merged);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  };
+
+  useEffect(() => { fetchConfigs(); }, []);
+
+  const handleChange = (key: string, value: string) => {
+    setConfigs(configs.map(c => c.key === key ? { ...c, value } : c));
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.put('/admin/config', { configs });
+      setToast('Configuration saved successfully');
+      setTimeout(() => setToast(''), 3000);
+      fetchConfigs();
+    } catch (error) {
+      setToast('Failed to save configuration');
+      setTimeout(() => setToast(''), 3000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-brand-primary" /></div>;
+  }
+
+  return (
+    <div className="animate-fade-in-up">
+      <div className="mb-8">
+        <h1 className="text-3xl font-black text-gray-900">Platform Configuration</h1>
+        <p className="text-gray-500 font-medium mt-1">Adjust core economic and operational variables</p>
+      </div>
+
+      {toast && (
+        <div className="mb-6 p-4 bg-gray-900 text-white rounded-xl shadow-lg flex items-center gap-3">
+          <div className="w-2 h-2 bg-brand-primary rounded-full animate-pulse"></div>
+          <span className="font-bold">{toast}</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSave} className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm max-w-2xl">
+        <div className="space-y-6">
+          {configs.map(config => (
+            <div key={config.key} className="pb-6 border-b border-gray-100 last:border-0 last:pb-0">
+              <label className="block text-sm font-black text-gray-900 mb-1">{config.key.replace(/_/g, ' ')}</label>
+              <p className="text-xs text-gray-500 font-medium mb-3">{config.description}</p>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={config.value}
+                onChange={e => handleChange(config.key, e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-bold focus:ring-2 focus:ring-brand-primary focus:outline-none transition-all"
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-gray-100">
+          <button 
+            type="submit" 
+            disabled={saving}
+            className="w-full py-4 bg-brand-primary text-white rounded-xl font-bold hover:bg-brand-secondary transition-all shadow-lg shadow-brand-primary/20 flex justify-center items-center gap-2"
+          >
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+            {saving ? 'Saving...' : 'Save Configuration'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ─── PAYOUTS TAB ─────────────────────────────────────────────────────────────
+function PayoutsTab() {
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [statusFilter, setStatusFilter] = useState('pending');
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const fetchPayouts = () => {
+    api.get(`/admin/payouts?status=${statusFilter === 'all' ? '' : statusFilter}`).then((res) => {
+      setAssignments(res.data.data);
+    });
+  };
+
+  useEffect(() => {
+    fetchPayouts();
+    // eslint-disable-next-line
+  }, [statusFilter]);
+
+  const handlePay = async (assignmentId: string) => {
+    if (!window.confirm('Are you sure you want to trigger payout for this assignment?')) return;
+    setProcessingId(assignmentId);
+    try {
+      await api.post('/payment/payout', { assignment_id: assignmentId });
+      alert('Payout triggered successfully');
+      fetchPayouts();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to trigger payout');
+      fetchPayouts(); // refresh state in case of duplicate click
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  return (
+    <div className="animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-gray-900">Partner Payouts</h2>
+          <p className="text-gray-500 font-medium mt-1">Manage and disburse delivery partner earnings</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-1 inline-flex shadow-sm">
+          {['pending', 'processing', 'success', 'failed', 'all'].map(status => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`px-4 py-2 rounded-lg text-sm font-bold capitalize transition-colors ${
+                statusFilter === status 
+                  ? 'bg-brand-dark text-white shadow-sm' 
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50/50 text-gray-500 text-xs font-black uppercase tracking-wider border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-4">Delivery Partner</th>
+                <th className="px-6 py-4">Order & Time</th>
+                <th className="px-6 py-4">Earnings</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {assignments.map((a) => (
+                <tr key={a.id} className="hover:bg-gray-50/50 transition-colors group">
+                  <td className="px-6 py-4">
+                    <p className="font-black text-gray-900 text-base">{a.partner?.name || 'Unknown'}</p>
+                    <p className="text-sm font-medium text-gray-500 mt-0.5">{a.partner?.phone}</p>
+                  </td>
+                  <td className="px-6 py-4 text-gray-700">
+                    <p className="font-bold text-gray-900">#{a.order?.id?.split('-')[0].toUpperCase()}</p>
+                    <p className="text-sm font-medium text-gray-500">{new Date(a.created_at).toLocaleString()}</p>
+                  </td>
+                  <td className="px-6 py-4 text-gray-700">
+                    <p className="font-black text-gray-900 text-lg">₹{a.earning_amount}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider ${
+                      a.payout_status === 'success' ? 'bg-green-50 text-green-700 border border-green-200' :
+                      a.payout_status === 'processing' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                      a.payout_status === 'failed' ? 'bg-red-50 text-red-700 border border-red-200' :
+                      'bg-orange-50 text-orange-700 border border-orange-200'
+                    }`}>
+                      {a.payout_status || 'unpaid'}
+                    </span>
+                    {a.payout_reference_id && <p className="text-xs text-gray-400 mt-1">{a.payout_reference_id}</p>}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    {(a.payout_status === 'pending' || a.payout_status === 'failed' || !a.payout_status) && (
+                      <button 
+                        onClick={() => handlePay(a.id)}
+                        disabled={processingId === a.id}
+                        className="bg-brand-primary text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-brand-secondary shadow-sm shadow-brand-primary/20 disabled:opacity-50 flex items-center justify-center gap-2 ml-auto"
+                      >
+                        {processingId === a.id ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        Pay Partner
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {assignments.length === 0 && (
+                <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No payout records found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}

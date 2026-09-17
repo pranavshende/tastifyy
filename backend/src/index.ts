@@ -1,0 +1,137 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { createServer } from 'http';
+import { initSocket } from './socket.js';
+import { prisma } from './utils/prisma.js';
+import './jobs/workers.js';
+
+import authRoutes from './routes/auth.routes.js';
+import restaurantRoutes from './routes/restaurant.routes.js';
+import menuRoutes from './routes/menu.routes.js';
+import orderRoutes from './routes/order.routes.js';
+import adminRoutes from './routes/admin.routes.js';
+import deliveryRoutes from './routes/delivery.routes.js';
+import onboardingRoutes from './routes/onboarding.routes.js';
+import customerRoutes from './routes/customer.routes.js';
+
+import passport from './config/passport.js';
+
+import reviewRoutes from './routes/review.routes.js';
+import supportRoutes from './routes/support.routes.js';
+import analyticsRoutes from './routes/analytics.routes.js';
+import aiRoutes from './routes/ai.routes.js';
+import profileRoutes from './routes/profile.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
+import couponRoutes from './routes/coupon.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
+
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+
+dotenv.config();
+
+const app = express();
+app.set('trust proxy', 1);
+const httpServer = createServer(app);
+const io = initSocket(httpServer);
+
+// Standard Middleware
+const allowedOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()) 
+  : ['http://localhost:5173', 'https://www.tastifyy.in', 'https://tastifyy.in', 'https://tastifyy.pranavshende.online'];
+
+// Always ensure production domains are included
+for (const domain of ['https://www.tastifyy.in', 'https://tastifyy.in']) {
+  if (!allowedOrigins.includes(domain)) {
+    allowedOrigins.push(domain);
+  }
+}
+
+console.log('--- CORS allowedOrigins ---', allowedOrigins);
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
+
+// Webhook MUST be parsed as raw buffer for cryptographic signature validation
+import { handleRazorpayWebhook } from './controllers/payment.controller.js';
+app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), handleRazorpayWebhook);
+
+app.use(express.json());
+
+// Security Middleware
+app.use(helmet({
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }
+}));
+
+// Global Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+  standardHeaders: true, 
+  legacyHeaders: false,
+});
+app.use(limiter);
+
+// Auth Specific Rate Limiting (Stricter)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 20 auth requests per window
+  standardHeaders: true, 
+  legacyHeaders: false,
+});
+
+app.use(passport.initialize());
+
+// Routes
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/customer', customerRoutes);
+app.use('/api/restaurants', restaurantRoutes);
+app.use('/api/menu', menuRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/delivery', deliveryRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/support', supportRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/coupons', couponRoutes);
+app.use('/api/notifications', notificationRoutes);
+
+// Health check (Root)
+app.get('/', (_req, res) => {
+  res.json({ message: 'Tastifyy API is running!', version: '2.0.0' });
+});
+
+// Deep Health Check
+app.get('/health', async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({ 
+      status: 'healthy', 
+      database: 'connected', 
+      timestamp: new Date().toISOString() 
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(503).json({ 
+      status: 'unhealthy', 
+      database: 'disconnected', 
+      timestamp: new Date().toISOString() 
+    });
+  }
+});
+
+if (process.env.NODE_ENV !== 'test') {
+  const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
+  httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on port ${PORT} (0.0.0.0)`);
+  });
+}
+
+export default app;

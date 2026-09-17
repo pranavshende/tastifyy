@@ -1,0 +1,128 @@
+type PartnerIdentity = {
+    phone?: string | null;
+    email?: string | null;
+};
+export declare function findRestaurantPartner(user: PartnerIdentity): Promise<{
+    restaurant: {
+        id: string;
+        name: string;
+        phone: string;
+        email: string | null;
+        created_at: Date;
+        updated_at: Date;
+        pan_number: string | null;
+        type: import("@prisma/client").$Enums.RestaurantType;
+        owner_name: string;
+        address_line: string;
+        city: string;
+        state: string;
+        pincode: string;
+        latitude: import("@prisma/client-runtime-utils").Decimal;
+        longitude: import("@prisma/client-runtime-utils").Decimal;
+        service_radius_km: import("@prisma/client-runtime-utils").Decimal;
+        logo_url: string | null;
+        cover_image_url: string | null;
+        photo_gallery_urls: string[];
+        is_pure_veg: boolean;
+        cuisine_tags: string[];
+        status: import("@prisma/client").$Enums.RestaurantStatus;
+        is_open: boolean;
+        commission_rate: import("@prisma/client-runtime-utils").Decimal;
+        subscription_plan: import("@prisma/client").$Enums.SubscriptionPlan;
+        avg_preparation_time_mins: number | null;
+        razorpay_account_id: string | null;
+        razorpay_stakeholder_id: string | null;
+        route_account_status: import("@prisma/client").$Enums.RouteAccountStatus;
+        route_activated_at: Date | null;
+        bank_account_number: string | null;
+        ifsc_code: string | null;
+        bank_beneficiary_name: string | null;
+    };
+} & {
+    id: string;
+    role: import("@prisma/client").$Enums.PartnerRole;
+    restaurant_id: string;
+    name: string;
+    phone: string;
+    email: string | null;
+    password_hash: string | null;
+    is_active: boolean;
+    created_at: Date;
+}>;
+export declare function findRestaurantPartnerUser(user: PartnerIdentity): Promise<{
+    partner: {
+        restaurant: {
+            id: string;
+            name: string;
+            phone: string;
+            email: string | null;
+            created_at: Date;
+            updated_at: Date;
+            pan_number: string | null;
+            type: import("@prisma/client").$Enums.RestaurantType;
+            owner_name: string;
+            address_line: string;
+            city: string;
+            state: string;
+            pincode: string;
+            latitude: import("@prisma/client-runtime-utils").Decimal;
+            longitude: import("@prisma/client-runtime-utils").Decimal;
+            service_radius_km: import("@prisma/client-runtime-utils").Decimal;
+            logo_url: string | null;
+            cover_image_url: string | null;
+            photo_gallery_urls: string[];
+            is_pure_veg: boolean;
+            cuisine_tags: string[];
+            status: import("@prisma/client").$Enums.RestaurantStatus;
+            is_open: boolean;
+            commission_rate: import("@prisma/client-runtime-utils").Decimal;
+            subscription_plan: import("@prisma/client").$Enums.SubscriptionPlan;
+            avg_preparation_time_mins: number | null;
+            razorpay_account_id: string | null;
+            razorpay_stakeholder_id: string | null;
+            route_account_status: import("@prisma/client").$Enums.RouteAccountStatus;
+            route_activated_at: Date | null;
+            bank_account_number: string | null;
+            ifsc_code: string | null;
+            bank_beneficiary_name: string | null;
+        };
+    } & {
+        id: string;
+        role: import("@prisma/client").$Enums.PartnerRole;
+        restaurant_id: string;
+        name: string;
+        phone: string;
+        email: string | null;
+        password_hash: string | null;
+        is_active: boolean;
+        created_at: Date;
+    };
+    user: {
+        id: string;
+        role: import("@prisma/client").$Enums.Role;
+        name: string;
+        phone: string;
+        email: string | null;
+        is_active: boolean;
+        created_at: Date;
+        profile_photo_url: string | null;
+        dob: Date | null;
+        fcm_token: string | null;
+        updated_at: Date;
+    };
+}>;
+export declare function findRestaurantUserByRestaurantId(restaurantId: string): Promise<{
+    id: string;
+    role: import("@prisma/client").$Enums.Role;
+    name: string;
+    phone: string;
+    email: string | null;
+    is_active: boolean;
+    created_at: Date;
+    profile_photo_url: string | null;
+    dob: Date | null;
+    fcm_token: string | null;
+    updated_at: Date;
+}>;
+export {};
+//# sourceMappingURL=restaurantPartner.d.ts.map
