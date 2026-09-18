@@ -19,11 +19,26 @@ export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem('tastifyy-notification-sound') !== 'off');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  const unlockNotificationSound = () => {
+    try {
+      const context = audioContextRef.current || new AudioContext();
+      audioContextRef.current = context;
+      if (context.state === 'suspended') {
+        void context.resume();
+      }
+    } catch {
+      // Browsers without Web Audio keep visual notifications available.
+    }
+  };
 
   const playNotificationSound = () => {
     if (!soundEnabled) return;
     try {
-      const context = new AudioContext();
+      const context = audioContextRef.current || new AudioContext();
+      audioContextRef.current = context;
+      if (context.state === 'suspended') return;
       const oscillator = context.createOscillator();
       const gain = context.createGain();
       oscillator.frequency.value = 880;
@@ -54,6 +69,9 @@ export default function NotificationBell() {
     };
     fetchNotifications();
 
+    const unlockOnInteraction = () => unlockNotificationSound();
+    document.addEventListener('pointerdown', unlockOnInteraction, { once: true });
+
     // Socket.io for real-time updates
     const socketUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
     const socket = io(socketUrl, {
@@ -72,6 +90,7 @@ export default function NotificationBell() {
 
     return () => {
       socket.disconnect();
+      document.removeEventListener('pointerdown', unlockOnInteraction);
     };
   }, [user, token]);
 
@@ -119,6 +138,7 @@ export default function NotificationBell() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
+        onPointerDown={unlockNotificationSound}
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 text-gray-700 hover:bg-gray-50 rounded-full transition-colors focus:outline-none"
       >
