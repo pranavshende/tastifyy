@@ -74,7 +74,7 @@ router.put('/', async (req: Request, res: Response) => {
     address_line, city, state, pincode,
     cuisine_tags, type, is_pure_veg,
     avg_preparation_time_mins, service_radius_km,
-    is_open,
+    is_open, pan_number, bank_account_number, ifsc_code, bank_beneficiary_name,
   } = req.body;
 
   try {
@@ -95,6 +95,10 @@ router.put('/', async (req: Request, res: Response) => {
         ...(avg_preparation_time_mins !== undefined && { avg_preparation_time_mins: parseInt(avg_preparation_time_mins) }),
         ...(service_radius_km !== undefined && { service_radius_km: parseFloat(service_radius_km) }),
         ...(is_open !== undefined && { is_open }),
+        ...(pan_number !== undefined && { pan_number: pan_number.toUpperCase() }),
+        ...(bank_account_number !== undefined && { bank_account_number }),
+        ...(ifsc_code !== undefined && { ifsc_code: ifsc_code.toUpperCase() }),
+        ...(bank_beneficiary_name !== undefined && { bank_beneficiary_name }),
       },
       include: { operating_hours: true },
     });

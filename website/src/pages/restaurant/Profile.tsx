@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../../api/axios';
 import { getStorageUrl } from '../../lib/supabase';
 import {
-  Store, Phone, MapPin, Clock, Award, CheckCircle, XCircle,
+  Store, Phone, MapPin, Clock, Award, CheckCircle, XCircle, Landmark,
   Camera, Loader2, Save, ChevronDown, ChevronUp, AlertCircle, Trash2
 } from 'lucide-react';
 
@@ -59,6 +59,10 @@ export default function RestaurantProfile() {
     avg_preparation_time_mins: '',
     service_radius_km: '',
     is_open: false,
+    pan_number: '',
+    bank_account_number: '',
+    ifsc_code: '',
+    bank_beneficiary_name: '',
   });
   const [hours, setHours] = useState(defaultHours);
 
@@ -82,6 +86,10 @@ export default function RestaurantProfile() {
           avg_preparation_time_mins: r.avg_preparation_time_mins?.toString() || '',
           service_radius_km: r.service_radius_km?.toString() || '',
           is_open: r.is_open || false,
+          pan_number: r.pan_number || '',
+          bank_account_number: r.bank_account_number || '',
+          ifsc_code: r.ifsc_code || '',
+          bank_beneficiary_name: r.bank_beneficiary_name || '',
         });
 
         if (r.operating_hours?.length > 0) {
@@ -113,6 +121,10 @@ export default function RestaurantProfile() {
         cuisine_tags: form.cuisine_tags.split(',').map(s => s.trim()).filter(Boolean),
         avg_preparation_time_mins: form.avg_preparation_time_mins || undefined,
         service_radius_km: form.service_radius_km || undefined,
+        pan_number: form.pan_number || undefined,
+        bank_account_number: form.bank_account_number || undefined,
+        ifsc_code: form.ifsc_code || undefined,
+        bank_beneficiary_name: form.bank_beneficiary_name || undefined,
       });
 
       // Save operating hours
@@ -412,6 +424,47 @@ export default function RestaurantProfile() {
                        onChange={e => setForm(f => ({ ...f, service_radius_km: e.target.value }))}
                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-brand-primary" />
               </div>
+            </div>
+          </div>
+
+          {/* Payout Details */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <h3 className="font-bold text-gray-900 mb-5 flex items-center text-sm">
+              <Landmark className="w-4 h-4 mr-2 text-brand-primary" /> Payout Details
+            </h3>
+            <p className="text-xs text-gray-500 mb-4">These details are used for restaurant settlements.</p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">PAN Number</label>
+                <input value={form.pan_number} maxLength={10}
+                       onChange={e => setForm(f => ({ ...f, pan_number: e.target.value.toUpperCase() }))}
+                       placeholder="ABCDE1234F"
+                       className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-medium uppercase focus:outline-none focus:border-brand-primary" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Account Holder Name</label>
+                <input value={form.bank_beneficiary_name}
+                       onChange={e => setForm(f => ({ ...f, bank_beneficiary_name: e.target.value }))}
+                       placeholder="Name as per bank account"
+                       className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-brand-primary" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Bank Account Number</label>
+                <input value={form.bank_account_number}
+                       onChange={e => setForm(f => ({ ...f, bank_account_number: e.target.value }))}
+                       placeholder="Enter bank account number"
+                       className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-brand-primary" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">IFSC Code</label>
+                <input value={form.ifsc_code} maxLength={11}
+                       onChange={e => setForm(f => ({ ...f, ifsc_code: e.target.value.toUpperCase() }))}
+                       placeholder="e.g. HDFC0001234"
+                       className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-medium uppercase focus:outline-none focus:border-brand-primary" />
+              </div>
+              {profile?.route_account_status && (
+                <p className="text-xs font-bold text-gray-500">Payment account status: <span className="capitalize text-brand-primary">{String(profile.route_account_status).replaceAll('_', ' ')}</span></p>
+              )}
             </div>
           </div>
 
