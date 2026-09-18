@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
+import socketService from '../../api/socket';
 import { MapPin, Phone, Package, CheckCircle, Navigation, Loader2 } from 'lucide-react';
 import StatusBadge from '../../components/ui/StatusBadge';
 
@@ -33,8 +34,8 @@ export default function DeliveryDashboard() {
         });
       }
 
-      if (activeRes.data.success && activeRes.data.data.length > 0) {
-        setActiveOrder(activeRes.data.data[0]);
+      if (activeRes.data.success && activeRes.data.data) {
+        setActiveOrder(activeRes.data.data);
         setActiveTab('active');
       } else {
         setActiveOrder(null);
@@ -53,7 +54,18 @@ export default function DeliveryDashboard() {
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 15000); // refresh every 15s
-    return () => clearInterval(interval);
+
+    const socket = socketService.getSocket();
+    const handleAssigned = () => {
+      setActiveTab('active');
+      fetchData();
+    };
+    socket?.on('delivery:assigned', handleAssigned);
+
+    return () => {
+      clearInterval(interval);
+      socket?.off('delivery:assigned', handleAssigned);
+    };
   }, []);
 
   const toggleStatus = async () => {

@@ -9,6 +9,7 @@ class SocketService {
   connect(role: string, id: string) {
     if (!this.socket) {
       this.socket = io(SOCKET_URL, {
+        auth: { token: localStorage.getItem('token') },
         transports: ['websocket'],
         reconnection: true,
         reconnectionDelay: 1000,

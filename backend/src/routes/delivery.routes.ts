@@ -3,6 +3,7 @@ import { authenticate, authorizeRole } from '../middlewares/auth.js';
 import { prisma } from '../utils/prisma.js';
 import type { Request, Response } from 'express';
 import { getIO } from '../socket.js';
+import { assignmentQueue } from '../jobs/queues.js';
 import { getPublicUrl, uploadFile, deleteFile, validateFile, generateFilename } from '../services/storage.service.js';
 import multer from 'multer';
 
@@ -149,6 +150,18 @@ router.post('/location', async (req: Request, res: Response) => {
         is_online: true // optionally auto-set them online if they ping location
       }
     });
+
+    const pendingOrders = await prisma.order.findMany({
+      where: {
+        status: { in: ['restaurant_confirmed', 'preparing', 'ready'] },
+        delivery_partner_id: null,
+      },
+      select: { id: true },
+      take: 20,
+    });
+    for (const order of pendingOrders) {
+      await assignmentQueue.add('assign-partner', { orderId: order.id });
+    }
 
     res.json({ success: true, message: 'Location updated' });
   } catch (error) {
