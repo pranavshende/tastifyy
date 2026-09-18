@@ -25,6 +25,8 @@ export const getActiveRestaurants = async (req: Request, res: Response): Promise
         approval_status: 'approved',
         account_status: 'active',
         visibility_status: 'visible',
+        latitude: { not: 0 },
+        longitude: { not: 0 },
       },
       include: { 
         menu_categories: { include: { menu_items: true } },
@@ -44,8 +46,8 @@ export const getActiveRestaurants = async (req: Request, res: Response): Promise
 
     res.json(formatted);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Restaurant listing failed:', error);
+    res.status(500).json({ success: false, message: 'Unable to load restaurants right now.' });
   }
 };
 
@@ -53,7 +55,7 @@ export const registerRestaurant = async (req: Request, res: Response): Promise<v
   const { name, type, owner_name, phone, address_line, city, state, pincode, latitude, longitude, commission_rate } = req.body;
   
   if (!name || !type || !owner_name || !phone) {
-    res.status(400).json({ error: 'Missing required fields' });
+    res.status(400).json({ success: false, message: 'Restaurant name, type, owner name, and phone are required.' });
     return;
   }
 
@@ -77,8 +79,8 @@ export const registerRestaurant = async (req: Request, res: Response): Promise<v
 
     res.json(restaurant);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Restaurant registration failed:', error);
+    res.status(500).json({ success: false, message: 'Unable to register restaurant right now.' });
   }
 };
 
@@ -95,14 +97,14 @@ export const updateRestaurant = async (req: Request, res: Response): Promise<voi
   try {
     const existingRestaurant = await prisma.restaurant.findUnique({ where: { id } });
     if (!existingRestaurant) {
-      res.status(404).json({ error: 'Restaurant not found' });
+      res.status(404).json({ success: false, message: 'Restaurant not found.' });
       return;
     }
     const user = req.user as any;
     if (user.role !== 'admin') {
       const partner = await findRestaurantPartner(user);
       if (!partner || partner.restaurant_id !== id) {
-        res.status(403).json({ error: 'Forbidden: You do not own this restaurant' });
+        res.status(403).json({ success: false, message: 'You are not authorized to update this restaurant.' });
         return;
       }
     }
@@ -113,8 +115,8 @@ export const updateRestaurant = async (req: Request, res: Response): Promise<voi
     });
     res.json(restaurant);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Restaurant update failed:', error);
+    res.status(500).json({ success: false, message: 'Unable to update restaurant right now.' });
   }
 };
 
@@ -122,7 +124,7 @@ export const getNearbyRestaurants = async (req: Request, res: Response): Promise
   const { lat, lng, radiusKm = 10 } = req.query;
 
   if (!lat || !lng) {
-    res.status(400).json({ error: 'Latitude and Longitude are required' });
+    res.status(400).json({ success: false, message: 'Latitude and longitude are required.' });
     return;
   }
 
@@ -130,32 +132,48 @@ export const getNearbyRestaurants = async (req: Request, res: Response): Promise
   const userLng = parseFloat(lng as string);
   const maxDistance = parseFloat(radiusKm as string);
 
+  if (!Number.isFinite(userLat) || userLat < -90 || userLat > 90 ||
+      !Number.isFinite(userLng) || userLng < -180 || userLng > 180 ||
+      !Number.isFinite(maxDistance) || maxDistance < 0) {
+    res.status(400).json({ success: false, message: 'A valid location and radius are required.' });
+    return;
+  }
+
   try {
     // Haversine formula using CTE to allow WHERE clause filtering
-    const restaurants = await prisma.$queryRaw`
+    const restaurants = await prisma.$queryRaw<Array<Record<string, unknown>>>
+      `
       WITH distances AS (
         SELECT id, name, type, cover_image_url, cuisine_tags, avg_preparation_time_mins, latitude, longitude,
         (
-          6371 * acos(
+          6371 * acos(LEAST(1, GREATEST(-1,
             cos(radians(${userLat})) * cos(radians(latitude::float)) *
             cos(radians(longitude::float) - radians(${userLng})) +
             sin(radians(${userLat})) * sin(radians(latitude::float))
-          )
+          )))
         ) AS distance
         FROM restaurants
         WHERE approval_status = 'approved'
           AND account_status = 'active'
           AND visibility_status = 'visible'
+          AND latitude IS NOT NULL
+          AND longitude IS NOT NULL
+          AND latitude <> 0
+          AND longitude <> 0
       )
       SELECT * FROM distances
       WHERE distance <= ${maxDistance}
       ORDER BY distance ASC;
     `;
     
-    res.json(restaurants);
+    res.json({
+      success: true,
+      restaurants,
+      message: restaurants.length ? undefined : 'No restaurants found nearby',
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Nearby restaurant query failed:', error);
+    res.status(500).json({ success: false, message: 'Unable to load restaurants right now.' });
   }
 };
 
@@ -169,6 +187,8 @@ export const getRestaurantMenu = async (req: Request, res: Response): Promise<vo
         approval_status: 'approved',
         account_status: 'active',
         visibility_status: 'visible',
+        latitude: { not: 0 },
+        longitude: { not: 0 },
       },
       include: {
         menu_categories: {
@@ -198,8 +218,8 @@ export const getRestaurantMenu = async (req: Request, res: Response): Promise<vo
 
     res.json(result);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Restaurant menu query failed:', error);
+    res.status(500).json({ success: false, message: 'Unable to load this restaurant right now.' });
   }
 };
 
@@ -219,6 +239,8 @@ export const searchRestaurants = async (req: Request, res: Response): Promise<vo
         approval_status: 'approved',
         account_status: 'active',
         visibility_status: 'visible',
+        latitude: { not: 0 },
+        longitude: { not: 0 },
         OR: [
           { name: { contains: queryStr, mode: 'insensitive' } },
           { cuisine_tags: { has: queryStr } } // Wait, has is strict. Let's stick to array match or name match.
@@ -237,6 +259,8 @@ export const searchRestaurants = async (req: Request, res: Response): Promise<vo
         approval_status: 'approved',
         account_status: 'active',
         visibility_status: 'visible',
+        latitude: { not: 0 },
+        longitude: { not: 0 },
         cuisine_tags: { has: queryStr }
       },
       take: 5
@@ -255,7 +279,9 @@ export const searchRestaurants = async (req: Request, res: Response): Promise<vo
         restaurant: {
           approval_status: 'approved',
           account_status: 'active',
-          visibility_status: 'visible'
+          visibility_status: 'visible',
+          latitude: { not: 0 },
+          longitude: { not: 0 }
         },
         OR: [
           { name: { contains: queryStr, mode: 'insensitive' } },
@@ -292,6 +318,6 @@ export const searchRestaurants = async (req: Request, res: Response): Promise<vo
     });
   } catch (error) {
     console.error('Search error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ success: false, message: 'Unable to search restaurants right now.' });
   }
 };

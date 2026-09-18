@@ -54,7 +54,7 @@ export default function CustomerHome() {
         }
       } catch (err: any) {
         console.error('Failed to load data', err);
-        setError('Failed to load restaurants nearby. Please try again.');
+        setError('Unable to load restaurants right now. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -297,7 +297,7 @@ export default function CustomerHome() {
               </div>
             ) : restaurants.length === 0 ? (
               <div className="w-full bg-gray-50 text-gray-500 font-medium p-8 rounded-2xl text-center border border-gray-100">
-                No restaurants found nearby. Try exploring other locations!
+                No restaurants found near you.
               </div>
             ) : (
               restaurants.map((restaurant) => (

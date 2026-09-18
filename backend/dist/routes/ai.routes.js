@@ -40,6 +40,8 @@ router.post('/recommend', async (req, res) => {
                 approval_status: 'approved',
                 account_status: 'active',
                 visibility_status: 'visible',
+                latitude: { not: 0 },
+                longitude: { not: 0 },
             },
         };
         if (isVeg !== null) {

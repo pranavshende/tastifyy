@@ -344,6 +344,8 @@ router.get('/restaurants', async (req: Request, res: Response) => {
         approval_status: 'approved',
         account_status: 'active',
         visibility_status: 'visible',
+        latitude: { not: 0 },
+        longitude: { not: 0 },
       },
       select: {
         id: true,
@@ -403,6 +405,8 @@ router.get('/restaurants/:id/menu', async (req: Request, res: Response) => {
         approval_status: 'approved',
         account_status: 'active',
         visibility_status: 'visible',
+        latitude: { not: 0 },
+        longitude: { not: 0 },
       },
       select: {
         id: true,
