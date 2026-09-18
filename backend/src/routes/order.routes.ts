@@ -136,15 +136,32 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
       return;
     }
 
-    // Haversine Distance Check (only if coordinates are present)
+    // Haversine Distance Check (only when both coordinate pairs are valid)
     let distanceKm = 0;
-    if (Number(address.latitude) !== 0 || Number(address.longitude) !== 0) {
+    const restaurantLatitude = Number(restaurant.latitude);
+    const restaurantLongitude = Number(restaurant.longitude);
+    const addressLatitude = Number(address.latitude);
+    const addressLongitude = Number(address.longitude);
+    const hasValidCoordinates = [
+      restaurantLatitude,
+      restaurantLongitude,
+      addressLatitude,
+      addressLongitude,
+    ].every(Number.isFinite) &&
+      Math.abs(restaurantLatitude) <= 90 &&
+      Math.abs(addressLatitude) <= 90 &&
+      Math.abs(restaurantLongitude) <= 180 &&
+      Math.abs(addressLongitude) <= 180 &&
+      (addressLatitude !== 0 || addressLongitude !== 0) &&
+      (restaurantLatitude !== 0 || restaurantLongitude !== 0);
+
+    if (hasValidCoordinates) {
       const R = 6371; // Earth radius in km
-      const dLat = (Number(restaurant.latitude) - Number(address.latitude)) * Math.PI / 180;
-      const dLon = (Number(restaurant.longitude) - Number(address.longitude)) * Math.PI / 180;
+      const dLat = (restaurantLatitude - addressLatitude) * Math.PI / 180;
+      const dLon = (restaurantLongitude - addressLongitude) * Math.PI / 180;
       const a = 
         Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(Number(address.latitude) * Math.PI / 180) * Math.cos(Number(restaurant.latitude) * Math.PI / 180) * 
+        Math.cos(addressLatitude * Math.PI / 180) * Math.cos(restaurantLatitude * Math.PI / 180) * 
         Math.sin(dLon/2) * Math.sin(dLon/2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
       distanceKm = R * c;

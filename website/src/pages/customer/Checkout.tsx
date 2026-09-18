@@ -5,6 +5,22 @@ import api from '../../api/axios';
 import Header from '../../components/customer/Header';
 import { CreditCard, Banknote, MapPin, Receipt, CheckCircle, Tag, Wallet, Landmark, Plus, Check } from 'lucide-react';
 
+async function geocodeAddress(addressLine: string, city: string, state: string, pincode: string) {
+  const query = [addressLine, city, state, pincode].filter(Boolean).join(', ');
+  if (!query) return { latitude: 0, longitude: 0 };
+
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`, {
+      headers: { 'Accept-Language': 'en' },
+    });
+    const results = await response.json();
+    if (!results[0]) return { latitude: 0, longitude: 0 };
+    return { latitude: Number(results[0].lat), longitude: Number(results[0].lon) };
+  } catch {
+    return { latitude: 0, longitude: 0 };
+  }
+}
+
 export default function Checkout() {
   const navigate = useNavigate();
   const cart = useCartStore();
@@ -68,7 +84,10 @@ export default function Checkout() {
     e.preventDefault();
     setError(null);
     try {
-      const { data } = await api.post('/customer/addresses', newAddress);
+      const coordinates = newAddress.latitude === 0 && newAddress.longitude === 0
+        ? await geocodeAddress(newAddress.address_line, newAddress.city, newAddress.state, newAddress.pincode)
+        : { latitude: newAddress.latitude, longitude: newAddress.longitude };
+      const { data } = await api.post('/customer/addresses', { ...newAddress, ...coordinates });
       const address = data.data;
       setAddresses(prev => [address, ...prev]);
       setSelectedAddressId(address.id);

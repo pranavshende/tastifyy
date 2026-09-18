@@ -7,6 +7,22 @@ import {
 } from 'lucide-react';
 import Header from '../../components/customer/Header';
 
+async function geocodeAddress(addressLine: string, city: string, state: string, pincode: string) {
+  const query = [addressLine, city, state, pincode].filter(Boolean).join(', ');
+  if (!query) return { latitude: 0, longitude: 0 };
+
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`, {
+      headers: { 'Accept-Language': 'en' },
+    });
+    const results = await response.json();
+    if (!results[0]) return { latitude: 0, longitude: 0 };
+    return { latitude: Number(results[0].lat), longitude: Number(results[0].lon) };
+  } catch {
+    return { latitude: 0, longitude: 0 };
+  }
+}
+
 function ImageUploadButton({
   label, currentUrl, onUpload, onDelete, uploading, aspect = 'square',
 }: {
@@ -142,7 +158,8 @@ export default function CustomerProfile() {
     e.preventDefault();
     setError(null); setSuccess(null); setLoadingAddresses(true);
     try {
-      await api.post('/customer/addresses', newAddress);
+      const coordinates = await geocodeAddress(newAddress.address_line, newAddress.city, newAddress.state, newAddress.pincode);
+      await api.post('/customer/addresses', { ...newAddress, ...coordinates });
       setSuccess('Address added successfully');
       setShowAddForm(false);
       setNewAddress({ label: 'Home', address_line: '', city: '', state: '', pincode: '', is_default: false });
