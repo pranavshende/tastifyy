@@ -1,0 +1,25 @@
+{
+  "name": "Tastifyy",
+  "short_name": "Tastifyy",
+  "description": "Order fresh food from local restaurants with Tastifyy.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#fff8f2",
+  "theme_color": "#e86a22",
+  "icons": [
+    {
+      "src": "/android-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/android-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
