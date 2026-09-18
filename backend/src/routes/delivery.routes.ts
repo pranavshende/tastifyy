@@ -20,15 +20,25 @@ const getPartner = async (userId: string) => {
   return await prisma.deliveryPartner.findUnique({ where: { user_id: userId } });
 };
 
+const getOrCreatePartner = async (user: any) => {
+  const existing = await getPartner(user.id);
+  if (existing) return existing;
+
+  return await prisma.deliveryPartner.create({
+    data: {
+      user_id: user.id,
+      name: user.name || 'Delivery Partner',
+      phone: user.phone,
+      email: user.email || null,
+    },
+  });
+};
+
 // ─── PROFILE ROUTES ─────────────────────────────────────────────────────────
 
 router.get('/profile', async (req: Request, res: Response) => {
   try {
-    const partner = await getPartner((req.user as any).id);
-    if (!partner) {
-      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Partner not found' } });
-      return;
-    }
+    const partner = await getOrCreatePartner(req.user as any);
     partner.profile_photo_url = getPublicUrl(partner.profile_photo_url);
     res.json({ success: true, data: partner });
   } catch (error) {
@@ -43,8 +53,7 @@ router.put('/profile', async (req: Request, res: Response) => {
     return;
   }
   try {
-    const partner = await getPartner((req.user as any).id);
-    if (!partner) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND' } });
+    const partner = await getOrCreatePartner(req.user as any);
 
     // Update User as well to keep in sync
     await prisma.user.update({

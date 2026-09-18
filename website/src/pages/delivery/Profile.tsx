@@ -42,8 +42,8 @@ export default function DeliveryProfile() {
         upi_id: data.upi_id || '',
         profile_photo_url: data.profile_photo_url
       });
-    } catch (err) {
-      setError('Failed to load profile');
+    } catch (err: any) {
+      setError(err.response?.data?.error?.message || 'Failed to load profile');
     } finally {
       setLoading(false);
     }
