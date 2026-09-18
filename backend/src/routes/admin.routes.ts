@@ -6,6 +6,8 @@ import multer from 'multer';
 import type { Request, Response } from 'express';
 import Razorpay from 'razorpay';
 import { refundQueue } from '../jobs/queues.js';
+import { notificationQueue } from '../jobs/queues.js';
+import { findRestaurantUserByRestaurantId } from '../utils/restaurantPartner.js';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
@@ -188,6 +190,8 @@ router.get('/dashboard', async (_req: Request, res: Response) => {
       totalRestaurants,
       activeRestaurants,
       pendingRestaurants,
+      rejectedRestaurants,
+      suspendedRestaurants,
       totalDeliveryPartners,
       pendingDeliveryPartners,
       totalOrders,
@@ -195,8 +199,10 @@ router.get('/dashboard', async (_req: Request, res: Response) => {
     ] = await Promise.all([
       prisma.user.count(),
       prisma.restaurant.count(),
-      prisma.restaurant.count({ where: { status: 'active' } }),
-      prisma.restaurant.count({ where: { status: 'pending' } }),
+      prisma.restaurant.count({ where: { approval_status: 'approved' } }),
+      prisma.restaurant.count({ where: { approval_status: 'pending' } }),
+      prisma.restaurant.count({ where: { approval_status: 'rejected' } }),
+      prisma.restaurant.count({ where: { approval_status: 'suspended' } }),
       prisma.deliveryPartner.count(),
       prisma.deliveryPartner.count({ where: { status: 'pending' } }),
       prisma.order.count(),
@@ -210,6 +216,8 @@ router.get('/dashboard', async (_req: Request, res: Response) => {
         totalRestaurants,
         activeRestaurants,
         pendingRestaurants,
+        rejectedRestaurants,
+        suspendedRestaurants,
         totalDeliveryPartners,
         pendingDeliveryPartners,
         totalOrders,
@@ -265,7 +273,8 @@ router.get('/restaurants', async (req: Request, res: Response) => {
   const limit = (req.query.limit as string) || '20';
   const skip = (parseInt(page) - 1) * parseInt(limit);
   try {
-    const where = status ? { status: status as any } : {};
+    const approvalStatus = status === 'active' ? 'approved' : status;
+    const where = approvalStatus ? { approval_status: approvalStatus as any } : {};
     const [restaurants, total] = await Promise.all([
       prisma.restaurant.findMany({ where, skip, take: parseInt(limit), include: { documents: true }, orderBy: { created_at: 'desc' } }),
       prisma.restaurant.count({ where }),
@@ -276,11 +285,79 @@ router.get('/restaurants', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/restaurant-location-requests', async (req: Request, res: Response) => {
+  const status = req.query.status as string | undefined;
+  try {
+    const requests = await prisma.restaurantLocationChangeRequest.findMany({
+      where: status ? { status: status as any } : {},
+      include: { restaurant: { select: { id: true, name: true, address_line: true, city: true, state: true, latitude: true, longitude: true, formatted_address: true } } },
+      orderBy: { created_at: 'desc' },
+    });
+    res.json({ success: true, data: requests });
+  } catch {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch location requests' } });
+  }
+});
+
+router.patch('/restaurant-location-requests/:requestId/approve', async (req: Request, res: Response) => {
+  const requestId = req.params.requestId as string;
+  try {
+    const pendingRequest = await prisma.restaurantLocationChangeRequest.findUnique({ where: { id: requestId }, select: { restaurant_id: true } });
+    const request = await prisma.restaurantLocationChangeRequest.updateMany({
+      where: { id: requestId, status: 'pending' },
+      data: { status: 'approved', reviewed_by: (req.user as any).id, reviewed_at: new Date(), review_notes: req.body.notes || null },
+    });
+    if (!request.count) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Pending location request not found' } });
+      return;
+    }
+    const partner = pendingRequest ? await findRestaurantUserByRestaurantId(pendingRequest.restaurant_id) : null;
+    if (partner) await notificationQueue.add('notify', { type: 'both', userId: partner.id, userRole: 'restaurant_partner', title: 'Location change approved', body: 'Your restaurant location change was approved. Set the new location from your profile.', data: { event: 'location_change_approved', restaurant_id: pendingRequest?.restaurant_id } });
+    res.json({ success: true, message: 'Location change approved' });
+  } catch {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to approve location request' } });
+  }
+});
+
+router.patch('/restaurant-location-requests/:requestId/reject', async (req: Request, res: Response) => {
+  const requestId = req.params.requestId as string;
+  const notes = req.body.notes as string | undefined;
+  if (!notes) return res.status(400).json({ success: false, message: 'Rejection reason is required' });
+  try {
+    const pendingRequest = await prisma.restaurantLocationChangeRequest.findUnique({ where: { id: requestId }, select: { restaurant_id: true } });
+    const request = await prisma.restaurantLocationChangeRequest.updateMany({
+      where: { id: requestId, status: 'pending' },
+      data: { status: 'rejected', reviewed_by: (req.user as any).id, reviewed_at: new Date(), review_notes: notes },
+    });
+    if (!request.count) {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Pending location request not found' } });
+      return;
+    }
+    const partner = pendingRequest ? await findRestaurantUserByRestaurantId(pendingRequest.restaurant_id) : null;
+    if (partner) await notificationQueue.add('notify', { type: 'both', userId: partner.id, userRole: 'restaurant_partner', title: 'Location change rejected', body: notes, data: { event: 'location_change_rejected', restaurant_id: pendingRequest?.restaurant_id } });
+    res.json({ success: true, message: 'Location change rejected' });
+  } catch {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to reject location request' } });
+  }
+});
+
 // PATCH /admin/restaurants/:id/approve
 router.patch('/restaurants/:id/approve', async (req: Request, res: Response) => {
   const id = req.params.id as string;
   try {
-    const restaurant = await prisma.restaurant.update({ where: { id }, data: { status: 'active' } });
+    const restaurant = await prisma.restaurant.update({
+      where: { id },
+      data: {
+        status: 'active', approval_status: 'approved', account_status: 'active',
+        visibility_status: 'visible', approved_by: (req.user as any).id, approved_at: new Date(),
+      }
+    });
+    const partner = await findRestaurantUserByRestaurantId(id);
+    if (partner) await notificationQueue.add('notify', {
+      type: 'both', userId: partner.id, userRole: 'restaurant_partner',
+      title: 'Restaurant approved', body: 'Your restaurant has been approved on Tastifyy.',
+      data: { restaurant_id: id, event: 'restaurant_approved' }
+    });
     res.json({ success: true, data: restaurant });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to approve restaurant' } });
@@ -291,9 +368,21 @@ router.patch('/restaurants/:id/approve', async (req: Request, res: Response) => 
 router.patch('/restaurants/:id/reject', async (req: Request, res: Response) => {
   const id = req.params.id as string;
   const { reason } = req.body as { reason: string };
+  if (!reason) return res.status(400).json({ success: false, message: 'Rejection reason is required' });
   try {
-    const restaurant = await prisma.restaurant.update({ where: { id }, data: { status: 'rejected' } });
-    res.json({ success: true, data: restaurant, reason });
+    const restaurant = await prisma.restaurant.update({
+      where: { id }, data: {
+        status: 'rejected', approval_status: 'rejected', account_status: 'inactive',
+        visibility_status: 'hidden', rejection_reason: reason,
+      }
+    });
+    const partner = await findRestaurantUserByRestaurantId(id);
+    if (partner) await notificationQueue.add('notify', {
+      type: 'both', userId: partner.id, userRole: 'restaurant_partner',
+      title: 'Restaurant application not approved', body: reason,
+      data: { restaurant_id: id, event: 'restaurant_rejected' }
+    });
+    res.json({ success: true, data: restaurant });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to reject restaurant' } });
   }
@@ -302,11 +391,65 @@ router.patch('/restaurants/:id/reject', async (req: Request, res: Response) => {
 // PATCH /admin/restaurants/:id/suspend
 router.patch('/restaurants/:id/suspend', async (req: Request, res: Response) => {
   const id = req.params.id as string;
+  const { reason } = req.body as { reason?: string };
   try {
-    const restaurant = await prisma.restaurant.update({ where: { id }, data: { status: 'suspended' } });
+    const restaurant = await prisma.restaurant.update({ where: { id }, data: {
+      status: 'suspended', approval_status: 'suspended', account_status: 'inactive', visibility_status: 'hidden',
+      rejection_reason: reason || undefined,
+    } });
     res.json({ success: true, data: restaurant });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to suspend restaurant' } });
+  }
+});
+
+router.patch('/restaurants/:id/activate', async (req: Request, res: Response) => {
+  try {
+    const restaurant = await prisma.restaurant.update({ where: { id: req.params.id as string }, data: {
+      account_status: 'active', status: 'active'
+    } });
+    res.json({ success: true, data: restaurant });
+  } catch { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to activate restaurant' } }); }
+});
+
+router.patch('/restaurants/:id/deactivate', async (req: Request, res: Response) => {
+  try {
+    const restaurant = await prisma.restaurant.update({ where: { id: req.params.id as string }, data: {
+      account_status: 'inactive', status: 'active'
+    } });
+    res.json({ success: true, data: restaurant });
+  } catch { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to deactivate restaurant' } }); }
+});
+
+router.patch('/restaurants/:id/visibility', async (req: Request, res: Response) => {
+  const { visible } = req.body as { visible?: boolean };
+  if (visible === undefined) return res.status(400).json({ success: false, message: 'visible is required' });
+  try {
+    const restaurant = await prisma.restaurant.update({ where: { id: req.params.id as string }, data: {
+      visibility_status: visible ? 'visible' : 'hidden'
+    } });
+    res.json({ success: true, data: restaurant });
+  } catch { res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to update visibility' } }); }
+});
+
+router.patch('/restaurants/:id/request-changes', async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const { notes } = req.body as { notes?: string };
+  if (!notes) return res.status(400).json({ success: false, message: 'Requested changes are required' });
+  try {
+    const restaurant = await prisma.restaurant.update({ where: { id }, data: {
+      status: 'pending', approval_status: 'changes_required', account_status: 'inactive',
+      visibility_status: 'hidden', admin_notes: notes,
+    } });
+    const partner = await findRestaurantUserByRestaurantId(id);
+    if (partner) await notificationQueue.add('notify', {
+      type: 'both', userId: partner.id, userRole: 'restaurant_partner',
+      title: 'Changes required for approval', body: notes,
+      data: { restaurant_id: id, event: 'restaurant_changes_required' }
+    });
+    res.json({ success: true, data: restaurant });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to request changes' } });
   }
 });
 

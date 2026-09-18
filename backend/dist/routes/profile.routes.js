@@ -4,6 +4,7 @@ import { prisma } from '../utils/prisma.js';
 import { uploadFile, deleteFile, validateFile, generateFilename, getPublicUrl } from '../services/storage.service.js';
 import { findRestaurantPartner } from '../utils/restaurantPartner.js';
 import multer from 'multer';
+import { notificationQueue } from '../jobs/queues.js';
 const router = Router();
 // All profile routes require restaurant_partner auth
 router.use(authenticate, authorizeRole(['restaurant_partner']));
@@ -36,7 +37,10 @@ router.get('/', async (req, res) => {
     try {
         const restaurant = await prisma.restaurant.findUnique({
             where: { id: restaurant_id },
-            include: { operating_hours: { orderBy: { day_of_week: 'asc' } } },
+            include: {
+                operating_hours: { orderBy: { day_of_week: 'asc' } },
+                location_change_requests: { orderBy: { created_at: 'desc' }, take: 5 },
+            },
         });
         if (!restaurant) {
             res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Restaurant not found' } });
@@ -53,6 +57,114 @@ router.get('/', async (req, res) => {
     catch (error) {
         console.error(error);
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch profile' } });
+    }
+});
+function parseCoordinates(latitude, longitude) {
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180) {
+        return null;
+    }
+    return { lat, lng };
+}
+// Save the official location once, or replace it only after an admin-approved request.
+router.post('/location', async (req, res) => {
+    const restaurant_id = req.restaurant_id;
+    const partner = req.partner;
+    const { latitude, longitude, formatted_address, area, city, district, state, pincode, source = 'gps', request_id } = req.body;
+    const coordinates = parseCoordinates(latitude, longitude);
+    if (!coordinates) {
+        res.status(400).json({ success: false, error: { code: 'INVALID_COORDINATES', message: 'Latitude or longitude is invalid' } });
+        return;
+    }
+    if (!['gps', 'manual'].includes(source)) {
+        res.status(400).json({ success: false, error: { code: 'INVALID_SOURCE', message: 'Location source is invalid' } });
+        return;
+    }
+    try {
+        const existing = await prisma.restaurant.findUnique({ where: { id: restaurant_id }, select: { location_set_at: true } });
+        let approvedRequest = null;
+        if (existing?.location_set_at) {
+            if (!request_id) {
+                res.status(409).json({ success: false, error: { code: 'LOCATION_LOCKED', message: 'Request admin approval before changing the saved location' } });
+                return;
+            }
+            approvedRequest = await prisma.restaurantLocationChangeRequest.findFirst({
+                where: { id: request_id, restaurant_id, requested_by: partner.id, status: 'approved' },
+                select: { id: true },
+            });
+            if (!approvedRequest) {
+                res.status(403).json({ success: false, error: { code: 'CHANGE_NOT_APPROVED', message: 'This location change has not been approved' } });
+                return;
+            }
+        }
+        const restaurant = await prisma.$transaction(async (tx) => {
+            const updated = await tx.restaurant.update({
+                where: { id: restaurant_id },
+                data: {
+                    latitude: coordinates.lat,
+                    longitude: coordinates.lng,
+                    formatted_address: formatted_address || null,
+                    area: area || null,
+                    city: city || undefined,
+                    district: district || null,
+                    state: state || undefined,
+                    pincode: pincode || undefined,
+                    location_verified: source === 'gps',
+                    location_source: source,
+                    location_set_at: new Date(),
+                    location_set_by: partner.id,
+                },
+            });
+            if (approvedRequest) {
+                await tx.restaurantLocationChangeRequest.update({
+                    where: { id: approvedRequest.id },
+                    data: { status: 'completed', completed_at: new Date() },
+                });
+            }
+            return updated;
+        });
+        res.json({ success: true, data: restaurant, message: 'Restaurant location saved successfully' });
+    }
+    catch (error) {
+        console.error('Restaurant location save error:', error);
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to save restaurant location' } });
+    }
+});
+router.post('/location/change-request', async (req, res) => {
+    const restaurant_id = req.restaurant_id;
+    const partner = req.partner;
+    const { reason, latitude, longitude, formatted_address, area, city, district, state, pincode, source = 'gps' } = req.body;
+    const coordinates = parseCoordinates(latitude, longitude);
+    if (!reason || !coordinates) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Reason and valid coordinates are required' } });
+        return;
+    }
+    try {
+        const pending = await prisma.restaurantLocationChangeRequest.findFirst({ where: { restaurant_id, status: 'pending' } });
+        if (pending) {
+            res.status(409).json({ success: false, error: { code: 'REQUEST_EXISTS', message: 'A location change request is already under review' } });
+            return;
+        }
+        const request = await prisma.restaurantLocationChangeRequest.create({
+            data: {
+                restaurant_id, requested_by: partner.id, reason,
+                latitude: coordinates.lat, longitude: coordinates.lng,
+                formatted_address: formatted_address || null, area: area || null, city: city || null,
+                district: district || null, state: state || null, pincode: pincode || null, source,
+            },
+        });
+        const admins = await prisma.user.findMany({ where: { role: 'admin', is_active: true }, select: { id: true } });
+        await Promise.all(admins.map(admin => notificationQueue.add('notify', {
+            type: 'both', userId: admin.id, userRole: 'admin',
+            title: 'Restaurant location change requested', body: `${partner.restaurant.name} submitted a location change request.`,
+            data: { restaurant_id, request_id: request.id, event: 'location_change_requested' },
+        })));
+        res.status(201).json({ success: true, data: request, message: 'Location change request submitted' });
+    }
+    catch (error) {
+        console.error('Location change request error:', error);
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to submit location change request' } });
     }
 });
 // ─── PUT /api/profile ─────────────────────────────────────────────────────────
@@ -76,7 +188,7 @@ router.put('/', async (req, res) => {
                 ...(is_pure_veg !== undefined && { is_pure_veg }),
                 ...(avg_preparation_time_mins !== undefined && { avg_preparation_time_mins: parseInt(avg_preparation_time_mins) }),
                 ...(service_radius_km !== undefined && { service_radius_km: parseFloat(service_radius_km) }),
-                ...(is_open !== undefined && { is_open }),
+                ...(is_open !== undefined && { is_open, operating_status: is_open ? 'open' : 'closed' }),
             },
             include: { operating_hours: true },
         });
@@ -103,7 +215,7 @@ router.patch('/accepting-orders', async (req, res) => {
     try {
         const updated = await prisma.restaurant.update({
             where: { id: restaurant_id },
-            data: { is_open },
+            data: { is_open, operating_status: is_open ? 'open' : 'closed' },
         });
         res.json({ success: true, data: { is_open: updated.is_open } });
     }

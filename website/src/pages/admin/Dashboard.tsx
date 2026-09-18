@@ -3,7 +3,7 @@ import api from '../../api/axios';
 import socketService from '../../api/socket';
 import Sidebar from '../../components/dashboard/Sidebar';
 import { 
-  Users, Store, ShoppingBag, Bike, ShieldAlert, 
+  Users, Store, ShoppingBag, Bike, ShieldAlert, MapPin,
   TrendingUp, AlertCircle, RefreshCw, User, Phone, Mail, Save, Loader2
 } from 'lucide-react';
 import { ImageUploadButton } from '../../components/ui/ImageUploadButton';
@@ -138,6 +138,7 @@ function OverviewTab() {
 // ─── RESTAURANTS TAB ─────────────────────────────────────────────────────────
 function RestaurantsTab() {
   const [restaurants, setRestaurants] = useState<any[]>([]);
+  const [locationRequests, setLocationRequests] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState('pending');
 
   const fetchRestaurants = () => {
@@ -148,8 +149,16 @@ function RestaurantsTab() {
 
   useEffect(() => {
     fetchRestaurants();
+    api.get('/admin/restaurant-location-requests?status=pending').then(res => setLocationRequests(res.data.data || [])).catch(() => {});
     // eslint-disable-next-line
   }, [statusFilter]);
+
+  const handleLocationRequest = async (id: string, action: 'approve' | 'reject') => {
+    const notes = action === 'reject' ? window.prompt('Reason for rejecting this location change?') : undefined;
+    if (action === 'reject' && !notes) return;
+    await api.patch(`/admin/restaurant-location-requests/${id}/${action}`, notes ? { notes } : {});
+    setLocationRequests(current => current.filter(request => request.id !== id));
+  };
 
   const handleAction = async (id: string, action: 'approve' | 'reject' | 'suspend') => {
     if (window.confirm(`Are you sure you want to ${action} this restaurant?`)) {
@@ -237,6 +246,37 @@ function RestaurantsTab() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="mt-8 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-black text-gray-900 flex items-center gap-2"><MapPin className="w-5 h-5 text-brand-primary" /> Location Change Requests</h3>
+            <p className="text-sm text-gray-500 font-medium mt-1">Review requested replacements for locked restaurant locations.</p>
+          </div>
+          <span className="rounded-full bg-orange-50 px-3 py-1 text-sm font-black text-orange-700">{locationRequests.length} pending</span>
+        </div>
+        {locationRequests.length === 0 ? (
+          <p className="px-6 py-8 text-center text-gray-400 font-bold">No pending location requests.</p>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {locationRequests.map(request => (
+              <div key={request.id} className="p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <p className="font-black text-gray-900">{request.restaurant.name}</p>
+                  <p className="text-sm text-gray-600 mt-1">{request.formatted_address || `${request.city}, ${request.state} ${request.pincode || ''}`}</p>
+                  <p className="text-xs text-gray-500 mt-1">{request.latitude}, {request.longitude} · {request.reason}</p>
+                  <p className="text-xs text-gray-400 mt-1">Submitted {new Date(request.created_at).toLocaleString()}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <a href={`https://www.openstreetmap.org/?mlat=${request.latitude}&mlon=${request.longitude}#map=17/${request.latitude}/${request.longitude}`} target="_blank" rel="noreferrer" className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-gray-700">View Map</a>
+                  <button onClick={() => handleLocationRequest(request.id, 'reject')} className="rounded-xl border border-red-200 px-3 py-2 text-sm font-bold text-red-600">Reject</button>
+                  <button onClick={() => handleLocationRequest(request.id, 'approve')} className="rounded-xl bg-green-600 px-3 py-2 text-sm font-bold text-white">Approve</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

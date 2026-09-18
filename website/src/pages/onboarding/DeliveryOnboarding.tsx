@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 
@@ -19,6 +19,35 @@ export default function DeliveryOnboarding() {
     upi_id: '',
     availability_type: 'full_time',
   });
+
+  useEffect(() => {
+    const fetchOnboarding = async () => {
+      try {
+        const response = await api.get('/onboarding/delivery/status');
+        const partner = response.data.data;
+
+        if (!partner) return;
+
+        setFormData((current) => ({
+          ...current,
+          vehicle_type: partner.vehicle_type || current.vehicle_type,
+          vehicle_number: partner.vehicle_number || '',
+          vehicle_model: partner.vehicle_model || '',
+          license_number: partner.license_number || '',
+          bank_account_number: partner.bank_account_number || '',
+          ifsc_code: partner.ifsc_code || '',
+          upi_id: partner.upi_id || '',
+          availability_type: partner.availability_type || current.availability_type,
+        }));
+
+        setStep(partner.vehicle_number && partner.license_number ? 2 : 1);
+      } catch (err: any) {
+        setError(err.response?.data?.error?.message || 'Failed to load saved onboarding data');
+      }
+    };
+
+    fetchOnboarding();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

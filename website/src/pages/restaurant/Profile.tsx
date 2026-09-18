@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/axios';
 import { getStorageUrl } from '../../lib/supabase';
+import LocationSetup from '../../components/restaurant/LocationSetup';
 import {
   Store, Phone, MapPin, Clock, Award, CheckCircle, XCircle,
   Camera, Loader2, Save, ChevronDown, ChevronUp, AlertCircle, Trash2
@@ -320,6 +321,8 @@ export default function RestaurantProfile() {
             </div>
           </div>
         </div>
+
+        <LocationSetup profile={profile} onSaved={fetchProfile} />
 
         {/* ── Editable Info ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">

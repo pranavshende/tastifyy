@@ -56,7 +56,7 @@ router.patch('/customer', async (req, res) => {
 // POST /onboarding/restaurant — start or update restaurant onboarding
 router.post('/restaurant', async (req, res) => {
     const user = req.user;
-    const { name, type, owner_name, phone, email, address_line, city, state, pincode, latitude, longitude, service_radius_km, avg_preparation_time_mins, is_pure_veg, cuisine_tags, onboarding_step } = req.body;
+    const { name, type, owner_name, phone, email, address_line, city, state, pincode, service_radius_km, avg_preparation_time_mins, is_pure_veg, cuisine_tags, onboarding_step } = req.body;
     try {
         // Check if restaurant already exists for this user (via RestaurantPartner link)
         const existingPartner = await prisma.restaurantPartner.findFirst({
@@ -81,14 +81,16 @@ router.post('/restaurant', async (req, res) => {
                     ...(city !== undefined && { city }),
                     ...(state !== undefined && { state }),
                     ...(pincode !== undefined && { pincode }),
-                    ...(latitude !== undefined && { latitude }),
-                    ...(longitude !== undefined && { longitude }),
                     ...(service_radius_km !== undefined && { service_radius_km }),
                     ...(avg_preparation_time_mins !== undefined && { avg_preparation_time_mins }),
                     ...(is_pure_veg !== undefined && { is_pure_veg }),
                     ...(cuisine_tags !== undefined && { cuisine_tags }),
-                    status: 'active',
-                    is_open: true,
+                    status: 'pending',
+                    approval_status: 'pending',
+                    account_status: 'inactive',
+                    operating_status: 'closed',
+                    visibility_status: 'hidden',
+                    is_open: false,
                 }
             });
             res.json({ success: true, data: restaurant, onboarding_step });
@@ -106,15 +108,19 @@ router.post('/restaurant', async (req, res) => {
                     city: city || '',
                     state: state || '',
                     pincode: pincode || '',
-                    latitude: latitude || 0,
-                    longitude: longitude || 0,
+                    latitude: 0,
+                    longitude: 0,
                     service_radius_km: service_radius_km || 5,
                     avg_preparation_time_mins,
                     is_pure_veg: is_pure_veg || false,
                     cuisine_tags: cuisine_tags || [],
                     commission_rate: 15.0,
-                    status: 'active',
-                    is_open: true,
+                    status: 'pending',
+                    approval_status: 'pending',
+                    account_status: 'inactive',
+                    operating_status: 'closed',
+                    visibility_status: 'hidden',
+                    is_open: false,
                     partners: {
                         create: {
                             name: owner_name || user.name,
@@ -133,6 +139,47 @@ router.post('/restaurant', async (req, res) => {
     catch (error) {
         console.error('Restaurant onboarding error:', error);
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Onboarding failed', details: error.message } });
+    }
+});
+// POST /onboarding/restaurant/location — save the partner's initial official location
+router.post('/restaurant/location', async (req, res) => {
+    const user = req.user;
+    const { latitude, longitude, formatted_address, area, city, district, state, pincode, source = 'gps' } = req.body;
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180) {
+        res.status(400).json({ success: false, error: { code: 'INVALID_COORDINATES', message: 'Latitude or longitude is invalid' } });
+        return;
+    }
+    if (!['gps', 'manual'].includes(source)) {
+        res.status(400).json({ success: false, error: { code: 'INVALID_SOURCE', message: 'Location source is invalid' } });
+        return;
+    }
+    try {
+        const partner = await findRestaurantPartner(user);
+        if (!partner) {
+            res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Restaurant onboarding not started' } });
+            return;
+        }
+        if (partner.restaurant.location_set_at) {
+            res.status(409).json({ success: false, error: { code: 'LOCATION_LOCKED', message: 'Restaurant location is already saved' } });
+            return;
+        }
+        const restaurant = await prisma.restaurant.update({
+            where: { id: partner.restaurant_id },
+            data: {
+                latitude: lat, longitude: lng, formatted_address: formatted_address || null,
+                area: area || null, city: city || undefined, district: district || null,
+                state: state || undefined, pincode: pincode || undefined,
+                location_verified: source === 'gps', location_source: source,
+                location_set_at: new Date(), location_set_by: partner.id,
+            },
+        });
+        res.json({ success: true, data: restaurant, message: 'Restaurant location saved successfully' });
+    }
+    catch (error) {
+        console.error('Restaurant onboarding location error:', error);
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to save restaurant location' } });
     }
 });
 // POST /onboarding/restaurant/submit — finalize and submit for admin review
@@ -179,7 +226,16 @@ router.post('/delivery', async (req, res) => {
         if (existing) {
             const updated = await prisma.deliveryPartner.update({
                 where: { id: existing.id },
-                data: { vehicle_type, vehicle_number, vehicle_model, license_number, availability_type }
+                data: {
+                    vehicle_type,
+                    vehicle_number,
+                    vehicle_model,
+                    license_number,
+                    bank_account_number,
+                    ifsc_code,
+                    upi_id: upi_id || null,
+                    availability_type,
+                }
             });
             res.json({ success: true, data: updated, onboarding_step });
         }

@@ -36,6 +36,29 @@ enum RestaurantStatus {
   rejected
 }
 
+enum RestaurantApprovalStatus {
+  pending
+  approved
+  rejected
+  changes_required
+  suspended
+}
+
+enum RestaurantAccountStatus {
+  active
+  inactive
+}
+
+enum RestaurantOperatingStatus {
+  open
+  closed
+}
+
+enum RestaurantVisibilityStatus {
+  visible
+  hidden
+}
+
 enum SubscriptionPlan {
   starter
   growth
@@ -171,6 +194,13 @@ enum TicketStatus {
   closed
 }
 
+enum LocationChangeRequestStatus {
+  pending
+  approved
+  rejected
+  completed
+}
+
 // Models
 model User {
   id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -238,6 +268,21 @@ model Restaurant {
   is_pure_veg               Boolean            @default(false)
   cuisine_tags              String[]           @default([])
   status                    RestaurantStatus   @default(pending)
+  approval_status           RestaurantApprovalStatus @default(pending)
+  account_status            RestaurantAccountStatus @default(inactive)
+  operating_status          RestaurantOperatingStatus @default(closed)
+  visibility_status         RestaurantVisibilityStatus @default(hidden)
+  rejection_reason          String?
+  admin_notes               String?
+  approved_by               String?            @db.Uuid
+  approved_at               DateTime?          @db.Timestamptz
+  formatted_address         String?
+  area                      String?
+  district                  String?
+  location_verified         Boolean            @default(false)
+  location_source           String?            @db.VarChar(20)
+  location_set_at           DateTime?          @db.Timestamptz
+  location_set_by           String?            @db.Uuid
   is_open                   Boolean            @default(false)
   commission_rate           Decimal            @db.Decimal(5, 2)
   subscription_plan         SubscriptionPlan   @default(starter)
@@ -262,8 +307,37 @@ model Restaurant {
   coupons         Coupon[]
   ratings         Rating[]
   favorited_by    UserFavorite[]
+  location_change_requests RestaurantLocationChangeRequest[]
 
   @@map("restaurants")
+}
+
+model RestaurantLocationChangeRequest {
+  id                String                       @id @default(uuid()) @db.Uuid
+  restaurant_id     String                       @db.Uuid
+  requested_by      String                       @db.Uuid
+  reason            String
+  latitude          Decimal                      @db.Decimal(10, 8)
+  longitude         Decimal                      @db.Decimal(11, 8)
+  formatted_address String?
+  area              String?
+  city              String?
+  district          String?
+  state             String?
+  pincode           String?
+  source            String                       @db.VarChar(20)
+  status            LocationChangeRequestStatus @default(pending)
+  reviewed_by       String?                      @db.Uuid
+  reviewed_at       DateTime?                    @db.Timestamptz
+  review_notes      String?
+  completed_at      DateTime?                    @db.Timestamptz
+  created_at        DateTime                     @default(now()) @db.Timestamptz
+  updated_at        DateTime                     @default(now()) @updatedAt @db.Timestamptz
+
+  restaurant Restaurant @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+
+  @@index([restaurant_id, status])
+  @@map("restaurant_location_change_requests")
 }
 
 model RestaurantOperatingHour {

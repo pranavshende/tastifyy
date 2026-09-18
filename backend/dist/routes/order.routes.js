@@ -105,11 +105,11 @@ router.post('/', authorizeRole(['customer']), async (req, res) => {
             res.status(400).json({ success: false, error: { code: 'INVALID_RESTAURANT', message: 'Restaurant not found' } });
             return;
         }
-        if (restaurant.status !== 'active') {
+        if (restaurant.approval_status !== 'approved' || restaurant.account_status !== 'active' || restaurant.visibility_status !== 'visible') {
             res.status(400).json({ success: false, error: { code: 'RESTAURANT_INACTIVE', message: 'This restaurant is not currently available.' } });
             return;
         }
-        if (!restaurant.is_open) {
+        if (restaurant.operating_status !== 'open' || !restaurant.is_open) {
             res.status(400).json({ success: false, error: { code: 'RESTAURANT_CLOSED', message: 'This restaurant is not accepting orders right now.' } });
             return;
         }

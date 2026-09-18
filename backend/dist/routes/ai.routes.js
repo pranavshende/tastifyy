@@ -35,7 +35,12 @@ router.post('/recommend', async (req, res) => {
         // 2. Query DB based on extracted intent
         const whereClause = {
             is_available: true,
-            price: { lte: maxPrice }
+            price: { lte: maxPrice },
+            restaurant: {
+                approval_status: 'approved',
+                account_status: 'active',
+                visibility_status: 'visible',
+            },
         };
         if (isVeg !== null) {
             whereClause.is_veg = isVeg;

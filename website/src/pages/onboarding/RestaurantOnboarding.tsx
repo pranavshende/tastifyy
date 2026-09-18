@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
+import LocationSetup from '../../components/restaurant/LocationSetup';
 
 export default function RestaurantOnboarding() {
 
@@ -8,6 +9,7 @@ export default function RestaurantOnboarding() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState(1);
+  const [restaurantProfile, setRestaurantProfile] = useState<any>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -38,7 +40,8 @@ export default function RestaurantOnboarding() {
     setError('');
 
     try {
-      await api.post('/onboarding/restaurant', { ...formData, onboarding_step: step + 1 });
+      const response = await api.post('/onboarding/restaurant', { ...formData, onboarding_step: step + 1 });
+      setRestaurantProfile(response.data.data);
       setStep(step + 1);
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Failed to save progress');
@@ -242,6 +245,15 @@ export default function RestaurantOnboarding() {
                 />
               </div>
             </div>
+
+            <LocationSetup
+              profile={restaurantProfile}
+              locationEndpoint="/onboarding/restaurant/location"
+              onSaved={async () => {
+                const response = await api.get('/onboarding/restaurant/status');
+                setRestaurantProfile(response.data.data);
+              }}
+            />
 
             <div className="flex gap-4 pt-4">
               <button

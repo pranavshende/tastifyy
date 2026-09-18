@@ -21,7 +21,11 @@ function formatMenuItem(item: any) {
 export const getActiveRestaurants = async (req: Request, res: Response): Promise<void> => {
   try {
     const restaurants = await prisma.restaurant.findMany({
-      where: { status: 'active', is_open: true },
+      where: {
+        approval_status: 'approved',
+        account_status: 'active',
+        visibility_status: 'visible',
+      },
       include: { 
         menu_categories: { include: { menu_items: true } },
         ratings: { select: { restaurant_rating: true } }
@@ -80,7 +84,13 @@ export const registerRestaurant = async (req: Request, res: Response): Promise<v
 
 export const updateRestaurant = async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id as string;
-  const updates = req.body;
+  const allowedFields = [
+    'name', 'type', 'owner_name', 'phone', 'email', 'address_line', 'city', 'state', 'pincode',
+    'service_radius_km', 'logo_url', 'cover_image_url', 'photo_gallery_urls',
+    'is_pure_veg', 'cuisine_tags', 'avg_preparation_time_mins', 'bank_account_number', 'ifsc_code',
+    'bank_beneficiary_name', 'pan_number',
+  ];
+  const updates = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowedFields.includes(key)));
 
   try {
     const existingRestaurant = await prisma.restaurant.findUnique({ where: { id } });
@@ -133,7 +143,9 @@ export const getNearbyRestaurants = async (req: Request, res: Response): Promise
           )
         ) AS distance
         FROM restaurants
-        WHERE status = 'active' AND is_open = true
+        WHERE approval_status = 'approved'
+          AND account_status = 'active'
+          AND visibility_status = 'visible'
       )
       SELECT * FROM distances
       WHERE distance <= ${maxDistance}
@@ -152,7 +164,12 @@ export const getRestaurantMenu = async (req: Request, res: Response): Promise<vo
 
   try {
     const restaurant = await prisma.restaurant.findUnique({
-      where: { id },
+      where: {
+        id,
+        approval_status: 'approved',
+        account_status: 'active',
+        visibility_status: 'visible',
+      },
       include: {
         menu_categories: {
           orderBy: { display_order: 'asc' },
@@ -199,8 +216,9 @@ export const searchRestaurants = async (req: Request, res: Response): Promise<vo
     // 1. Search Restaurants (Name or Tags)
     const restaurantMatches = await prisma.restaurant.findMany({
       where: {
-        status: 'active',
-        is_open: true,
+        approval_status: 'approved',
+        account_status: 'active',
+        visibility_status: 'visible',
         OR: [
           { name: { contains: queryStr, mode: 'insensitive' } },
           { cuisine_tags: { has: queryStr } } // Wait, has is strict. Let's stick to array match or name match.
@@ -216,8 +234,9 @@ export const searchRestaurants = async (req: Request, res: Response): Promise<vo
     // Let's improve the Restaurant query to also match if query is exactly in tags
     const restaurantTagMatches = await prisma.restaurant.findMany({
       where: {
-        status: 'active',
-        is_open: true,
+        approval_status: 'approved',
+        account_status: 'active',
+        visibility_status: 'visible',
         cuisine_tags: { has: queryStr }
       },
       take: 5
@@ -234,8 +253,9 @@ export const searchRestaurants = async (req: Request, res: Response): Promise<vo
       where: {
         is_available: true,
         restaurant: {
-          status: 'active',
-          is_open: true
+          approval_status: 'approved',
+          account_status: 'active',
+          visibility_status: 'visible'
         },
         OR: [
           { name: { contains: queryStr, mode: 'insensitive' } },
