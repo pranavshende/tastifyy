@@ -48,7 +48,7 @@ router.get('/profile', async (req: Request, res: Response) => {
 });
 
 router.put('/profile', async (req: Request, res: Response) => {
-  const { name, phone, email, vehicle_type, vehicle_number, bank_account_number, ifsc_code, upi_id } = req.body;
+  const { name, phone, email, vehicle_type, vehicle_number, vehicle_model, bank_account_number, ifsc_code, upi_id } = req.body;
   if (!name || !phone) {
     res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Name and phone are required' } });
     return;
@@ -64,7 +64,7 @@ router.put('/profile', async (req: Request, res: Response) => {
 
     const updated = await prisma.deliveryPartner.update({
       where: { id: partner.id },
-      data: { name, phone, email, vehicle_type, vehicle_number, bank_account_number, ifsc_code, upi_id }
+      data: { name, phone, email, vehicle_type, vehicle_number, vehicle_model, bank_account_number, ifsc_code, upi_id }
     });
     
     updated.profile_photo_url = getPublicUrl(updated.profile_photo_url);

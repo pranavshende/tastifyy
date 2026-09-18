@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Switch, FlatList, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, Switch, FlatList, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, TextInput } from 'react-native';
 import api from '../../api/axios';
+import { useAuthStore } from '../../store/authStore';
 import { io, Socket } from 'socket.io-client';
 import { SOCKET_URL } from '../../constants/config';
 
 export default function DeliveryHomeScreen() {
+  const { user, token } = useAuthStore();
   const [isOnline, setIsOnline] = useState(false);
   const [activeOrder, setActiveOrder] = useState<any>(null);
   const [availableOrders, setAvailableOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [otp, setOtp] = useState('');
 
   const fetchDashboardStatus = async () => {
     try {
@@ -54,13 +57,17 @@ export default function DeliveryHomeScreen() {
     fetchOrders();
 
     // PHASE I: Connect to socket to emit live location
-    const newSocket = io(SOCKET_URL);
+    const newSocket = io(SOCKET_URL, { auth: { token } });
     setSocket(newSocket);
+    newSocket.on('connect', () => {
+      if (user) newSocket.emit('join', { role: 'delivery_partner', id: user.id });
+    });
+    newSocket.on('delivery:assigned', () => fetchOrders());
 
     return () => {
       newSocket.disconnect();
     };
-  }, [isOnline]);
+  }, [isOnline, token, user]);
 
   useEffect(() => {
     // PHASE I: Simulate GPS location emission
@@ -118,12 +125,13 @@ export default function DeliveryHomeScreen() {
     }
   };
 
-  const updateOrderStatus = async (orderId: string, status: string) => {
+  const updateOrderStatus = async (orderId: string, status: string, deliveryOtp?: string) => {
     try {
-      await api.put(`/orders/${orderId}/status`, { status });
+      await api.patch(`/delivery/orders/${orderId}/status`, { status, ...(deliveryOtp ? { otp: deliveryOtp } : {}) });
+      setOtp('');
       fetchOrders();
-    } catch (err) {
-      Alert.alert('Error', 'Failed to update order status');
+    } catch (err: any) {
+      Alert.alert('Error', err.response?.data?.error?.message || 'Failed to update order status');
     }
   };
 
@@ -159,7 +167,7 @@ export default function DeliveryHomeScreen() {
             <View style={styles.infoBlock}>
               <Text style={styles.infoLabel}>DELIVER TO</Text>
               <Text style={styles.infoTitle}>{activeOrder.customer.name}</Text>
-              <Text style={styles.infoDetail}>{activeOrder.delivery_address.street_address}, {activeOrder.delivery_address.city}</Text>
+                <Text style={styles.infoDetail}>{activeOrder.delivery_address.address_line}, {activeOrder.delivery_address.city}</Text>
             </View>
 
             <View style={styles.statusBlock}>
@@ -168,20 +176,41 @@ export default function DeliveryHomeScreen() {
             </View>
 
             {/* ACTION BUTTONS */}
-            {activeOrder.status === 'ready_for_pickup' && (
-              <TouchableOpacity style={styles.actionBtn} onPress={() => updateOrderStatus(activeOrder.id, 'out_for_delivery')}>
+            {activeOrder.status === 'ready' && (
+              <TouchableOpacity style={styles.actionBtn} onPress={() => updateOrderStatus(activeOrder.id, 'picked_up')}>
                 <Text style={styles.actionBtnText}>Confirm Pickup</Text>
               </TouchableOpacity>
             )}
 
-            {activeOrder.status === 'out_for_delivery' && (
-              <TouchableOpacity style={[styles.actionBtn, styles.deliverBtn]} onPress={() => updateOrderStatus(activeOrder.id, 'delivered')}>
-                <Text style={styles.actionBtnText}>Mark Delivered</Text>
+            {activeOrder.status === 'picked_up' && (
+              <TouchableOpacity style={styles.actionBtn} onPress={() => updateOrderStatus(activeOrder.id, 'out_for_delivery')}>
+                <Text style={styles.actionBtnText}>Start Delivery</Text>
               </TouchableOpacity>
+            )}
+
+            {activeOrder.status === 'out_for_delivery' && (
+              <View>
+                <Text style={styles.otpLabel}>Enter customer delivery OTP</Text>
+                <TextInput
+                  style={styles.otpInput}
+                  value={otp}
+                  onChangeText={value => setOtp(value.replace(/\D/g, '').slice(0, 4))}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  placeholder="4-digit OTP"
+                />
+                <TouchableOpacity
+                  style={[styles.actionBtn, styles.deliverBtn, otp.length !== 4 && styles.disabledBtn]}
+                  disabled={otp.length !== 4}
+                  onPress={() => updateOrderStatus(activeOrder.id, 'delivered', otp)}
+                >
+                  <Text style={styles.actionBtnText}>Mark Delivered</Text>
+                </TouchableOpacity>
+              </View>
             )}
             
             {/* If restaurant is still preparing, rider just waits */}
-            {(activeOrder.status === 'accepted' || activeOrder.status === 'preparing') && (
+            {(activeOrder.status === 'restaurant_confirmed' || activeOrder.status === 'preparing') && (
               <View style={styles.waitBlock}>
                 <ActivityIndicator color="#E86A22" />
                 <Text style={styles.waitText}>Waiting for restaurant to prep...</Text>
@@ -258,6 +287,9 @@ const styles = StyleSheet.create({
   actionBtn: { backgroundColor: '#10B981', borderRadius: 12, padding: 16, alignItems: 'center' },
   deliverBtn: { backgroundColor: '#3B82F6' },
   actionBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  disabledBtn: { opacity: 0.5 },
+  otpLabel: { fontSize: 13, fontWeight: '700', color: '#555', marginBottom: 8 },
+  otpInput: { backgroundColor: '#F9F9F9', borderWidth: 1, borderColor: '#DDD', borderRadius: 10, padding: 14, fontSize: 20, letterSpacing: 8, textAlign: 'center', marginBottom: 12 },
   
   waitBlock: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF5E6', padding: 16, borderRadius: 12 },
   waitText: { color: '#E86A22', fontWeight: '700', marginLeft: 12 },

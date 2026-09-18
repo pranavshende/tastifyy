@@ -202,7 +202,16 @@ router.post('/delivery', async (req: Request, res: Response) => {
     if (existing) {
       const updated = await prisma.deliveryPartner.update({
         where: { id: existing.id },
-        data: { vehicle_type, vehicle_number, vehicle_model, license_number, availability_type }
+        data: {
+          vehicle_type,
+          vehicle_number,
+          vehicle_model,
+          license_number,
+          bank_account_number,
+          ifsc_code,
+          upi_id,
+          availability_type,
+        }
       });
       res.json({ success: true, data: updated, onboarding_step });
     } else {
