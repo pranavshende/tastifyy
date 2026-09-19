@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { LogOut, LayoutDashboard, UtensilsCrossed, User, Wallet, TrendingUp, Star, Ticket } from 'lucide-react';
+import { LogOut, LayoutDashboard, UtensilsCrossed, User, Wallet, TrendingUp, Star, Ticket, Menu, X } from 'lucide-react';
 import { Logo } from '../../components/ui/Logo';
 import api from '../../api/axios';
 import { getStorageUrl } from '../../lib/supabase';
@@ -13,6 +13,7 @@ export default function DashboardLayout() {
   const { user, logout } = useAuthStore();
   const [restaurantName, setRestaurantName] = useState<string>(user?.name || 'Restaurant Partner');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     const fetchInfo = () => {
@@ -49,10 +50,22 @@ export default function DashboardLayout() {
   return (
     <div className="min-h-screen bg-gray-50 flex font-sans text-gray-900">
       {/* Sidebar */}
-      <aside className="w-56 bg-[#161B22] border-r border-gray-800 hidden md:flex flex-col z-30 fixed h-screen top-0 left-0 text-white">
+      <button
+        type="button"
+        aria-label="Open navigation"
+        onClick={() => setMobileOpen(true)}
+        className="fixed left-4 top-4 z-40 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#161B22] text-white shadow-lg md:hidden"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+      {mobileOpen && (
+        <button type="button" aria-label="Close navigation" onClick={() => setMobileOpen(false)} className="fixed inset-0 z-40 bg-black/50 md:hidden" />
+      )}
+      <aside className={`fixed left-0 top-0 z-50 flex h-screen w-72 flex-col border-r border-gray-800 bg-[#161B22] text-white transition-transform duration-200 md:z-30 md:w-56 md:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         
         {/* Top — Restaurant Identity */}
-        <Link to="/restaurant/dashboard" className="h-16 flex items-center px-4 border-b border-gray-800 shrink-0 hover:bg-gray-800 transition-colors">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-800 shrink-0">
+        <Link to="/restaurant/dashboard" onClick={() => setMobileOpen(false)} className="flex items-center hover:bg-gray-800 transition-colors min-w-0">
           <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-primary text-white flex items-center justify-center font-black mr-3 text-sm shadow-sm shrink-0">
             {logoUrl ? (
               <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
@@ -65,6 +78,10 @@ export default function DashboardLayout() {
             <span className="text-xs text-gray-400 font-medium mt-0.5">Restaurant Partner</span>
           </div>
         </Link>
+        <button type="button" aria-label="Close navigation" onClick={() => setMobileOpen(false)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-800 hover:text-white md:hidden">
+          <X className="h-5 w-5" />
+        </button>
+        </div>
         
         {/* Navigation */}
         <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
@@ -74,6 +91,7 @@ export default function DashboardLayout() {
               <Link
                 key={item.path}
                 to={item.path}
+                onClick={() => setMobileOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-bold text-sm ${
                   isActive
                     ? 'bg-brand-primary text-white shadow-sm'
@@ -142,7 +160,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 sm:p-6 h-[calc(100vh-3.5rem)] overflow-y-auto">
+        <main className="flex-1 p-4 pt-20 sm:p-6 sm:pt-20 md:pt-6 h-[calc(100vh-3.5rem)] overflow-y-auto">
           <div className="max-w-5xl mx-auto w-full h-full flex flex-col">
             <Outlet />
           </div>

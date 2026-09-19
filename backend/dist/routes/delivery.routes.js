@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate, authorizeRole } from '../middlewares/auth.js';
 import { prisma } from '../utils/prisma.js';
 import { getIO } from '../socket.js';
+import { assignmentQueue } from '../jobs/queues.js';
 import { getPublicUrl, uploadFile, deleteFile, validateFile, generateFilename } from '../services/storage.service.js';
 import multer from 'multer';
 const upload = multer({
@@ -14,14 +15,23 @@ router.use(authenticate, authorizeRole(['delivery_partner']));
 const getPartner = async (userId) => {
     return await prisma.deliveryPartner.findUnique({ where: { user_id: userId } });
 };
+const getOrCreatePartner = async (user) => {
+    const existing = await getPartner(user.id);
+    if (existing)
+        return existing;
+    return await prisma.deliveryPartner.create({
+        data: {
+            user_id: user.id,
+            name: user.name || 'Delivery Partner',
+            phone: user.phone,
+            email: user.email || null,
+        },
+    });
+};
 // ─── PROFILE ROUTES ─────────────────────────────────────────────────────────
 router.get('/profile', async (req, res) => {
     try {
-        const partner = await getPartner(req.user.id);
-        if (!partner) {
-            res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Partner not found' } });
-            return;
-        }
+        const partner = await getOrCreatePartner(req.user);
         partner.profile_photo_url = getPublicUrl(partner.profile_photo_url);
         res.json({ success: true, data: partner });
     }
@@ -30,15 +40,13 @@ router.get('/profile', async (req, res) => {
     }
 });
 router.put('/profile', async (req, res) => {
-    const { name, phone, email, vehicle_type, vehicle_number, bank_account_number, ifsc_code, upi_id } = req.body;
+    const { name, phone, email, vehicle_type, vehicle_number, vehicle_model, bank_account_number, ifsc_code, upi_id } = req.body;
     if (!name || !phone) {
         res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Name and phone are required' } });
         return;
     }
     try {
-        const partner = await getPartner(req.user.id);
-        if (!partner)
-            return res.status(404).json({ success: false, error: { code: 'NOT_FOUND' } });
+        const partner = await getOrCreatePartner(req.user);
         // Update User as well to keep in sync
         await prisma.user.update({
             where: { id: req.user.id },
@@ -46,7 +54,7 @@ router.put('/profile', async (req, res) => {
         });
         const updated = await prisma.deliveryPartner.update({
             where: { id: partner.id },
-            data: { name, phone, email, vehicle_type, vehicle_number, bank_account_number, ifsc_code, upi_id }
+            data: { name, phone, email, vehicle_type, vehicle_number, vehicle_model, bank_account_number, ifsc_code, upi_id }
         });
         updated.profile_photo_url = getPublicUrl(updated.profile_photo_url);
         res.json({ success: true, data: updated });
@@ -126,6 +134,17 @@ router.post('/location', async (req, res) => {
                 is_online: true // optionally auto-set them online if they ping location
             }
         });
+        const pendingOrders = await prisma.order.findMany({
+            where: {
+                status: { in: ['restaurant_confirmed', 'preparing', 'ready'] },
+                delivery_partner_id: null,
+            },
+            select: { id: true },
+            take: 20,
+        });
+        for (const order of pendingOrders) {
+            await assignmentQueue.add('assign-partner', { orderId: order.id });
+        }
         res.json({ success: true, message: 'Location updated' });
     }
     catch (error) {
@@ -167,7 +186,7 @@ router.get('/orders/active', async (req, res) => {
         const order = await prisma.order.findFirst({
             where: {
                 delivery_partner_id: partnerId,
-                status: { in: ['restaurant_confirmed', 'preparing', 'ready', 'out_for_delivery'] }
+                status: { in: ['rider_assigned', 'picked_up', 'out_for_delivery'] }
             },
             include: {
                 restaurant: { select: { name: true, address_line: true, city: true, phone: true } },
@@ -197,7 +216,7 @@ router.post('/orders/:id/accept', async (req, res) => {
         const [updatedOrder] = await prisma.$transaction([
             prisma.order.update({
                 where: { id },
-                data: { delivery_partner_id: partnerId, status: 'out_for_delivery' }
+                data: { delivery_partner_id: partnerId, status: 'rider_assigned' }
             }),
             prisma.deliveryAssignment.create({
                 data: {
@@ -230,6 +249,15 @@ router.patch('/orders/:id/status', async (req, res) => {
         });
         if (!order) {
             return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found or not assigned to you' } });
+        }
+        const allowedTransitions = {
+            rider_assigned: ['picked_up'],
+            picked_up: ['out_for_delivery'],
+            out_for_delivery: ['delivered'],
+        };
+        if (!allowedTransitions[order.status]?.includes(status)) {
+            res.status(400).json({ success: false, error: { code: 'INVALID_TRANSITION', message: `Cannot change delivery from ${order.status} to ${status}` } });
+            return;
         }
         if (status === 'delivered') {
             if (!otp || String(otp) !== order.delivery_otp) {
