@@ -30,7 +30,14 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
 
   // Not authenticated — send to login, preserve intended destination
   if (!user) {
-    return <Navigate to="/customer/login" state={{ from: location }} replace />;
+    const loginPath = location.pathname.startsWith('/delivery')
+      ? '/delivery/login'
+      : location.pathname.startsWith('/restaurant')
+        ? '/restaurant/login'
+        : location.pathname.startsWith('/admin')
+          ? '/admin'
+          : '/customer/login';
+    return <Navigate to={loginPath} state={{ from: location }} replace />;
   }
 
   // Role check

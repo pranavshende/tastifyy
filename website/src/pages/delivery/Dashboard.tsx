@@ -17,38 +17,55 @@ export default function DeliveryDashboard() {
   const [activeTab, setActiveTab] = useState<'available' | 'active'>('available');
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otp, setOtp] = useState('');
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
   const refreshInFlight = useRef(false);
+  const activeOrderRef = useRef<any>(null);
 
   const fetchData = async () => {
     if (refreshInFlight.current) return;
     refreshInFlight.current = true;
+    setDashboardError(null);
     try {
-      const [dashRes, activeRes, availableRes] = await Promise.all([
+      const results = await Promise.allSettled([
         api.get('/delivery/dashboard'),
         api.get('/delivery/orders/active'),
         api.get('/delivery/orders/available')
       ]);
 
-      if (dashRes.data.success) {
-        setIsOnline(dashRes.data.data.is_online);
+      const [dashResult, activeResult, availableResult] = results;
+      const failedRequests = results.filter(result => result.status === 'rejected').length;
+      if (failedRequests === results.length) {
+        throw new Error('Unable to load dashboard');
+      }
+      if (failedRequests > 0) {
+        setDashboardError('Some dashboard data could not be loaded. Retry to refresh.');
+      }
+
+      if (dashResult.status === 'fulfilled' && dashResult.value.data.success) {
+        const data = dashResult.value.data.data || {};
+        setIsOnline(Boolean(data.is_online));
         setStats({
-          today_deliveries: dashRes.data.data.today_deliveries,
-          today_earnings: dashRes.data.data.today_earnings
+          today_deliveries: Number(data.today_deliveries || 0),
+          today_earnings: Number(data.today_earnings || 0)
         });
       }
 
-      if (activeRes.data.success && activeRes.data.data) {
-        setActiveOrder(activeRes.data.data);
+      if (activeResult.status === 'fulfilled' && activeResult.value.data.success && activeResult.value.data.data) {
+        setActiveOrder(activeResult.value.data.data);
+        activeOrderRef.current = activeResult.value.data.data;
         setActiveTab('active');
-      } else {
+      } else if (activeResult.status === 'fulfilled') {
         setActiveOrder(null);
+        activeOrderRef.current = null;
       }
 
-      if (availableRes.data.success) {
-        setAvailableOrders(availableRes.data.data);
+      if (availableResult.status === 'fulfilled' && availableResult.value.data.success) {
+        const orders = Array.isArray(availableResult.value.data.data) ? availableResult.value.data.data : [];
+        setAvailableOrders(orders);
       }
     } catch (err) {
       console.error('Failed to fetch dashboard data', err);
+      setDashboardError('Unable to load dashboard. Please try again.');
     } finally {
       refreshInFlight.current = false;
       setLoading(false);
@@ -65,11 +82,12 @@ export default function DeliveryDashboard() {
       fetchData();
     };
     const handleStatusUpdate = (payload: { orderId: string; status: string }) => {
-      if (payload.orderId !== activeOrder?.id) {
+      if (payload.orderId !== activeOrderRef.current?.id) {
         fetchData();
         return;
       }
       setActiveOrder((current: any) => current ? { ...current, status: payload.status } : current);
+      if (activeOrderRef.current) activeOrderRef.current = { ...activeOrderRef.current, status: payload.status };
       if (payload.status === 'delivered') fetchData();
     };
     socket?.on('delivery:assigned', handleAssigned);
@@ -90,7 +108,7 @@ export default function DeliveryDashboard() {
       socket?.off('order:delivered', handleStatusUpdate);
       socketService.setReconnectCallback(null as any);
     };
-  }, [activeOrder?.id]);
+  }, []);
 
   const toggleStatus = async () => {
     try {
@@ -100,6 +118,7 @@ export default function DeliveryDashboard() {
       fetchData(); // refresh pool
     } catch (err) {
       setIsOnline(!isOnline); // revert
+      setDashboardError('Unable to update availability. Please try again.');
     }
   };
 
@@ -120,6 +139,7 @@ export default function DeliveryDashboard() {
   const updateOrderStatus = async (status: string, overrideOtp?: string) => {
     if (!activeOrder) return;
     setActionLoading(true);
+    const previousOrder = activeOrder;
     try {
       const payload: any = { status };
       if (overrideOtp) {
@@ -133,6 +153,8 @@ export default function DeliveryDashboard() {
         setOtp('');
       }
     } catch (err: any) {
+      setActiveOrder(previousOrder);
+      activeOrderRef.current = previousOrder;
       alert(err.response?.data?.error?.message || 'Failed to update status');
     } finally {
       setActionLoading(false);
@@ -141,20 +163,35 @@ export default function DeliveryDashboard() {
 
   if (loading && !activeOrder && availableOrders.length === 0) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
+      <div className="flex min-h-[420px] flex-col items-center justify-center rounded-2xl bg-white p-8 text-center shadow-sm">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-primary" />
+        <p className="mt-4 font-bold text-gray-700">Loading your delivery dashboard...</p>
+        <p className="mt-1 text-sm text-gray-500">Fetching your availability and deliveries.</p>
+        {dashboardError && (
+          <button type="button" onClick={fetchData} className="mt-5 rounded-xl bg-brand-primary px-5 py-3 font-bold text-white">
+            Retry
+          </button>
+        )}
       </div>
     );
   }
 
   return (
     <div className="space-y-6 pb-20">
+      {dashboardError && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-red-100 bg-red-50 p-4 text-red-800 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-bold">{dashboardError}</p>
+          <button type="button" onClick={fetchData} className="rounded-xl bg-red-700 px-4 py-2 text-sm font-bold text-white">
+            Retry
+          </button>
+        </div>
+      )}
       {/* Header & Status */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-black text-gray-900">Welcome, {user?.name?.split(' ')[0]}!</h1>
           <p className="text-gray-500 font-medium text-sm mt-1">
-            {stats.today_deliveries} deliveries today • ₹{stats.today_earnings.toFixed(2)} earned
+            {Number(stats.today_deliveries || 0)} deliveries today • ₹{Number(stats.today_earnings || 0).toFixed(2)} earned
           </p>
         </div>
         
@@ -198,9 +235,9 @@ export default function DeliveryDashboard() {
               </div>
             ) : availableOrders.length === 0 ? (
               <div className="text-center py-12 bg-gray-50 rounded-2xl border border-gray-100">
-                <Loader2 className="w-8 h-8 animate-spin text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 font-bold">Waiting for orders...</p>
-                <p className="text-sm text-gray-400 mt-1">Stay in high-demand areas to get more requests.</p>
+                <CheckCircle className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 font-bold">No active deliveries right now.</p>
+                <p className="text-sm text-gray-400 mt-1">New requests will appear here when available.</p>
               </div>
             ) : (
               availableOrders.map(order => (
