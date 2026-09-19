@@ -8,6 +8,7 @@ import StatusBadge from '../../components/ui/StatusBadge';
 export default function DeliveryDashboard() {
   const { user } = useAuthStore();
   const [isOnline, setIsOnline] = useState(false);
+  const [partnerStatus, setPartnerStatus] = useState('pending');
   const [stats, setStats] = useState({ today_deliveries: 0, today_earnings: 0 });
   const [availableOrders, setAvailableOrders] = useState<any[]>([]);
   const [activeOrder, setActiveOrder] = useState<any>(null);
@@ -44,6 +45,7 @@ export default function DeliveryDashboard() {
       if (dashResult.status === 'fulfilled' && dashResult.value.data.success) {
         const data = dashResult.value.data.data || {};
         setIsOnline(Boolean(data.is_online));
+        setPartnerStatus(String(data.status || 'pending'));
         setStats({
           today_deliveries: Number(data.today_deliveries || 0),
           today_earnings: Number(data.today_earnings || 0)
@@ -111,6 +113,12 @@ export default function DeliveryDashboard() {
   }, []);
 
   const toggleStatus = async () => {
+    if (!isOnline && partnerStatus !== 'active') {
+      setDashboardError(partnerStatus === 'pending'
+        ? 'Your rider profile is awaiting admin approval.'
+        : `Your rider profile is ${partnerStatus}. Contact support before going online.`);
+      return;
+    }
     try {
       const newVal = !isOnline;
       setIsOnline(newVal);
@@ -208,6 +216,14 @@ export default function DeliveryDashboard() {
         </div>
       </div>
 
+      {partnerStatus !== 'active' && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">
+          {partnerStatus === 'pending'
+            ? 'Your rider profile is awaiting admin approval. You can accept deliveries after approval.'
+            : `Your rider profile is ${partnerStatus}. Contact support before accepting deliveries.`}
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-2 p-1 bg-gray-200/50 rounded-xl w-full max-w-sm">
         <button
@@ -228,7 +244,12 @@ export default function DeliveryDashboard() {
       <div className="mt-6">
         {activeTab === 'available' && (
           <div className="space-y-4">
-            {!isOnline ? (
+            {partnerStatus !== 'active' ? (
+              <div className="text-center py-12 bg-amber-50 rounded-2xl border border-amber-100">
+                <p className="text-amber-800 font-bold">Profile approval required</p>
+                <p className="text-sm text-amber-700 mt-1">Your profile must be approved before delivery requests can be accepted.</p>
+              </div>
+            ) : !isOnline ? (
               <div className="text-center py-12 bg-gray-50 rounded-2xl border border-gray-100">
                 <p className="text-gray-500 font-bold">You are offline</p>
                 <p className="text-sm text-gray-400 mt-1">Go online to receive delivery requests.</p>

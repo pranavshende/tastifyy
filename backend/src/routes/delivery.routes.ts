@@ -356,6 +356,21 @@ router.patch('/status', async (req: Request, res: Response) => {
   const user = req.user as any;
   const { is_online } = req.body as { is_online: boolean };
   try {
+    const currentPartner = await prisma.deliveryPartner.findUnique({ where: { user_id: user.id } });
+    if (!currentPartner) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Delivery partner profile not found' } });
+    }
+    if (is_online && currentPartner.status !== 'active') {
+      return res.status(409).json({
+        success: false,
+        error: {
+          code: 'PROFILE_NOT_ACTIVE',
+          message: currentPartner.status === 'pending'
+            ? 'Your rider profile is awaiting admin approval.'
+            : `Your rider profile is ${currentPartner.status}. Contact support before going online.`,
+        },
+      });
+    }
     const partner = await prisma.deliveryPartner.update({
       where: { user_id: user.id },
       data: { is_online }
