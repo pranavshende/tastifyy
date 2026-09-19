@@ -1,0 +1,3 @@
+export declare function sendPushNotification(userId: string, title: string, body: string, data?: Record<string, string>): Promise<boolean>;
+export declare function createNotification(recipientId: string, recipientType: 'customer' | 'restaurant_partner' | 'delivery_partner' | 'admin', type: string, title: string, body: string, data?: any): Promise<any>;
+//# sourceMappingURL=notification.service.d.ts.map

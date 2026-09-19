@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-brand-primary: #FF5B33;
+  --color-brand-secondary: #E04B28;
+  --color-brand-dark: #1A1A1A;
+  --color-brand-light: #FAFAFA; /* Off White / Gray 50 */
+  
+  --font-sans: 'Inter', 'Roboto', 'Outfit', system-ui, sans-serif;
+  --font-handwriting: 'Caveat', cursive;
+  
+  --animate-fade-in-up: fade-in-up 0.5s ease-out;
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-shimmer: shimmer 2s infinite linear;
+}
+
+@layer utilities {
+  .shadow-card {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  }
+  .shadow-soft {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+body {
+  @apply bg-brand-light text-brand-dark font-sans;
+}

@@ -1,0 +1,171 @@
+import { useState, useEffect } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
+import { LogOut, LayoutDashboard, UtensilsCrossed, User, Wallet, TrendingUp, Star, Ticket, Menu, X } from 'lucide-react';
+import { Logo } from '../../components/ui/Logo';
+import api from '../../api/axios';
+import { getStorageUrl } from '../../lib/supabase';
+import NotificationBell from '../../components/NotificationBell';
+
+export default function DashboardLayout() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
+  const [restaurantName, setRestaurantName] = useState<string>(user?.name || 'Restaurant Partner');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchInfo = () => {
+      api.get('/menu/info').then(({ data }) => {
+        if (data.success && data.data.restaurant) {
+          const r = data.data.restaurant;
+          setRestaurantName(r.name || user?.name || 'Restaurant Partner');
+          setLogoUrl(getStorageUrl(r.logo_url) || null);
+        }
+      }).catch(() => {});
+    };
+
+    fetchInfo();
+    
+    window.addEventListener('restaurant-updated', fetchInfo);
+    return () => window.removeEventListener('restaurant-updated', fetchInfo);
+  }, [user?.name, location.pathname]);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/restaurant/login');
+  };
+
+  const navItems = [
+    { path: '/restaurant/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+    { path: '/restaurant/menu', label: 'Menu Manager', icon: <UtensilsCrossed className="w-5 h-5" /> },
+    { path: '/restaurant/analytics', label: 'Analytics', icon: <TrendingUp className="w-5 h-5" /> },
+    { path: '/restaurant/reviews', label: 'Reviews', icon: <Star className="w-5 h-5" /> },
+    { path: '/restaurant/transactions', label: 'Transactions', icon: <Wallet className="w-5 h-5" /> },
+    { path: '/restaurant/coupons', label: 'Coupons', icon: <Ticket className="w-5 h-5" /> },
+    { path: '/restaurant/profile', label: 'Profile', icon: <User className="w-5 h-5" /> },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex font-sans text-gray-900">
+      {/* Sidebar */}
+      <button
+        type="button"
+        aria-label="Open navigation"
+        onClick={() => setMobileOpen(true)}
+        className="fixed left-4 top-4 z-40 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#161B22] text-white shadow-lg md:hidden"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+      {mobileOpen && (
+        <button type="button" aria-label="Close navigation" onClick={() => setMobileOpen(false)} className="fixed inset-0 z-40 bg-black/50 md:hidden" />
+      )}
+      <aside className={`fixed left-0 top-0 z-50 flex h-screen w-72 flex-col border-r border-gray-800 bg-[#161B22] text-white transition-transform duration-200 md:z-30 md:w-56 md:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        
+        {/* Top — Restaurant Identity */}
+        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-800 shrink-0">
+        <Link to="/restaurant/dashboard" onClick={() => setMobileOpen(false)} className="flex items-center hover:bg-gray-800 transition-colors min-w-0">
+          <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-primary text-white flex items-center justify-center font-black mr-3 text-sm shadow-sm shrink-0">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              <span>{restaurantName?.charAt(0) || 'R'}</span>
+            )}
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold tracking-tight leading-tight truncate">{restaurantName}</span>
+            <span className="text-xs text-gray-400 font-medium mt-0.5">Restaurant Partner</span>
+          </div>
+        </Link>
+        <button type="button" aria-label="Close navigation" onClick={() => setMobileOpen(false)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-800 hover:text-white md:hidden">
+          <X className="h-5 w-5" />
+        </button>
+        </div>
+        
+        {/* Navigation */}
+        <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
+          {navItems.map((item) => {
+            const isActive = location.pathname.startsWith(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-bold text-sm ${
+                  isActive
+                    ? 'bg-brand-primary text-white shadow-sm'
+                    : 'text-gray-400 hover:bg-gray-800 hover:text-white border border-transparent'
+                }`}
+              >
+                {item.icon}
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Bottom — User + Logout */}
+        <div className="p-4 border-t border-gray-800 shrink-0">
+          <Link to="/restaurant/profile" className="flex items-center gap-3 mb-4 px-2 py-2 hover:bg-gray-800 rounded-lg transition-colors cursor-pointer">
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-brand-primary text-white flex items-center justify-center font-bold text-sm shrink-0 border border-gray-700">
+              {user?.profile_photo_url ? (
+                <img src={user.profile_photo_url} alt={user.name} className="w-full h-full object-cover" />
+              ) : (
+                <span>{user?.name?.charAt(0).toUpperCase() || 'R'}</span>
+              )}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-bold text-white truncate">{user?.name || 'Restaurant'}</span>
+              <span className="text-[10px] text-gray-400 font-medium">Partner</span>
+            </div>
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-2 py-2 w-full text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all font-bold text-sm"
+          >
+            <LogOut className="w-4 h-4" />
+            Log Out
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 md:ml-56">
+        {/* Top Header */}
+        <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-20">
+          <div className="flex items-center md:hidden">
+            <Logo size="sm" textSuffix="Partner" />
+          </div>
+          
+          {/* Top right */}
+          <div className="ml-auto flex items-center gap-3 sm:gap-4">
+            <NotificationBell />
+            <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full border border-green-200">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+              <span className="text-xs font-bold text-green-700 hidden sm:block">Accepting Orders</span>
+              <span className="text-xs font-bold text-green-700 sm:hidden">Online</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 text-gray-700 border border-gray-200 flex items-center justify-center font-bold text-sm">
+                {logoUrl ? (
+                  <img src={logoUrl} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <span>{restaurantName?.charAt(0) || 'R'}</span>
+                )}
+              </div>
+              <span className="text-sm font-bold text-gray-700 hidden sm:block max-w-[120px] truncate">{restaurantName}</span>
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="flex-1 p-4 pt-20 sm:p-6 sm:pt-20 md:pt-6 h-[calc(100vh-3.5rem)] overflow-y-auto">
+          <div className="max-w-5xl mx-auto w-full h-full flex flex-col">
+            <Outlet />
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}

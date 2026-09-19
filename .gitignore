@@ -1,0 +1,22 @@
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+client_secret*.json
+**/client_secret*.json
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build and tool output
+website/dist/
+tastifyyApp/dist/
+tastifyyApp/web-build/
+
+# Local logs and caches
+*.log
+npm-debug.log*
+*.tsbuildinfo
+.DS_Store
+.vscode/
