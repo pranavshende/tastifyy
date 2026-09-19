@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
 import socketService from '../../api/socket';
@@ -17,8 +17,11 @@ export default function DeliveryDashboard() {
   const [activeTab, setActiveTab] = useState<'available' | 'active'>('available');
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otp, setOtp] = useState('');
+  const refreshInFlight = useRef(false);
 
   const fetchData = async () => {
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
     try {
       const [dashRes, activeRes, availableRes] = await Promise.all([
         api.get('/delivery/dashboard'),
@@ -47,26 +50,47 @@ export default function DeliveryDashboard() {
     } catch (err) {
       console.error('Failed to fetch dashboard data', err);
     } finally {
+      refreshInFlight.current = false;
       setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 15000); // refresh every 15s
+    const interval = setInterval(fetchData, 30000); // Socket events handle normal updates; polling is recovery only.
 
     const socket = socketService.getSocket();
     const handleAssigned = () => {
       setActiveTab('active');
       fetchData();
     };
+    const handleStatusUpdate = (payload: { orderId: string; status: string }) => {
+      if (payload.orderId !== activeOrder?.id) {
+        fetchData();
+        return;
+      }
+      setActiveOrder((current: any) => current ? { ...current, status: payload.status } : current);
+      if (payload.status === 'delivered') fetchData();
+    };
     socket?.on('delivery:assigned', handleAssigned);
+    socket?.on('delivery:accepted', handleAssigned);
+    socket?.on('order:rider_assigned', handleAssigned);
+    socket?.on('order:picked_up', handleStatusUpdate);
+    socket?.on('order:out_for_delivery', handleStatusUpdate);
+    socket?.on('order:delivered', handleStatusUpdate);
+    socketService.setReconnectCallback(fetchData);
 
     return () => {
       clearInterval(interval);
       socket?.off('delivery:assigned', handleAssigned);
+      socket?.off('delivery:accepted', handleAssigned);
+      socket?.off('order:rider_assigned', handleAssigned);
+      socket?.off('order:picked_up', handleStatusUpdate);
+      socket?.off('order:out_for_delivery', handleStatusUpdate);
+      socket?.off('order:delivered', handleStatusUpdate);
+      socketService.setReconnectCallback(null as any);
     };
-  }, []);
+  }, [activeOrder?.id]);
 
   const toggleStatus = async () => {
     try {
@@ -81,10 +105,12 @@ export default function DeliveryDashboard() {
 
   const acceptOrder = async (id: string) => {
     setActionLoading(true);
+    setAvailableOrders(prev => prev.filter(order => order.id !== id));
     try {
       await api.post(`/delivery/orders/${id}/accept`);
       await fetchData();
     } catch (err: any) {
+      await fetchData();
       alert(err.response?.data?.error?.message || 'Failed to accept order');
     } finally {
       setActionLoading(false);
@@ -99,6 +125,7 @@ export default function DeliveryDashboard() {
       if (overrideOtp) {
         payload.otp = overrideOtp;
       }
+      setActiveOrder((current: any) => current ? { ...current, status } : current);
       await api.patch(`/delivery/orders/${activeOrder.id}/status`, payload);
       await fetchData();
       if (status === 'delivered') {
@@ -269,7 +296,7 @@ export default function DeliveryDashboard() {
                         <p className="text-xs font-bold text-brand-primary uppercase tracking-wider mb-1">2. Drop-off Location</p>
                         <h4 className="font-black text-lg text-gray-900">{activeOrder.customer?.name}</h4>
                         <p className="text-sm text-gray-600 mt-1">
-                          {activeOrder.delivery_address?.street_address}<br/>
+                          {activeOrder.delivery_address?.address_line || activeOrder.delivery_address?.street_address}<br/>
                           {activeOrder.delivery_address?.apartment && <>{activeOrder.delivery_address.apartment}<br/></>}
                           {activeOrder.delivery_address?.landmark && <span className="text-gray-400">Landmark: {activeOrder.delivery_address.landmark}</span>}
                         </p>
@@ -295,7 +322,7 @@ export default function DeliveryDashboard() {
                       <Package className="w-4 h-4 mr-2 text-gray-400" /> Package Contents
                     </h5>
                     <ul className="text-sm text-gray-600 space-y-2">
-                      {activeOrder.items?.map((item: any) => (
+                      {(activeOrder.order_items || activeOrder.items)?.map((item: any) => (
                         <li key={item.id} className="flex justify-between border-b border-gray-50 pb-2">
                           <span>{item.quantity}x {item.name_snapshot}</span>
                         </li>

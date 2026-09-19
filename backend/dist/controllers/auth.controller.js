@@ -123,6 +123,26 @@ export const register = async (req, res) => {
         res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Email, password, phone, name, and role are required' } });
         return;
     }
+    if (!['customer', 'restaurant_partner', 'delivery_partner'].includes(role)) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Invalid account role' } });
+        return;
+    }
+    if (!/^[6-9]\d{9}$/.test(String(phone).trim())) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Enter a valid 10-digit Indian mobile number' } });
+        return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Enter a valid email address' } });
+        return;
+    }
+    if (String(name).trim().length < 2 || !/^[A-Za-z][A-Za-z .'-]*$/.test(String(name).trim())) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Enter a valid full name' } });
+        return;
+    }
+    if (String(password).length < 8) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Password must be at least 8 characters' } });
+        return;
+    }
     // Block self-registration of admin accounts
     if (role === 'admin') {
         res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Admin accounts cannot be self-registered' } });

@@ -67,11 +67,17 @@ export async function assignDeliveryPartner(orderId: string): Promise<boolean> {
 
     // 3. Assign the order in DB
     await prisma.$transaction(async (tx) => {
-      // Update order
-      await tx.order.update({
-        where: { id: order.id },
-        data: { delivery_partner_id: closestPartner.id }
+      const claimed = await tx.order.updateMany({
+        where: {
+          id: order.id,
+          delivery_partner_id: null,
+          status: { in: ['restaurant_confirmed', 'preparing', 'ready'] },
+        },
+        data: { delivery_partner_id: closestPartner.id, status: 'rider_assigned' }
       });
+      if (claimed.count !== 1) {
+        throw new Error(`Order ${order.id} was already assigned`);
+      }
 
       // Create delivery assignment (Strict forced assignment for Phase M MVP)
       await tx.deliveryAssignment.create({
@@ -105,6 +111,16 @@ export async function assignDeliveryPartner(orderId: string): Promise<boolean> {
       orderId: order.id,
       partnerName: closestPartner.name,
       partnerPhone: closestPartner.phone
+    });
+    io.to(`customer_${order.customer_id}`).emit('order:rider_assigned', {
+      orderId: order.id,
+      status: 'rider_assigned',
+      partnerName: closestPartner.name,
+    });
+    io.to('admin').emit('order:rider_assigned', {
+      orderId: order.id,
+      status: 'rider_assigned',
+      partnerName: closestPartner.name,
     });
 
     // Persist and deliver the assignment notification through the common worker.
