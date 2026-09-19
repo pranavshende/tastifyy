@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { LogOut, User, LayoutDashboard, UtensilsCrossed, Settings, Users, Store, Bike, LifeBuoy, Shield, Menu, X } from 'lucide-react';
+import { LogOut, User, LayoutDashboard, UtensilsCrossed, Settings, Users, Store, Bike, LifeBuoy, Shield } from 'lucide-react';
 
 export interface SidebarProps {
   role?: 'admin' | 'restaurant' | 'delivery';
@@ -17,7 +16,6 @@ export default function Sidebar({ role, activeTab, onTabChange, title, items, ba
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -70,47 +68,16 @@ export default function Sidebar({ role, activeTab, onTabChange, title, items, ba
 
   const menu = getMenu();
 
-  const selectItem = (item: any) => {
-    setMobileOpen(false);
-    if (onTabChange) {
-      onTabChange(item.id);
-    } else if (item.path !== '#') {
-      navigate(item.path);
-    }
-  };
-
   return (
-    <>
-      <button
-        type="button"
-        aria-label="Open navigation"
-        onClick={() => setMobileOpen(true)}
-        className="fixed left-4 top-4 z-40 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-dark text-white shadow-lg lg:hidden"
-      >
-        <Menu className="h-5 w-5" />
-      </button>
-      {mobileOpen && (
-        <button
-          type="button"
-          aria-label="Close navigation"
-          onClick={() => setMobileOpen(false)}
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-        />
-      )}
-      <aside className={`fixed left-0 top-0 z-50 flex h-screen w-72 flex-col border-r border-gray-800 bg-brand-dark text-white transition-transform duration-200 lg:z-40 lg:w-64 lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+    <aside className="w-64 bg-brand-dark text-white h-screen flex flex-col fixed left-0 top-0 border-r border-gray-800 z-40 hidden lg:flex">
       {/* Brand */}
       <div className="h-20 flex items-center px-6 border-b border-gray-800 shrink-0">
-        <div className="flex items-center justify-between">
-        <Link to={`${menu.baseRoute}/dashboard`} onClick={() => setMobileOpen(false)} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+        <Link to={`${menu.baseRoute}/dashboard`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <div className="w-10 h-10 rounded-xl bg-brand-primary text-white flex items-center justify-center font-black shadow-md text-xl">
             T
           </div>
           <span className="text-xl font-black tracking-tight">{menu.title}</span>
         </Link>
-        <button type="button" aria-label="Close navigation" onClick={() => setMobileOpen(false)} className="rounded-lg p-2 text-gray-400 hover:bg-white/10 hover:text-white lg:hidden">
-          <X className="h-5 w-5" />
-        </button>
-        </div>
       </div>
 
       {/* Nav */}
@@ -126,7 +93,13 @@ export default function Sidebar({ role, activeTab, onTabChange, title, items, ba
           return (
             <button
               key={item.name}
-              onClick={() => selectItem(item)}
+              onClick={() => {
+                if (onTabChange) {
+                  onTabChange(item.id);
+                } else if (item.path !== '#') {
+                  navigate(item.path);
+                }
+              }}
               className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold transition-all ${
                 isActive 
                   ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' 
@@ -164,6 +137,5 @@ export default function Sidebar({ role, activeTab, onTabChange, title, items, ba
         </button>
       </div>
     </aside>
-    </>
   );
 }

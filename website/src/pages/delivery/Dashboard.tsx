@@ -305,23 +305,13 @@ export default function DeliveryDashboard() {
 
                   {/* Action Buttons */}
                   <div className="pt-4 flex flex-col gap-3">
-                    {activeOrder.status === 'rider_assigned' && (
+                    {activeOrder.status === 'ready_for_pickup' && (
                       <button 
-                        onClick={() => updateOrderStatus('picked_up')}
-                        disabled={actionLoading}
-                        className="w-full bg-brand-primary hover:bg-brand-secondary text-white font-black py-4 rounded-xl text-lg shadow-lg disabled:opacity-50"
-                      >
-                        {actionLoading ? 'Updating...' : 'Arrived and Picked Up'}
-                      </button>
-                    )}
-
-                    {activeOrder.status === 'picked_up' && (
-                      <button
                         onClick={() => updateOrderStatus('out_for_delivery')}
                         disabled={actionLoading}
                         className="w-full bg-brand-primary hover:bg-brand-secondary text-white font-black py-4 rounded-xl text-lg shadow-lg disabled:opacity-50"
                       >
-                        {actionLoading ? 'Updating...' : 'Start Delivery'}
+                        {actionLoading ? 'Updating...' : 'Confirm Pickup'}
                       </button>
                     )}
                     

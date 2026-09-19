@@ -222,7 +222,7 @@ function ItemModal({ isOpen, onClose, onSave, categories, existingItem, defaultC
 
           {/* Price + Prep Time */}
           {/* Price, Prep Time, Stock */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1.5">Price (₹) <span className="text-red-500">*</span></label>
               <input type="number" required min="0" step="0.01" placeholder="0.00"

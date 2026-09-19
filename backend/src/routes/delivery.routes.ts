@@ -205,7 +205,7 @@ router.get('/orders/active', async (req: Request, res: Response) => {
     const order = await prisma.order.findFirst({
       where: {
         delivery_partner_id: partnerId,
-        status: { in: ['rider_assigned', 'picked_up', 'out_for_delivery'] }
+        status: { in: ['restaurant_confirmed', 'preparing', 'ready', 'out_for_delivery'] }
       },
       include: {
         restaurant: { select: { name: true, address_line: true, city: true, phone: true } },
@@ -237,7 +237,7 @@ router.post('/orders/:id/accept', async (req: Request, res: Response) => {
     const [updatedOrder] = await prisma.$transaction([
       prisma.order.update({
         where: { id },
-        data: { delivery_partner_id: partnerId, status: 'rider_assigned' }
+        data: { delivery_partner_id: partnerId, status: 'out_for_delivery' }
       }),
       prisma.deliveryAssignment.create({
         data: {
@@ -273,16 +273,6 @@ router.patch('/orders/:id/status', async (req: Request, res: Response) => {
 
     if (!order) {
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found or not assigned to you' } });
-    }
-
-    const allowedTransitions: Record<string, string[]> = {
-      rider_assigned: ['picked_up'],
-      picked_up: ['out_for_delivery'],
-      out_for_delivery: ['delivered'],
-    };
-    if (!allowedTransitions[order.status]?.includes(status)) {
-      res.status(400).json({ success: false, error: { code: 'INVALID_TRANSITION', message: `Cannot change delivery from ${order.status} to ${status}` } });
-      return;
     }
 
     if (status === 'delivered') {
