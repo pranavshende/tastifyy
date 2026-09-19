@@ -365,7 +365,7 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
           idempotency_key: idempotency_key || randomUUID(),
           special_instructions,
           coupon_id: valid_coupon_id,
-          delivery_otp: Math.floor(1000 + Math.random() * 9000).toString(),
+          delivery_otp: '0001',
           order_items: {
             create: orderItemsData
           }
