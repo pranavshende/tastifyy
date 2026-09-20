@@ -421,8 +421,17 @@ export default function Checkout() {
                 {cart.items.map((item) => (
                   <div key={item.menu_item_id} className="flex justify-between items-start group">
                     <div className="flex items-start gap-4">
-                      <div className="w-8 h-8 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center font-bold text-brand-primary shrink-0">
-                        {item.quantity}
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="w-20 h-9 rounded-lg bg-white border border-gray-200 flex items-center justify-between font-bold text-brand-primary shrink-0 overflow-hidden shadow-sm">
+                          <button onClick={() => cart.updateQuantity(item.menu_item_id, item.quantity - 1)} className="w-1/3 h-full flex items-center justify-center hover:bg-gray-50 transition-colors text-gray-500">
+                            -
+                          </button>
+                          <span className="text-sm">{item.quantity}</span>
+                          <button onClick={() => cart.updateQuantity(item.menu_item_id, item.quantity + 1)} className="w-1/3 h-full flex items-center justify-center hover:bg-gray-50 transition-colors text-gray-500">
+                            +
+                          </button>
+                        </div>
+                        <button onClick={() => cart.removeItem(item.menu_item_id)} className="text-[10px] text-gray-400 hover:text-red-500 font-bold uppercase underline decoration-gray-300 underline-offset-2">Remove</button>
                       </div>
                       <div>
                         <h4 className="font-bold text-gray-900 text-lg group-hover:text-brand-primary transition-colors">{item.name}</h4>

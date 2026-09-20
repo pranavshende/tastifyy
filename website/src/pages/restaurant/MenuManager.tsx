@@ -310,6 +310,7 @@ export default function MenuManager() {
   const [activeCatId, setActiveCatId] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const [newCatName, setNewCatName] = useState('');
 
@@ -534,7 +535,7 @@ export default function MenuManager() {
                             </div>
 
                             {/* Controls */}
-                            <div className="flex items-center gap-3 shrink-0">
+                            <div className="flex items-center gap-3 shrink-0 relative">
                               <div className="flex items-center gap-2">
                                 <span className={`text-[10px] font-bold uppercase hidden sm:block ${item.is_available ? 'text-green-500' : 'text-gray-400'}`}>
                                   {item.is_available ? 'IN STOCK' : 'OUT'}
@@ -548,19 +549,40 @@ export default function MenuManager() {
                               </div>
                               <button
                                 onClick={() => openEditItem(item)}
-                                className="p-2 text-gray-400 hover:text-brand-primary transition-colors opacity-0 group-hover:opacity-100"
+                                className="p-2 text-gray-400 hover:text-brand-primary transition-colors hidden sm:block opacity-0 group-hover:opacity-100"
                               >
                                 <Edit2 className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleDeleteItem(item.id)}
-                                className="p-2 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                className="p-2 text-gray-400 hover:text-red-500 transition-colors hidden sm:block opacity-0 group-hover:opacity-100"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
-                              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                                <MoreVertical className="w-4 h-4" />
+                              
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === item.id ? null : item.id); }}
+                                className="p-3 -m-1 text-gray-400 hover:text-gray-600 transition-colors sm:hidden relative z-20"
+                              >
+                                <MoreVertical className="w-5 h-5" />
                               </button>
+
+                              {openMenuId === item.id && (
+                                <>
+                                  <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpenMenuId(null); }}></div>
+                                  <div className="absolute right-2 top-12 bg-white border border-gray-100 shadow-xl rounded-xl overflow-hidden z-20 w-44 sm:hidden">
+                                    <button onClick={() => { toggleItemAvailability(item.id, item.is_available); setOpenMenuId(null); }} className="w-full text-left px-4 py-3.5 text-sm font-bold text-gray-700 hover:bg-gray-50 border-b border-gray-50 flex items-center">
+                                      {item.is_available ? 'Mark Out of Stock' : 'Mark In Stock'}
+                                    </button>
+                                    <button onClick={() => { openEditItem(item); setOpenMenuId(null); }} className="w-full text-left px-4 py-3.5 text-sm font-bold text-brand-primary hover:bg-gray-50 border-b border-gray-50 flex items-center">
+                                      <Edit2 className="w-4 h-4 mr-3" /> Edit Item
+                                    </button>
+                                    <button onClick={() => { handleDeleteItem(item.id); setOpenMenuId(null); }} className="w-full text-left px-4 py-3.5 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center">
+                                      <Trash2 className="w-4 h-4 mr-3" /> Delete Item
+                                    </button>
+                                  </div>
+                                </>
+                              )}
                             </div>
                           </div>
                         );

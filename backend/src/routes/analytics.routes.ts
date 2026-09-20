@@ -83,7 +83,7 @@ router.get('/restaurant', authorizeRole(['restaurant_partner']), async (req: Req
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const [todayOrders, weekOrders, monthOrders, topItems, recentForChart] = await Promise.all([
+    const [todayOrders, weekOrders, monthOrders, topItems, recentForChart, allTimeStats, totalOrdersCount, cancelledOrdersCount, pendingOrdersCount] = await Promise.all([
       prisma.order.findMany({
         where: { restaurant_id: partner.restaurant_id, status: 'delivered', created_at: { gte: todayStart } },
         select: { total_amount: true }
@@ -104,7 +104,15 @@ router.get('/restaurant', authorizeRole(['restaurant_partner']), async (req: Req
         where: { restaurant_id: partner.restaurant_id, status: 'delivered', created_at: { gte: sevenDaysAgo } },
         select: { total_amount: true, created_at: true },
         orderBy: { created_at: 'asc' }
-      })
+      }),
+      prisma.order.aggregate({
+        where: { restaurant_id: partner.restaurant_id, status: 'delivered' },
+        _sum: { total_amount: true },
+        _count: { id: true }
+      }),
+      prisma.order.count({ where: { restaurant_id: partner.restaurant_id } }),
+      prisma.order.count({ where: { restaurant_id: partner.restaurant_id, status: { in: ['cancelled', 'rejected'] } } }),
+      prisma.order.count({ where: { restaurant_id: partner.restaurant_id, status: { notIn: ['delivered', 'cancelled', 'rejected'] } } })
     ]);
 
     const dailyData: Record<string, { revenue: number; orders: number }> = {};
@@ -130,6 +138,12 @@ router.get('/restaurant', authorizeRole(['restaurant_partner']), async (req: Req
           today_orders: todayOrders.length,
           week_orders: weekOrders,
           month_revenue: monthOrders.reduce((s, o) => s + Number(o.total_amount), 0),
+          month_orders: monthOrders.length,
+          total_sales: Number(allTimeStats._sum.total_amount || 0),
+          total_orders: totalOrdersCount,
+          completed_orders: allTimeStats._count.id,
+          cancelled_orders: cancelledOrdersCount,
+          pending_orders: pendingOrdersCount
         },
         chartData: Object.keys(dailyData).sort().map(date => ({ date, ...dailyData[date] })),
         topItems: topItems.map(i => ({ name: i.name_snapshot, sold: i._sum.quantity || 0 }))

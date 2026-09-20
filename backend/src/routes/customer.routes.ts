@@ -340,7 +340,12 @@ router.patch('/addresses/:id/default', async (req: Request, res: Response) => {
 router.get('/restaurants', async (req: Request, res: Response) => {
   try {
     const restaurants = await prisma.restaurant.findMany({
-      where: { status: 'active' },
+      where: { 
+        status: 'active',
+        approval_status: 'approved',
+        account_status: 'active',
+        visibility_status: 'visible'
+      },
       select: {
         id: true,
         name: true,
@@ -386,7 +391,13 @@ router.get('/restaurants/:id/menu', async (req: Request, res: Response) => {
   const id = req.params.id as string;
   try {
     const restaurant = await prisma.restaurant.findUnique({
-      where: { id, status: 'active' },
+      where: { 
+        id, 
+        status: 'active',
+        approval_status: 'approved',
+        account_status: 'active',
+        visibility_status: 'visible'
+      },
       select: {
         id: true,
         name: true,
@@ -412,7 +423,7 @@ router.get('/restaurants/:id/menu', async (req: Request, res: Response) => {
       orderBy: { display_order: 'asc' },
       include: {
         menu_items: {
-          where: { is_available: true },
+          where: { is_available: true, is_deleted: false },
           orderBy: { name: 'asc' },
           include: {
             customizations: {

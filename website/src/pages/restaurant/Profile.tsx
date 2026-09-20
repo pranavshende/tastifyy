@@ -86,9 +86,9 @@ export default function RestaurantProfile() {
           avg_preparation_time_mins: r.avg_preparation_time_mins?.toString() || '',
           service_radius_km: r.service_radius_km?.toString() || '',
           is_open: r.is_open || false,
-          pan_number: r.pan_number || '',
-          bank_account_number: r.bank_account_number || '',
-          ifsc_code: r.ifsc_code || '',
+          pan_number: r.pan_number ? '••••••••••' : '',
+          bank_account_number: '', // Don't put actual value in state, keep it empty to show placeholder mask
+          ifsc_code: '', // Keep empty to show placeholder mask
           bank_beneficiary_name: r.bank_beneficiary_name || '',
         });
 
@@ -452,14 +452,14 @@ export default function RestaurantProfile() {
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Bank Account Number</label>
                 <input value={form.bank_account_number}
                        onChange={e => setForm(f => ({ ...f, bank_account_number: e.target.value }))}
-                       placeholder="Enter bank account number"
+                       placeholder={profile?.bank_account_number ? `••••••••${String(profile.bank_account_number).slice(-4)}` : "Enter bank account number"}
                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-medium focus:outline-none focus:border-brand-primary" />
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">IFSC Code</label>
                 <input value={form.ifsc_code} maxLength={11}
                        onChange={e => setForm(f => ({ ...f, ifsc_code: e.target.value.toUpperCase() }))}
-                       placeholder="e.g. HDFC0001234"
+                       placeholder={profile?.ifsc_code ? `${String(profile.ifsc_code).slice(0, 4)}•••••••` : "e.g. HDFC0001234"}
                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-medium uppercase focus:outline-none focus:border-brand-primary" />
               </div>
               {profile?.route_account_status && (

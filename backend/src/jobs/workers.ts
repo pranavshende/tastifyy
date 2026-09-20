@@ -131,10 +131,16 @@ export const payoutWorker = new Worker('delivery-payout', async (job) => {
 export const smsWorker = new Worker('sms', async (job) => {
   const { type, phone, otp, role } = job.data;
   console.log(`[SMS Worker] Sending ${type} OTP to ${phone}`);
+  
+  let success = false;
   if (type === 'auth') {
-    await sendOTP(phone, otp);
+    success = await sendOTP(phone, otp);
   } else if (type === 'delivery') {
-    await sendDeliveryOTP(phone, otp);
+    success = await sendDeliveryOTP(phone, otp);
+  }
+  
+  if (!success) {
+    throw new Error(`Failed to send SMS to ${phone} (type: ${type})`);
   }
 });
 

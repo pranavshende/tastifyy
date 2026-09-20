@@ -231,25 +231,26 @@ function RestaurantsTab() {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider ${
-                      r.status === 'active' ? 'bg-green-50 text-green-700 border border-green-200' :
-                      r.status === 'pending' ? 'bg-orange-50 text-orange-700 border border-orange-200' :
+                      r.approval_status === 'approved' ? 'bg-green-50 text-green-700 border border-green-200' :
+                      r.approval_status === 'pending' ? 'bg-orange-50 text-orange-700 border border-orange-200' :
+                      r.approval_status === 'suspended' ? 'bg-gray-100 text-gray-700 border border-gray-300' :
                       'bg-red-50 text-red-700 border border-red-200'
                     }`}>
-                      {r.status}
+                      {r.approval_status || r.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                      {r.status === 'pending' && (
+                      {(r.approval_status === 'pending' || !r.approval_status) && (
                         <>
                           <button onClick={() => handleAction(r.id, 'approve')} className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-green-700 shadow-sm shadow-green-600/20">Approve</button>
                           <button onClick={() => handleAction(r.id, 'reject')} className="bg-white border-2 border-red-100 text-red-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-red-50">Reject</button>
                         </>
                       )}
-                      {r.status === 'active' && (
+                      {r.approval_status === 'approved' && (
                         <button onClick={() => handleAction(r.id, 'suspend')} className="bg-white border-2 border-orange-100 text-orange-600 px-4 py-2 rounded-xl font-bold text-sm hover:bg-orange-50">Suspend</button>
                       )}
-                      {r.status === 'suspended' && (
+                      {r.approval_status === 'suspended' && (
                         <button onClick={() => handleAction(r.id, 'approve')} className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-green-700 shadow-sm shadow-green-600/20">Reactivate</button>
                       )}
                     </div>

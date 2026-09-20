@@ -86,7 +86,7 @@ router.get('/categories', async (req: Request, res: Response) => {
     const categories = await prisma.menuCategory.findMany({
       where: { restaurant_id },
       orderBy: { display_order: 'asc' },
-      include: { menu_items: { orderBy: { name: 'asc' } } }
+      include: { menu_items: { where: { is_deleted: false }, orderBy: { name: 'asc' } } }
     });
     // Convert image paths to public URLs
     const result = categories.map(cat => ({
@@ -166,7 +166,7 @@ router.get('/items', async (req: Request, res: Response) => {
   const restaurant_id = (req as any).restaurant_id;
   try {
     const items = await prisma.menuItem.findMany({
-      where: { restaurant_id },
+      where: { restaurant_id, is_deleted: false },
       include: { category: true },
       orderBy: { name: 'asc' }
     });
@@ -361,7 +361,10 @@ router.delete('/items/:id', async (req: Request, res: Response) => {
       await deleteFile(existing.image_url);
     }
 
-    await prisma.menuItem.delete({ where: { id: id as string } });
+    await prisma.menuItem.update({
+      where: { id: id as string },
+      data: { is_deleted: true }
+    });
     res.json({ success: true, message: 'Item deleted' });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to delete item' } });

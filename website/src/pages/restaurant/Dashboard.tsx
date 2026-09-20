@@ -8,6 +8,7 @@ export default function RestaurantDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [analytics, setAnalytics] = useState<any>(null);
 
   const fetchProfileStatus = async () => {
     try {
@@ -46,9 +47,21 @@ export default function RestaurantDashboard() {
     }
   };
 
+  const fetchAnalytics = async () => {
+    try {
+      const { data } = await api.get('/analytics/restaurant');
+      if (data.success) {
+        setAnalytics(data.data.kpis);
+      }
+    } catch (err) {
+      console.error('Failed to fetch analytics', err);
+    }
+  };
+
   useEffect(() => {
     fetchOrders();
     fetchProfileStatus();
+    fetchAnalytics();
 
     // WebSocket room is now joined inside fetchProfileStatus
 
@@ -102,7 +115,6 @@ export default function RestaurantDashboard() {
 
   // Stat calculation
   const totalActive = orders.length;
-  const totalSales = orders.reduce((sum, order) => sum + Number(order.total_amount), 0);
 
   const renderOrderCard = (order: any, actionButton: React.ReactNode) => (
     <div key={order.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 flex flex-col mb-3 hover:shadow-md transition-shadow">
@@ -176,31 +188,34 @@ export default function RestaurantDashboard() {
                 <p className="text-2xl font-black text-gray-900 leading-none">{totalActive}</p>
               </div>
             </div>
-          <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex items-center">
+            
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex items-center">
               <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center mr-4">
                 <ChefHat className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Preparing</p>
-                <p className="text-2xl font-black text-gray-900 leading-none">{preparingOrders.length}</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Completed</p>
+                <p className="text-2xl font-black text-gray-900 leading-none">{analytics?.completed_orders || 0}</p>
               </div>
             </div>
+            
             <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex items-center">
               <div className="w-12 h-12 bg-green-50 text-green-500 rounded-xl flex items-center justify-center mr-4">
-                <Check className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Ready</p>
-                <p className="text-2xl font-black text-gray-900 leading-none">{readyOrders.length}</p>
-              </div>
-            </div>
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex items-center">
-              <div className="w-12 h-12 bg-red-50 text-red-500 rounded-xl flex items-center justify-center mr-4">
                 <TrendingUp className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Today's Sales</p>
-                <p className="text-2xl font-black text-gray-900 leading-none">₹{totalSales.toFixed(0)}</p>
+                <p className="text-2xl font-black text-gray-900 leading-none">₹{analytics?.today_revenue || 0}</p>
+              </div>
+            </div>
+            
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex items-center">
+              <div className="w-12 h-12 bg-brand-primary/10 text-brand-primary rounded-xl flex items-center justify-center mr-4">
+                <Check className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Sales</p>
+                <p className="text-2xl font-black text-gray-900 leading-none">₹{analytics?.total_sales || 0}</p>
               </div>
             </div>
           </div>
