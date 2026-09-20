@@ -7,6 +7,7 @@ import { triggerPayout } from '../controllers/payment.controller.js';
 import { sendOTP, sendDeliveryOTP } from '../services/sms.service.js';
 import { sendPushNotification, createNotification } from '../services/notification.service.js';
 import { assignDeliveryPartner } from '../services/assignment.service.js';
+import { processWhatsAppAlert } from '../services/whatsapp.service.js';
 import type { Request, Response } from 'express'; // Mock req/res for triggerPayout if needed
 
 // Order Timeout Worker
@@ -148,6 +149,11 @@ export const notificationWorker = new Worker('notification', async (job) => {
   if (type === 'db_only' || type === 'both') {
     await createNotification(userId, userRole, 'system', title, body, data);
   }
+});
+
+// WhatsApp worker: failures are persisted and retried without affecting the order.
+export const whatsappWorker = new Worker('whatsapp-alert', async (job) => {
+  await processWhatsAppAlert(job.data.logId);
 });
 
 // Assignment Worker

@@ -185,6 +185,46 @@ router.put('/config', async (req, res) => {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to update config' } });
     }
 });
+// GET /admin/whatsapp-alerts - delivery audit trail for backup order alerts
+router.get('/whatsapp-alerts', async (req, res) => {
+    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10));
+    const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '50'), 10)));
+    try {
+        const [logs, total] = await Promise.all([
+            prisma.whatsAppNotificationLog.findMany({
+                skip: (page - 1) * limit,
+                take: limit,
+                orderBy: { created_at: 'desc' },
+                include: { order: { select: { id: true, created_at: true, restaurant: { select: { name: true } } } } }
+            }),
+            prisma.whatsAppNotificationLog.count()
+        ]);
+        res.json({ success: true, data: logs, total, page, limit });
+    }
+    catch (error) {
+        console.error('WhatsApp alert logs error:', error);
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch WhatsApp alert logs' } });
+    }
+});
+// PUT /admin/whatsapp-alerts/recipients - comma-separated E.164 or Indian mobile numbers
+router.put('/whatsapp-alerts/recipients', async (req, res) => {
+    const recipients = req.body?.recipients;
+    if (!Array.isArray(recipients) || recipients.length === 0 || recipients.some((phone) => !/^\+?\d{10,15}$/.test(String(phone)))) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'recipients must be non-empty mobile numbers' } });
+        return;
+    }
+    try {
+        const config = await prisma.adminConfig.upsert({
+            where: { key: 'WHATSAPP_ALERT_RECIPIENTS' },
+            update: { value: recipients.join(','), updated_by: req.user.id },
+            create: { key: 'WHATSAPP_ALERT_RECIPIENTS', value: recipients.join(','), description: 'Backup WhatsApp alert recipients', updated_by: req.user.id }
+        });
+        res.json({ success: true, data: config });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to update WhatsApp recipients' } });
+    }
+});
 // ─── PLATFORM METRICS ───────────────────────────────────────────────────────
 // GET /admin/dashboard — platform metrics
 router.get('/dashboard', async (_req, res) => {

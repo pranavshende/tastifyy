@@ -7,6 +7,7 @@ import crypto, { randomUUID } from 'crypto';
 import Razorpay from 'razorpay';
 import { scheduleOrderTimeout, cancelOrderTimeout, payoutQueue, smsQueue, assignmentQueue, notificationQueue, refundQueue } from '../jobs/queues.js';
 import { getLaunchDaySettings } from '../utils/launchDay.js';
+import { enqueueWhatsAppAlerts } from '../services/whatsapp.service.js';
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
     key_secret: process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_mock',
@@ -392,6 +393,13 @@ router.post('/', authorizeRole(['customer']), async (req, res) => {
             title: 'Order Placed', body: 'Your order has been sent to the restaurant.',
             data: { type: 'order_placed', orderId: order.id }
         });
+        // External WhatsApp calls happen in a worker and can never fail order creation.
+        try {
+            await enqueueWhatsAppAlerts(order.id);
+        }
+        catch (whatsappQueueError) {
+            console.error(`[WhatsApp] Failed to enqueue alerts for order ${order.id}:`, whatsappQueueError);
+        }
         const timeoutMins = parseInt(configMap['ORDER_ACCEPT_TIMEOUT_MINS'] || '5');
         await scheduleOrderTimeout(order.id, timeoutMins * 60 * 1000);
         res.status(201).json({ success: true, data: order });

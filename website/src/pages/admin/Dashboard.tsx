@@ -938,6 +938,8 @@ function AuditTab() {
         </div>
       </div>
 
+      <WhatsAppAlertsPanel />
+
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -1007,6 +1009,59 @@ function AuditTab() {
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function WhatsAppAlertsPanel() {
+  const [alerts, setAlerts] = useState<any[]>([]);
+
+  useEffect(() => {
+    api.get('/admin/whatsapp-alerts?limit=50')
+      .then(res => setAlerts(res.data.data || []))
+      .catch(console.error);
+  }, []);
+
+  return (
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+      <div className="px-6 py-5 border-b border-gray-100">
+        <h3 className="text-xl font-black text-gray-900">WhatsApp Order Alerts</h3>
+        <p className="text-sm text-gray-500 font-medium mt-1">Backup delivery status for every new order recipient.</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead className="bg-gray-50 text-gray-500 text-xs font-black uppercase tracking-wider">
+            <tr>
+              <th className="px-6 py-4">Order</th>
+              <th className="px-6 py-4">Restaurant</th>
+              <th className="px-6 py-4">Mobile</th>
+              <th className="px-6 py-4">Status</th>
+              <th className="px-6 py-4">Attempts</th>
+              <th className="px-6 py-4">Timestamp / Error</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {alerts.map(alert => (
+              <tr key={alert.id} className="hover:bg-gray-50/50">
+                <td className="px-6 py-4 text-sm font-bold text-gray-900">#{alert.order_id.slice(0, 8).toUpperCase()}</td>
+                <td className="px-6 py-4 text-sm font-medium text-gray-700">{alert.order?.restaurant?.name || 'Unknown'}</td>
+                <td className="px-6 py-4 text-sm font-medium text-gray-700">{alert.recipient_phone}</td>
+                <td className="px-6 py-4">
+                  <span className={`px-3 py-1 rounded-lg text-xs font-bold uppercase ${alert.status === 'sent' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    {alert.status === 'failed' ? 'WhatsApp Notification Failed' : alert.status}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-sm font-bold text-gray-700">{alert.attempts}</td>
+                <td className="px-6 py-4 text-xs text-gray-500">
+                  <div>{new Date(alert.sent_at || alert.updated_at || alert.created_at).toLocaleString()}</div>
+                  {alert.last_error && <div className="text-red-600 mt-1 max-w-xs truncate" title={alert.last_error}>{alert.last_error}</div>}
+                </td>
+              </tr>
+            ))}
+            {alerts.length === 0 && <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-400 font-bold">No WhatsApp alert logs yet.</td></tr>}
+          </tbody>
+        </table>
       </div>
     </div>
   );

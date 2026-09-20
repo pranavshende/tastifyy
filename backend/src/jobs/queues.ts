@@ -27,6 +27,9 @@ export const smsQueue = new Queue('sms');
 // Notification Queue: Handles Push Notifications (FCM) and DB Notifications
 export const notificationQueue = new Queue('notification');
 
+// WhatsApp order alerts: provider calls run in a worker.
+export const whatsappQueue = new Queue('whatsapp-alert');
+
 // Assignment Queue: Handles geospatial delivery partner assignment
 export const assignmentQueue = new Queue('assignment');
 
