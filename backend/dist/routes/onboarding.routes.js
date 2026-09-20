@@ -4,7 +4,6 @@ import { prisma } from '../utils/prisma.js';
 import multer from 'multer';
 import { uploadFile } from '../utils/storage.js';
 import { findRestaurantPartner } from '../utils/restaurantPartner.js';
-import { validateDeliveryPartnerInput } from '../utils/deliveryValidation.js';
 const router = Router();
 // Configure Multer for in-memory storage (5MB limit)
 const upload = multer({
@@ -176,11 +175,6 @@ router.post('/delivery', async (req, res) => {
     const user = req.user;
     const { vehicle_type, vehicle_number, vehicle_model, license_number, bank_account_number, ifsc_code, upi_id, availability_type, onboarding_step } = req.body;
     try {
-        const validationErrors = validateDeliveryPartnerInput({ ...req.body, name: user.name, phone: user.phone }, { onboarding: true });
-        if (validationErrors.length > 0) {
-            res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: validationErrors[0], details: validationErrors } });
-            return;
-        }
         const existing = await prisma.deliveryPartner.findFirst({ where: { user_id: user.id } });
         if (existing) {
             const updated = await prisma.deliveryPartner.update({

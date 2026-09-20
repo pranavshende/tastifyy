@@ -5,6 +5,7 @@ import { getPublicUrl, uploadFile, deleteFile, validateFile, generateFilename } 
 import multer from 'multer';
 import Razorpay from 'razorpay';
 import { refundQueue } from '../jobs/queues.js';
+import { getLaunchDaySettings } from '../utils/launchDay.js';
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
     key_secret: process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_mock',
@@ -130,6 +131,29 @@ router.get('/config', async (_req, res) => {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch config' } });
     }
 });
+router.get('/launch-status', async (_req, res) => {
+    try {
+        const [settings, todayStart] = await Promise.all([
+            getLaunchDaySettings(),
+            Promise.resolve(new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })))
+        ]);
+        todayStart.setHours(0, 0, 0, 0);
+        const statuses = ['pending', 'restaurant_confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'];
+        const counts = await Promise.all(statuses.map(status => prisma.order.count({ where: { status, created_at: { gte: todayStart } } })));
+        res.json({
+            success: true,
+            data: {
+                ...settings,
+                realTimeSystemActive: true,
+                todayOrders: counts.reduce((sum, value) => sum + value, 0),
+                statusCounts: Object.fromEntries(statuses.map((status, index) => [status, counts[index]]))
+            }
+        });
+    }
+    catch {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to load launch status' } });
+    }
+});
 // PUT /admin/config
 router.put('/config', async (req, res) => {
     const adminId = req.user.id;
@@ -165,7 +189,7 @@ router.put('/config', async (req, res) => {
 // GET /admin/dashboard — platform metrics
 router.get('/dashboard', async (_req, res) => {
     try {
-        const [totalUsers, totalRestaurants, activeRestaurants, pendingRestaurants, totalDeliveryPartners, pendingDeliveryPartners, totalOrders, openComplaints,] = await Promise.all([
+        const [totalUsers, totalRestaurants, activeRestaurants, pendingRestaurants, totalDeliveryPartners, pendingDeliveryPartners, totalOrders, openComplaints, launchSettings,] = await Promise.all([
             prisma.user.count(),
             prisma.restaurant.count(),
             prisma.restaurant.count({ where: { status: 'active' } }),
@@ -174,6 +198,7 @@ router.get('/dashboard', async (_req, res) => {
             prisma.deliveryPartner.count({ where: { status: 'pending' } }),
             prisma.order.count(),
             prisma.supportTicket.count({ where: { status: 'open' } }),
+            getLaunchDaySettings(),
         ]);
         res.json({
             success: true,
@@ -186,6 +211,7 @@ router.get('/dashboard', async (_req, res) => {
                 pendingDeliveryPartners,
                 totalOrders,
                 openComplaints,
+                launchSettings,
             }
         });
     }

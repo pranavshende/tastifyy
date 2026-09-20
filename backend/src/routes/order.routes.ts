@@ -7,6 +7,7 @@ import type { Request, Response } from 'express';
 import crypto, { randomUUID } from 'crypto';
 import Razorpay from 'razorpay';
 import { scheduleOrderTimeout, cancelOrderTimeout, payoutQueue, smsQueue, assignmentQueue, notificationQueue, refundQueue } from '../jobs/queues.js';
+import { getLaunchDaySettings } from '../utils/launchDay.js';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
@@ -17,6 +18,16 @@ const router = Router();
 
 // Apply auth to all order routes
 router.use(authenticate);
+
+// Checkout clients use this endpoint for display only; order creation re-checks these settings server-side.
+router.get('/checkout-config', authorizeRole(['customer']), async (_req: Request, res: Response) => {
+  try {
+    const settings = await getLaunchDaySettings();
+    res.json({ success: true, data: settings });
+  } catch {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to load checkout settings' } });
+  }
+});
 
 // ─── CUSTOMER ROUTES ─────────────────────────────────────────────────────────
 
@@ -88,6 +99,21 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
     if (!restaurant_id || !Array.isArray(items) || items.length === 0) {
       res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Restaurant and at least one item are required.' } });
       return;
+    }
+
+    if (idempotency_key) {
+      const existingOrder = await prisma.order.findUnique({
+        where: { idempotency_key },
+        include: { restaurant: true, order_items: true, delivery_address: true }
+      });
+      if (existingOrder) {
+        if (existingOrder.customer_id !== user.id) {
+          res.status(409).json({ success: false, error: { code: 'DUPLICATE_ORDER', message: 'Order already exists' } });
+          return;
+        }
+        res.status(200).json({ success: true, data: existingOrder, idempotent: true });
+        return;
+      }
     }
     let address;
     if (req.body.delivery_address_id) {
@@ -220,14 +246,14 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
     
     const platform_fee = Math.min(configMap['PLATFORM_FEE'] || 5.0, 5.0);
     
-    // Distance-based affordable launch delivery fee
+    const launchSettings = await getLaunchDaySettings();
     let calculated_delivery_fee = 20;
     if (distanceKm > 2 && distanceKm <= 5) {
       calculated_delivery_fee = 22;
     } else if (distanceKm > 5) {
       calculated_delivery_fee = 25;
     }
-    const delivery_fee = Math.min(calculated_delivery_fee, 25);
+    const delivery_fee = launchSettings.freeDeliveryEnabled ? 0 : Math.min(calculated_delivery_fee, 25);
     const tax_amount = item_subtotal * 0.02;
     let total_amount = item_subtotal + delivery_fee + platform_fee + tax_amount;
     let discount_amount = 0;
@@ -273,6 +299,10 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
     restaurant_transfer = Math.max(0, restaurant_transfer);
 
     if (payment_method && payment_method !== 'cod') {
+      if (!launchSettings.onlinePaymentEnabled) {
+        res.status(400).json({ success: false, error: { code: 'ONLINE_PAYMENT_DISABLED', message: 'Online Payment: OFF - Launch Day. Please select Cash on Delivery.' } });
+        return;
+      }
       const restaurant = await prisma.restaurant.findUnique({ where: { id: restaurant_id } });
       const transfers: any[] = [];
       let isTransferReady = false;
@@ -365,7 +395,7 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
           idempotency_key: idempotency_key || randomUUID(),
           special_instructions,
           coupon_id: valid_coupon_id,
-          delivery_otp: '0001',
+          delivery_otp: Math.floor(1000 + Math.random() * 9000).toString(),
           order_items: {
             create: orderItemsData
           }

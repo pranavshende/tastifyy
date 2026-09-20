@@ -5,7 +5,6 @@ import { getIO } from '../socket.js';
 import { assignmentQueue } from '../jobs/queues.js';
 import { getPublicUrl, uploadFile, deleteFile, validateFile, generateFilename } from '../services/storage.service.js';
 import multer from 'multer';
-import { validateDeliveryPartnerInput } from '../utils/deliveryValidation.js';
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 },
@@ -41,10 +40,9 @@ router.get('/profile', async (req, res) => {
     }
 });
 router.put('/profile', async (req, res) => {
-    const { name, phone, email, vehicle_type, vehicle_number, vehicle_model, license_number, bank_account_number, ifsc_code, upi_id } = req.body;
-    const validationErrors = validateDeliveryPartnerInput(req.body, { onboarding: true });
-    if (validationErrors.length > 0) {
-        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: validationErrors[0], details: validationErrors } });
+    const { name, phone, email, vehicle_type, vehicle_number, vehicle_model, bank_account_number, ifsc_code, upi_id } = req.body;
+    if (!name || !phone) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Name and phone are required' } });
         return;
     }
     try {
@@ -56,7 +54,7 @@ router.put('/profile', async (req, res) => {
         });
         const updated = await prisma.deliveryPartner.update({
             where: { id: partner.id },
-            data: { name, phone, email, vehicle_type, vehicle_number, vehicle_model, license_number, bank_account_number, ifsc_code, upi_id }
+            data: { name, phone, email, vehicle_type, vehicle_number, vehicle_model, bank_account_number, ifsc_code, upi_id }
         });
         updated.profile_photo_url = getPublicUrl(updated.profile_photo_url);
         res.json({ success: true, data: updated });
@@ -160,6 +158,7 @@ router.get('/orders/available', async (req, res) => {
         const partner = await getPartner(req.user.id);
         if (!partner)
             return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not a delivery partner' } });
+        const partnerId = partner.id;
         const orders = await prisma.order.findMany({
             where: {
                 status: { in: ['restaurant_confirmed', 'preparing', 'ready'] },
@@ -167,11 +166,9 @@ router.get('/orders/available', async (req, res) => {
             },
             include: {
                 restaurant: { select: { name: true, address_line: true, city: true, phone: true } },
-                delivery_address: { select: { address_line: true, city: true, latitude: true, longitude: true } },
-                customer: { select: { name: true, phone: true } },
+                delivery_address: true,
             },
-            orderBy: { created_at: 'asc' },
-            take: 20,
+            orderBy: { created_at: 'asc' }
         });
         res.json({ success: true, data: orders });
     }
@@ -189,13 +186,12 @@ router.get('/orders/active', async (req, res) => {
         const order = await prisma.order.findFirst({
             where: {
                 delivery_partner_id: partnerId,
-                status: { in: ['rider_assigned', 'picked_up', 'out_for_delivery'] }
+                status: { in: ['restaurant_confirmed', 'preparing', 'ready', 'out_for_delivery'] }
             },
             include: {
                 restaurant: { select: { name: true, address_line: true, city: true, phone: true } },
                 delivery_address: true,
-                customer: { select: { name: true, phone: true } },
-                order_items: true,
+                customer: { select: { name: true, phone: true } }
             }
         });
         res.json({ success: true, data: order }); // order can be null
@@ -213,52 +209,29 @@ router.post('/orders/:id/accept', async (req, res) => {
         const partnerId = partner.id;
         const id = req.params.id;
         // Ensure it's not already assigned
-        if (partner.status !== 'active' || !partner.is_online) {
-            return res.status(409).json({ success: false, error: { code: 'RIDER_UNAVAILABLE', message: 'Go online with an active rider profile before accepting orders.' } });
+        const order = await prisma.order.findUnique({ where: { id } });
+        if (!order || order.delivery_partner_id) {
+            return res.status(400).json({ success: false, error: { code: 'UNAVAILABLE', message: 'Order is no longer available' } });
         }
-        const updatedOrder = await prisma.$transaction(async (tx) => {
-            const claimed = await tx.order.updateMany({
-                where: {
-                    id,
-                    delivery_partner_id: null,
-                    status: { in: ['restaurant_confirmed', 'preparing', 'ready'] },
-                },
-                data: { delivery_partner_id: partnerId, status: 'rider_assigned' },
-            });
-            if (claimed.count !== 1) {
-                throw Object.assign(new Error('Order is no longer available'), { code: 'UNAVAILABLE' });
-            }
-            const assignment = await tx.deliveryAssignment.create({
+        const [updatedOrder] = await prisma.$transaction([
+            prisma.order.update({
+                where: { id },
+                data: { delivery_partner_id: partnerId, status: 'out_for_delivery' }
+            }),
+            prisma.deliveryAssignment.create({
                 data: {
                     order_id: id,
                     partner_id: partnerId,
                     status: 'accepted',
-                    earning_amount: 30.00,
+                    earning_amount: 30.00, // MVP flat earning
                     pickup_distance_km: 2.5,
                     delivery_distance_km: 4.2
                 }
-            });
-            const order = await tx.order.findUniqueOrThrow({ where: { id } });
-            return { order, assignment };
-        });
-        const io = getIO();
-        io.to(`delivery_partner_${req.user.id}`).emit('delivery:accepted', {
-            orderId: id,
-            status: 'rider_assigned',
-        });
-        const assignmentPayload = { orderId: id, status: 'rider_assigned', partnerId };
-        io.to(`customer_${updatedOrder.order.customer_id}`).emit('order:rider_assigned', assignmentPayload);
-        io.to(`restaurant_${updatedOrder.order.restaurant_id}`).emit('order:rider_assigned', assignmentPayload);
-        io.to('admin').emit('order:rider_assigned', assignmentPayload);
-        res.json({ success: true, data: updatedOrder.order });
+            })
+        ]);
+        res.json({ success: true, data: updatedOrder });
     }
     catch (error) {
-        if (error.code === 'UNAVAILABLE') {
-            return res.status(409).json({ success: false, error: { code: 'UNAVAILABLE', message: error.message } });
-        }
-        if (error.code === 'P2002') {
-            return res.status(409).json({ success: false, error: { code: 'UNAVAILABLE', message: 'Order was accepted by another rider.' } });
-        }
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to accept order' } });
     }
 });
@@ -272,54 +245,30 @@ router.patch('/orders/:id/status', async (req, res) => {
             return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not a delivery partner' } });
         // Ensure the order is assigned to this partner
         const order = await prisma.order.findFirst({
-            where: { id, delivery_partner_id: partner.id },
-            include: { customer: true, restaurant: true }
+            where: { id, delivery_partner_id: partner.id }
         });
         if (!order) {
             return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found or not assigned to you' } });
         }
-        const allowedTransitions = {
-            rider_assigned: ['picked_up'],
-            picked_up: ['out_for_delivery'],
-            out_for_delivery: ['delivered'],
-        };
-        if (!allowedTransitions[order.status]?.includes(status)) {
-            res.status(400).json({ success: false, error: { code: 'INVALID_TRANSITION', message: `Cannot change delivery from ${order.status} to ${status}` } });
-            return;
-        }
         if (status === 'delivered') {
-            if (String(otp) !== '0001') {
+            if (!otp || String(otp) !== order.delivery_otp) {
                 return res.status(400).json({ success: false, error: { code: 'INVALID_OTP', message: 'Invalid or missing delivery OTP' } });
             }
         }
-        const updatedOrder = await prisma.$transaction(async (tx) => {
-            const changed = await tx.order.updateMany({
-                where: { id, delivery_partner_id: partner.id, status: order.status },
-                data: { status },
-            });
-            if (changed.count !== 1) {
-                throw Object.assign(new Error('Order status was already updated'), { code: 'STALE_STATUS' });
-            }
-            if (status === 'delivered') {
-                await tx.deliveryAssignment.update({
-                    where: { order_id: id },
-                    data: { status: 'delivered' }
-                });
-            }
-            return tx.order.findUniqueOrThrow({ where: { id } });
+        const updatedOrder = await prisma.order.update({
+            where: { id },
+            data: { status }
         });
-        const io = getIO();
-        const statusPayload = { orderId: id, status, riderId: req.user.id };
-        io.to(`customer_${order.customer_id}`).emit(`order:${status}`, statusPayload);
-        io.to(`restaurant_${order.restaurant_id}`).emit(`order:${status}`, statusPayload);
-        io.to('admin').emit(`order:${status}`, statusPayload);
+        // If delivered, update assignment status
+        if (status === 'delivered') {
+            await prisma.deliveryAssignment.update({
+                where: { order_id: id },
+                data: { status: 'delivered' }
+            });
+        }
         res.json({ success: true, data: updatedOrder });
     }
     catch (error) {
-        if (error.code === 'STALE_STATUS') {
-            res.status(409).json({ success: false, error: { code: 'STALE_STATUS', message: 'Order status was already updated. Refresh the delivery.' } });
-            return;
-        }
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to update order status' } });
     }
 });

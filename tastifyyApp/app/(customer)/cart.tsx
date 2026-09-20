@@ -9,7 +9,8 @@ import { RAZORPAY_KEY_ID } from '../../constants/config';
 
 export default function CartScreen() {
   const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'card'>('card');
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'card'>('cod');
+  const [launchSettings, setLaunchSettings] = useState<any>(null);
   const [addresses, setAddresses] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   
@@ -19,7 +20,7 @@ export default function CartScreen() {
   const clearCart = useCartStore(state => state.clearCart);
   
   const itemTotal = useCartStore(state => state.getTotal());
-  const deliveryFee = 20;
+  const deliveryFee = launchSettings?.freeDeliveryEnabled === false ? 20 : 0;
   const platformFee = 5;
   const taxAmount = itemTotal * 0.02;
   const [couponCode, setCouponCode] = useState('');
@@ -61,6 +62,7 @@ export default function CartScreen() {
   };
 
   useEffect(() => {
+    api.get('/orders/checkout-config').then(res => setLaunchSettings(res.data.data)).catch(() => undefined);
     const fetchAddresses = async () => {
       try {
         const res = await api.get('/customer/addresses');
@@ -271,6 +273,15 @@ export default function CartScreen() {
 
         <View style={styles.billCard}>
           <Text style={styles.billTitle}>Bill Details</Text>
+
+          {launchSettings?.launchDayActive && (
+            <View style={styles.launchOffer}>
+              <Text style={styles.launchOfferTitle}>🎉 LAUNCH DAY OFFER</Text>
+              <Text style={styles.launchOfferText}>FREE DELIVERY TODAY</Text>
+              <Text style={styles.launchOfferText}>Online Payment: Currently Unavailable</Text>
+              <Text style={styles.launchOfferText}>Available Payment: Cash on Delivery</Text>
+            </View>
+          )}
           
           <View style={styles.billRow}>
             <Text style={styles.billLabel}>Item Total</Text>
@@ -302,7 +313,7 @@ export default function CartScreen() {
 
         <View style={styles.paymentCard}>
           <Text style={styles.billTitle}>Payment Method</Text>
-          <TouchableOpacity 
+          {launchSettings?.onlinePaymentEnabled !== false && <TouchableOpacity 
             style={[styles.codRow, paymentMethod === 'card' && styles.radioSelected]} 
             onPress={() => setPaymentMethod('card')}
             activeOpacity={0.9}
@@ -317,7 +328,7 @@ export default function CartScreen() {
             <View style={[styles.radioActive, paymentMethod !== 'card' && styles.radioInactive]}>
               {paymentMethod === 'card' && <View style={styles.radioInner} />}
             </View>
-          </TouchableOpacity>
+          </TouchableOpacity>}
           <View style={{ height: 16 }} />
           <TouchableOpacity 
             style={[styles.codRow, paymentMethod === 'cod' && styles.radioSelected]} 
@@ -419,6 +430,9 @@ const styles = StyleSheet.create({
   removeCouponBtn: { color: '#EF4444', fontWeight: '800', fontSize: 12 },
 
   billCard: { backgroundColor: '#fff', borderRadius: 24, padding: 20, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, elevation: 3 },
+  launchOffer: { backgroundColor: '#FFF4E8', borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#FFD5A8' },
+  launchOfferTitle: { color: '#A84B00', fontSize: 14, fontWeight: '900', marginBottom: 4 },
+  launchOfferText: { color: '#7A450F', fontSize: 12, fontWeight: '700', marginTop: 2 },
   billRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 },
   billLabel: { fontSize: 14, color: '#555', fontWeight: '600' },
   billValue: { fontSize: 14, color: '#171717', fontWeight: '800' },

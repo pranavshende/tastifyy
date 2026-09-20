@@ -216,10 +216,10 @@ export default function RestaurantDashboard() {
             <AlertCircle className="w-6 h-6 mr-3" /> {typeof error === 'object' ? (error as any).message || JSON.stringify(error) : String(error)}
           </div>
         ) : (
-          <div className="flex-1 flex flex-col lg:flex-row gap-6 overflow-y-auto lg:overflow-x-auto pb-4 scrollbar-hide snap-y lg:snap-x">
+          <div className="flex-1 flex gap-6 overflow-x-auto pb-4 scrollbar-hide snap-x">
             
             {/* Column 1: New / Confirmed */}
-            <div className="bg-gray-100/60 rounded-2xl p-3 flex flex-col w-full lg:min-w-[300px] lg:max-w-[320px] snap-start border border-gray-200">
+            <div className="bg-gray-100/60 rounded-2xl p-3 flex flex-col min-w-[300px] max-w-[320px] snap-start border border-gray-200">
               <div className="flex items-center justify-between mb-3 px-1">
                 <h2 className="text-sm font-black text-gray-900 flex items-center">
                   <div className="w-2.5 h-2.5 bg-blue-500 rounded-full mr-2"></div>
@@ -257,7 +257,7 @@ export default function RestaurantDashboard() {
             </div>
 
             {/* Column 2: Preparing */}
-            <div className="bg-gray-100/60 rounded-2xl p-3 flex flex-col w-full lg:min-w-[300px] lg:max-w-[320px] snap-start border border-gray-200">
+            <div className="bg-gray-100/60 rounded-2xl p-3 flex flex-col min-w-[300px] max-w-[320px] snap-start border border-gray-200">
               <div className="flex items-center justify-between mb-3 px-1">
                 <h2 className="text-sm font-black text-gray-900 flex items-center">
                   <div className="w-2.5 h-2.5 bg-purple-500 rounded-full mr-2"></div>
@@ -288,7 +288,7 @@ export default function RestaurantDashboard() {
             </div>
 
             {/* Column 3: Ready */}
-            <div className="bg-[#F8F9FA] rounded-2xl p-4 flex flex-col w-full lg:min-w-[320px] lg:max-w-[340px] snap-start border border-gray-200 shadow-sm">
+            <div className="bg-[#F8F9FA] rounded-2xl p-4 flex flex-col min-w-[320px] max-w-[340px] snap-start border border-gray-200 shadow-sm">
               <div className="flex items-center justify-between mb-4 px-1">
                 <h2 className="text-xs font-black text-gray-900 flex items-center">
                   <div className="w-2.5 h-2.5 bg-green-500 rounded-full mr-2"></div>

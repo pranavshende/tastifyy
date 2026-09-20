@@ -48,10 +48,12 @@ export default function Checkout() {
   const [isAddressConfirmed, setIsAddressConfirmed] = useState(false);
   
   const [profile, setProfile] = useState<any>(null);
+  const [launchSettings, setLaunchSettings] = useState<any>(null);
 
   useEffect(() => {
     fetchAddresses();
     fetchProfile();
+    api.get('/orders/checkout-config').then(res => setLaunchSettings(res.data.data)).catch(() => undefined);
   }, []);
 
   const fetchProfile = async () => {
@@ -77,7 +79,10 @@ export default function Checkout() {
     }
   };
 
-  const totals = cart.getTotals();
+  const rawTotals = cart.getTotals();
+  const totals = launchSettings?.freeDeliveryEnabled
+    ? { ...rawTotals, deliveryFee: 0, totalAmount: rawTotals.totalAmount - rawTotals.deliveryFee }
+    : rawTotals;
   const grandTotal = Math.max(0, totals.totalAmount - (appliedCoupon?.discountAmount || 0));
 
   const handleAddAddress = async (e: React.FormEvent) => {
@@ -307,6 +312,14 @@ export default function Checkout() {
       
       <main className="max-w-5xl mx-auto px-4 sm:px-6 w-full py-8">
         <h1 className="text-2xl font-black text-gray-900 mb-6">Checkout</h1>
+
+        {launchSettings?.launchDayActive && (
+          <div className="mb-6 rounded-xl border border-orange-200 bg-orange-50 p-4 text-orange-900">
+            <div className="font-black">🎉 LAUNCH DAY OFFER</div>
+            <div className="font-bold">FREE DELIVERY TODAY</div>
+            <div className="text-sm mt-1">Online Payment: Currently Unavailable · Available Payment: Cash on Delivery</div>
+          </div>
+        )}
         
         {error && (
           <div className="mb-6 bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 font-bold flex items-center justify-between">
@@ -508,7 +521,7 @@ export default function Checkout() {
                   { id: 'card', icon: <CreditCard />, label: 'Credit / Debit Card', desc: 'Visa, Mastercard, RuPay' },
                   { id: 'net_banking', icon: <Landmark />, label: 'Net Banking', desc: 'All Indian banks supported' },
                   { id: 'wallet', icon: <Wallet />, label: 'Wallets', desc: 'Paytm, Amazon Pay, Mobikwik' }
-                ].map((method) => (
+                ].filter(method => method.id === 'cod' || launchSettings?.onlinePaymentEnabled !== false).map((method) => (
                   <label 
                     key={method.id} 
                     className={`flex items-center p-4 border-2 rounded-2xl cursor-pointer transition-all ${

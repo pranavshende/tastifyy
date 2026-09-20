@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/axios';
-import { User, Phone, Mail, Truck, Save, Loader2, AlertCircle, Hash, Building2, BadgeCheck } from 'lucide-react';
+import { User, Phone, Mail, Truck, Save, Loader2, AlertCircle, Hash, Building2 } from 'lucide-react';
 import { ImageUploadButton } from '../../components/ui/ImageUploadButton';
 
 export default function DeliveryProfile() {
@@ -17,8 +17,6 @@ export default function DeliveryProfile() {
     email: '',
     vehicle_type: '',
     vehicle_number: '',
-    vehicle_model: '',
-    license_number: '',
     bank_account_number: '',
     ifsc_code: '',
     upi_id: '',
@@ -39,8 +37,6 @@ export default function DeliveryProfile() {
         email: data.email || '',
         vehicle_type: data.vehicle_type || '',
         vehicle_number: data.vehicle_number || '',
-        vehicle_model: data.vehicle_model || '',
-        license_number: data.license_number || '',
         bank_account_number: data.bank_account_number || '',
         ifsc_code: data.ifsc_code || '',
         upi_id: data.upi_id || '',
@@ -64,8 +60,6 @@ export default function DeliveryProfile() {
         email: profile.email,
         vehicle_type: profile.vehicle_type,
         vehicle_number: profile.vehicle_number,
-        vehicle_model: profile.vehicle_model,
-        license_number: profile.license_number,
         bank_account_number: profile.bank_account_number,
         ifsc_code: profile.ifsc_code,
         upi_id: profile.upi_id
@@ -167,32 +161,6 @@ export default function DeliveryProfile() {
                     value={profile.name}
                     onChange={e => setProfile({...profile, name: e.target.value})}
                     className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-                    <Truck className="w-4 h-4 text-gray-400" />
-                    Vehicle Model
-                  </label>
-                  <input
-                    type="text"
-                    value={profile.vehicle_model}
-                    onChange={e => setProfile({...profile, vehicle_model: e.target.value})}
-                    placeholder="e.g. Honda Activa"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-                    <BadgeCheck className="w-4 h-4 text-gray-400" />
-                    Driving License Number
-                  </label>
-                  <input
-                    type="text"
-                    value={profile.license_number}
-                    onChange={e => setProfile({...profile, license_number: e.target.value.toUpperCase()})}
-                    placeholder="e.g. MH1220231234567"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all uppercase"
                   />
                 </div>
                 <div>

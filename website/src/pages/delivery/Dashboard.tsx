@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
 import socketService from '../../api/socket';
@@ -8,7 +8,6 @@ import StatusBadge from '../../components/ui/StatusBadge';
 export default function DeliveryDashboard() {
   const { user } = useAuthStore();
   const [isOnline, setIsOnline] = useState(false);
-  const [partnerStatus, setPartnerStatus] = useState('pending');
   const [stats, setStats] = useState({ today_deliveries: 0, today_earnings: 0 });
   const [availableOrders, setAvailableOrders] = useState<any[]>([]);
   const [activeOrder, setActiveOrder] = useState<any>(null);
@@ -18,107 +17,58 @@ export default function DeliveryDashboard() {
   const [activeTab, setActiveTab] = useState<'available' | 'active'>('available');
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otp, setOtp] = useState('');
-  const [dashboardError, setDashboardError] = useState<string | null>(null);
-  const refreshInFlight = useRef(false);
-  const activeOrderRef = useRef<any>(null);
 
   const fetchData = async () => {
-    if (refreshInFlight.current) return;
-    refreshInFlight.current = true;
-    setDashboardError(null);
     try {
-      const results = await Promise.allSettled([
+      const [dashRes, activeRes, availableRes] = await Promise.all([
         api.get('/delivery/dashboard'),
         api.get('/delivery/orders/active'),
         api.get('/delivery/orders/available')
       ]);
 
-      const [dashResult, activeResult, availableResult] = results;
-      const failedRequests = results.filter(result => result.status === 'rejected').length;
-      if (failedRequests === results.length) {
-        throw new Error('Unable to load dashboard');
-      }
-      if (failedRequests > 0) {
-        setDashboardError('Some dashboard data could not be loaded. Retry to refresh.');
-      }
-
-      if (dashResult.status === 'fulfilled' && dashResult.value.data.success) {
-        const data = dashResult.value.data.data || {};
-        setIsOnline(Boolean(data.is_online));
-        setPartnerStatus(String(data.status || 'pending'));
+      if (dashRes.data.success) {
+        setIsOnline(dashRes.data.data.is_online);
         setStats({
-          today_deliveries: Number(data.today_deliveries || 0),
-          today_earnings: Number(data.today_earnings || 0)
+          today_deliveries: dashRes.data.data.today_deliveries,
+          today_earnings: dashRes.data.data.today_earnings
         });
       }
 
-      if (activeResult.status === 'fulfilled' && activeResult.value.data.success && activeResult.value.data.data) {
-        setActiveOrder(activeResult.value.data.data);
-        activeOrderRef.current = activeResult.value.data.data;
+      if (activeRes.data.success && activeRes.data.data) {
+        setActiveOrder(activeRes.data.data);
         setActiveTab('active');
-      } else if (activeResult.status === 'fulfilled') {
+      } else {
         setActiveOrder(null);
-        activeOrderRef.current = null;
       }
 
-      if (availableResult.status === 'fulfilled' && availableResult.value.data.success) {
-        const orders = Array.isArray(availableResult.value.data.data) ? availableResult.value.data.data : [];
-        setAvailableOrders(orders);
+      if (availableRes.data.success) {
+        setAvailableOrders(availableRes.data.data);
       }
     } catch (err) {
       console.error('Failed to fetch dashboard data', err);
-      setDashboardError('Unable to load dashboard. Please try again.');
     } finally {
-      refreshInFlight.current = false;
       setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000); // Socket events handle normal updates; polling is recovery only.
+    const interval = setInterval(fetchData, 15000); // refresh every 15s
 
     const socket = socketService.getSocket();
     const handleAssigned = () => {
       setActiveTab('active');
       fetchData();
     };
-    const handleStatusUpdate = (payload: { orderId: string; status: string }) => {
-      if (payload.orderId !== activeOrderRef.current?.id) {
-        fetchData();
-        return;
-      }
-      setActiveOrder((current: any) => current ? { ...current, status: payload.status } : current);
-      if (activeOrderRef.current) activeOrderRef.current = { ...activeOrderRef.current, status: payload.status };
-      if (payload.status === 'delivered') fetchData();
-    };
     socket?.on('delivery:assigned', handleAssigned);
-    socket?.on('delivery:accepted', handleAssigned);
-    socket?.on('order:rider_assigned', handleAssigned);
-    socket?.on('order:picked_up', handleStatusUpdate);
-    socket?.on('order:out_for_delivery', handleStatusUpdate);
-    socket?.on('order:delivered', handleStatusUpdate);
-    socketService.setReconnectCallback(fetchData);
 
     return () => {
       clearInterval(interval);
       socket?.off('delivery:assigned', handleAssigned);
-      socket?.off('delivery:accepted', handleAssigned);
-      socket?.off('order:rider_assigned', handleAssigned);
-      socket?.off('order:picked_up', handleStatusUpdate);
-      socket?.off('order:out_for_delivery', handleStatusUpdate);
-      socket?.off('order:delivered', handleStatusUpdate);
-      socketService.setReconnectCallback(null as any);
     };
   }, []);
 
   const toggleStatus = async () => {
-    if (!isOnline && partnerStatus !== 'active') {
-      setDashboardError(partnerStatus === 'pending'
-        ? 'Your rider profile is awaiting admin approval.'
-        : `Your rider profile is ${partnerStatus}. Contact support before going online.`);
-      return;
-    }
     try {
       const newVal = !isOnline;
       setIsOnline(newVal);
@@ -126,18 +76,15 @@ export default function DeliveryDashboard() {
       fetchData(); // refresh pool
     } catch (err) {
       setIsOnline(!isOnline); // revert
-      setDashboardError('Unable to update availability. Please try again.');
     }
   };
 
   const acceptOrder = async (id: string) => {
     setActionLoading(true);
-    setAvailableOrders(prev => prev.filter(order => order.id !== id));
     try {
       await api.post(`/delivery/orders/${id}/accept`);
       await fetchData();
     } catch (err: any) {
-      await fetchData();
       alert(err.response?.data?.error?.message || 'Failed to accept order');
     } finally {
       setActionLoading(false);
@@ -147,13 +94,11 @@ export default function DeliveryDashboard() {
   const updateOrderStatus = async (status: string, overrideOtp?: string) => {
     if (!activeOrder) return;
     setActionLoading(true);
-    const previousOrder = activeOrder;
     try {
       const payload: any = { status };
       if (overrideOtp) {
         payload.otp = overrideOtp;
       }
-      setActiveOrder((current: any) => current ? { ...current, status } : current);
       await api.patch(`/delivery/orders/${activeOrder.id}/status`, payload);
       await fetchData();
       if (status === 'delivered') {
@@ -161,8 +106,6 @@ export default function DeliveryDashboard() {
         setOtp('');
       }
     } catch (err: any) {
-      setActiveOrder(previousOrder);
-      activeOrderRef.current = previousOrder;
       alert(err.response?.data?.error?.message || 'Failed to update status');
     } finally {
       setActionLoading(false);
@@ -171,35 +114,20 @@ export default function DeliveryDashboard() {
 
   if (loading && !activeOrder && availableOrders.length === 0) {
     return (
-      <div className="flex min-h-[420px] flex-col items-center justify-center rounded-2xl bg-white p-8 text-center shadow-sm">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-primary" />
-        <p className="mt-4 font-bold text-gray-700">Loading your delivery dashboard...</p>
-        <p className="mt-1 text-sm text-gray-500">Fetching your availability and deliveries.</p>
-        {dashboardError && (
-          <button type="button" onClick={fetchData} className="mt-5 rounded-xl bg-brand-primary px-5 py-3 font-bold text-white">
-            Retry
-          </button>
-        )}
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-primary" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6 pb-20">
-      {dashboardError && (
-        <div className="flex flex-col gap-3 rounded-2xl border border-red-100 bg-red-50 p-4 text-red-800 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm font-bold">{dashboardError}</p>
-          <button type="button" onClick={fetchData} className="rounded-xl bg-red-700 px-4 py-2 text-sm font-bold text-white">
-            Retry
-          </button>
-        </div>
-      )}
       {/* Header & Status */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-black text-gray-900">Welcome, {user?.name?.split(' ')[0]}!</h1>
           <p className="text-gray-500 font-medium text-sm mt-1">
-            {Number(stats.today_deliveries || 0)} deliveries today • ₹{Number(stats.today_earnings || 0).toFixed(2)} earned
+            {stats.today_deliveries} deliveries today • ₹{stats.today_earnings.toFixed(2)} earned
           </p>
         </div>
         
@@ -215,14 +143,6 @@ export default function DeliveryDashboard() {
           </span>
         </div>
       </div>
-
-      {partnerStatus !== 'active' && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">
-          {partnerStatus === 'pending'
-            ? 'Your rider profile is awaiting admin approval. You can accept deliveries after approval.'
-            : `Your rider profile is ${partnerStatus}. Contact support before accepting deliveries.`}
-        </div>
-      )}
 
       {/* Tabs */}
       <div className="flex gap-2 p-1 bg-gray-200/50 rounded-xl w-full max-w-sm">
@@ -244,21 +164,16 @@ export default function DeliveryDashboard() {
       <div className="mt-6">
         {activeTab === 'available' && (
           <div className="space-y-4">
-            {partnerStatus !== 'active' ? (
-              <div className="text-center py-12 bg-amber-50 rounded-2xl border border-amber-100">
-                <p className="text-amber-800 font-bold">Profile approval required</p>
-                <p className="text-sm text-amber-700 mt-1">Your profile must be approved before delivery requests can be accepted.</p>
-              </div>
-            ) : !isOnline ? (
+            {!isOnline ? (
               <div className="text-center py-12 bg-gray-50 rounded-2xl border border-gray-100">
                 <p className="text-gray-500 font-bold">You are offline</p>
                 <p className="text-sm text-gray-400 mt-1">Go online to receive delivery requests.</p>
               </div>
             ) : availableOrders.length === 0 ? (
               <div className="text-center py-12 bg-gray-50 rounded-2xl border border-gray-100">
-                <CheckCircle className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 font-bold">No active deliveries right now.</p>
-                <p className="text-sm text-gray-400 mt-1">New requests will appear here when available.</p>
+                <Loader2 className="w-8 h-8 animate-spin text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 font-bold">Waiting for orders...</p>
+                <p className="text-sm text-gray-400 mt-1">Stay in high-demand areas to get more requests.</p>
               </div>
             ) : (
               availableOrders.map(order => (
@@ -354,7 +269,7 @@ export default function DeliveryDashboard() {
                         <p className="text-xs font-bold text-brand-primary uppercase tracking-wider mb-1">2. Drop-off Location</p>
                         <h4 className="font-black text-lg text-gray-900">{activeOrder.customer?.name}</h4>
                         <p className="text-sm text-gray-600 mt-1">
-                          {activeOrder.delivery_address?.address_line || activeOrder.delivery_address?.street_address}<br/>
+                          {activeOrder.delivery_address?.street_address}<br/>
                           {activeOrder.delivery_address?.apartment && <>{activeOrder.delivery_address.apartment}<br/></>}
                           {activeOrder.delivery_address?.landmark && <span className="text-gray-400">Landmark: {activeOrder.delivery_address.landmark}</span>}
                         </p>
@@ -380,7 +295,7 @@ export default function DeliveryDashboard() {
                       <Package className="w-4 h-4 mr-2 text-gray-400" /> Package Contents
                     </h5>
                     <ul className="text-sm text-gray-600 space-y-2">
-                      {(activeOrder.order_items || activeOrder.items)?.map((item: any) => (
+                      {activeOrder.items?.map((item: any) => (
                         <li key={item.id} className="flex justify-between border-b border-gray-50 pb-2">
                           <span>{item.quantity}x {item.name_snapshot}</span>
                         </li>
@@ -390,23 +305,13 @@ export default function DeliveryDashboard() {
 
                   {/* Action Buttons */}
                   <div className="pt-4 flex flex-col gap-3">
-                    {activeOrder.status === 'rider_assigned' && (
+                    {activeOrder.status === 'ready_for_pickup' && (
                       <button 
-                        onClick={() => updateOrderStatus('picked_up')}
-                        disabled={actionLoading}
-                        className="w-full bg-brand-primary hover:bg-brand-secondary text-white font-black py-4 rounded-xl text-lg shadow-lg disabled:opacity-50"
-                      >
-                        {actionLoading ? 'Updating...' : 'Arrived and Picked Up'}
-                      </button>
-                    )}
-
-                    {activeOrder.status === 'picked_up' && (
-                      <button
                         onClick={() => updateOrderStatus('out_for_delivery')}
                         disabled={actionLoading}
                         className="w-full bg-brand-primary hover:bg-brand-secondary text-white font-black py-4 rounded-xl text-lg shadow-lg disabled:opacity-50"
                       >
-                        {actionLoading ? 'Updating...' : 'Start Delivery'}
+                        {actionLoading ? 'Updating...' : 'Confirm Pickup'}
                       </button>
                     )}
                     

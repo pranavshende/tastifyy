@@ -5,7 +5,6 @@ import type { Request, Response } from 'express';
 import multer from 'multer';
 import { uploadFile } from '../utils/storage.js';
 import { findRestaurantPartner } from '../utils/restaurantPartner.js';
-import { validateDeliveryPartnerInput } from '../utils/deliveryValidation.js';
 
 const router = Router();
 
@@ -198,11 +197,6 @@ router.post('/delivery', async (req: Request, res: Response) => {
   } = req.body;
 
   try {
-    const validationErrors = validateDeliveryPartnerInput({ ...req.body, name: user.name, phone: user.phone }, { onboarding: true });
-    if (validationErrors.length > 0) {
-      res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: validationErrors[0], details: validationErrors } });
-      return;
-    }
     const existing = await prisma.deliveryPartner.findFirst({ where: { user_id: user.id } });
 
     if (existing) {

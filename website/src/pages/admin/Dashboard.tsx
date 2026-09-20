@@ -38,16 +38,19 @@ export default function AdminDashboard() {
 // ─── OVERVIEW TAB ────────────────────────────────────────────────────────────
 function OverviewTab() {
   const [metrics, setMetrics] = useState<any>(null);
+  const [launchStatus, setLaunchStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<any>({ chartData: [], kpis: null });
 
   useEffect(() => {
     Promise.all([
       api.get('/admin/dashboard'),
-      api.get('/analytics/admin')
-    ]).then(([resMetrics, resAnalytics]) => {
+      api.get('/analytics/admin'),
+      api.get('/admin/launch-status')
+    ]).then(([resMetrics, resAnalytics, resLaunch]) => {
       setMetrics(resMetrics.data.data);
       setAnalytics(resAnalytics.data.data);
+      setLaunchStatus(resLaunch.data.data);
       setLoading(false);
     }).catch(err => {
       console.error(err);
@@ -92,6 +95,28 @@ function OverviewTab() {
             <p className="text-3xl font-black">{c.value}</p>
           </div>
         ))}
+      </div>
+
+      <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 mb-8">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+          <div>
+            <h2 className="text-xl font-black text-gray-900">Launch Day Operations</h2>
+            <p className="text-sm text-gray-500 font-medium">Live production controls and order health</p>
+          </div>
+          <span className="px-3 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 text-xs font-black uppercase">Real-Time System: ACTIVE</span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          <div className="rounded-xl bg-orange-50 p-4"><p className="text-xs font-bold text-orange-700">Online Payment</p><p className="font-black text-orange-900">{launchStatus?.onlinePaymentEnabled ? 'ON' : 'OFF - Launch Day'}</p></div>
+          <div className="rounded-xl bg-green-50 p-4"><p className="text-xs font-bold text-green-700">Free Delivery</p><p className="font-black text-green-900">{launchStatus?.freeDeliveryEnabled ? 'ACTIVE' : 'OFF'}</p></div>
+          <div className="rounded-xl bg-blue-50 p-4"><p className="text-xs font-bold text-blue-700">Delivery Charge</p><p className="font-black text-blue-900">₹{launchStatus?.deliveryCharge ?? 0}</p></div>
+          <div className="rounded-xl bg-gray-50 p-4"><p className="text-xs font-bold text-gray-600">Today's Orders</p><p className="font-black text-gray-900">{launchStatus?.todayOrders ?? 0}</p></div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-sm font-bold">
+          {[
+            ['Pending', 'pending'], ['Accepted', 'restaurant_confirmed'], ['Preparing', 'preparing'],
+            ['Out for Delivery', 'out_for_delivery'], ['Delivered', 'delivered'], ['Cancelled', 'cancelled']
+          ].map(([label, key]) => <div key={key} className="flex justify-between rounded-lg border border-gray-100 px-3 py-2"><span>{label}</span><span>{launchStatus?.statusCounts?.[key] ?? 0}</span></div>)}
+        </div>
       </div>
 
       <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 mb-8">
@@ -1000,7 +1025,10 @@ function ConfigTab() {
       const defaultKeys = [
         { key: 'PLATFORM_FEE_PERCENT', value: '10', description: 'Percentage cut platform takes from each order' },
         { key: 'BASE_DELIVERY_FEE', value: '30', description: 'Base flat fee charged for delivery' },
-        { key: 'MAX_DELIVERY_RADIUS_KM', value: '10', description: 'Maximum distance allowed for delivery (in km)' }
+        { key: 'MAX_DELIVERY_RADIUS_KM', value: '10', description: 'Maximum distance allowed for delivery (in km)' },
+        { key: 'ONLINE_PAYMENT_ENABLED', value: 'false', description: 'Online Payment: OFF - Launch Day' },
+        { key: 'FREE_DELIVERY_ENABLED', value: 'true', description: 'Free Delivery status' },
+        { key: 'LAUNCH_DAY_END_DATE', value: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date()), description: 'Launch-day mode remains active through this India date' }
       ];
       const fetched = res.data.data || [];
       const merged = defaultKeys.map(dk => {
@@ -1062,11 +1090,11 @@ function ConfigTab() {
               <label className="block text-sm font-black text-gray-900 mb-1">{config.key.replace(/_/g, ' ')}</label>
               <p className="text-xs text-gray-500 font-medium mb-3">{config.description}</p>
               <input
-                type="number"
-                step="0.01"
+                type={config.key === 'LAUNCH_DAY_END_DATE' ? 'date' : config.key.includes('ENABLED') ? 'checkbox' : 'number'}
                 required
-                value={config.value}
-                onChange={e => handleChange(config.key, e.target.value)}
+                checked={config.key.includes('ENABLED') ? config.value === 'true' : undefined}
+                value={config.key.includes('ENABLED') ? undefined : config.value}
+                onChange={e => handleChange(config.key, config.key.includes('ENABLED') ? String(e.target.checked) : e.target.value)}
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-bold focus:ring-2 focus:ring-brand-primary focus:outline-none transition-all"
               />
             </div>

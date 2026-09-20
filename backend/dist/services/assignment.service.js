@@ -54,18 +54,14 @@ export async function assignDeliveryPartner(orderId) {
         }
         console.log(`[Assignment] Found closest partner ${closestPartner.id} at distance ${closestPartner.distance.toFixed(2)}km`);
         // 3. Assign the order in DB
-        await prisma.$transaction(async (tx) => {
+        const assigned = await prisma.$transaction(async (tx) => {
+            // Claim the order conditionally so concurrent workers cannot assign it twice.
             const claimed = await tx.order.updateMany({
-                where: {
-                    id: order.id,
-                    delivery_partner_id: null,
-                    status: { in: ['restaurant_confirmed', 'preparing', 'ready'] },
-                },
-                data: { delivery_partner_id: closestPartner.id, status: 'rider_assigned' }
+                where: { id: order.id, delivery_partner_id: null },
+                data: { delivery_partner_id: closestPartner.id }
             });
-            if (claimed.count !== 1) {
-                throw new Error(`Order ${order.id} was already assigned`);
-            }
+            if (claimed.count !== 1)
+                return false;
             // Create delivery assignment (Strict forced assignment for Phase M MVP)
             await tx.deliveryAssignment.create({
                 data: {
@@ -76,7 +72,10 @@ export async function assignDeliveryPartner(orderId) {
                     pickup_distance_km: closestPartner.distance
                 }
             });
+            return true;
         });
+        if (!assigned)
+            return false;
         // 4. Emit Socket Event
         const io = getIO();
         io.to(`delivery_${closestPartner.id}`).emit('delivery:assigned', {
@@ -96,16 +95,6 @@ export async function assignDeliveryPartner(orderId) {
             orderId: order.id,
             partnerName: closestPartner.name,
             partnerPhone: closestPartner.phone
-        });
-        io.to(`customer_${order.customer_id}`).emit('order:rider_assigned', {
-            orderId: order.id,
-            status: 'rider_assigned',
-            partnerName: closestPartner.name,
-        });
-        io.to('admin').emit('order:rider_assigned', {
-            orderId: order.id,
-            status: 'rider_assigned',
-            partnerName: closestPartner.name,
         });
         // Persist and deliver the assignment notification through the common worker.
         await notificationQueue.add('notify', {
