@@ -26,7 +26,14 @@ router.patch('/restaurants/:id/status', async (req, res) => {
     try {
         const updated = await prisma.restaurant.update({
             where: { id: req.params.id },
-            data: { status }
+            data: {
+                status,
+                approval_status: status === 'active' ? 'approved' : status,
+                account_status: status === 'active' ? 'active' : 'inactive',
+                visibility_status: status === 'active' ? 'visible' : 'hidden',
+                operating_status: status === 'active' ? 'open' : 'closed',
+                is_open: status === 'active'
+            }
         });
         res.json({ success: true, data: updated });
     }
@@ -318,7 +325,14 @@ router.get('/restaurants', async (req, res) => {
 router.patch('/restaurants/:id/approve', async (req, res) => {
     const id = req.params.id;
     try {
-        const restaurant = await prisma.restaurant.update({ where: { id }, data: { status: 'active' } });
+        const restaurant = await prisma.restaurant.update({
+            where: { id },
+            data: {
+                status: 'active', approval_status: 'approved', account_status: 'active',
+                visibility_status: 'visible', operating_status: 'open', is_open: true,
+                approved_by: req.user.id, approved_at: new Date()
+            }
+        });
         res.json({ success: true, data: restaurant });
     }
     catch (error) {
@@ -330,7 +344,14 @@ router.patch('/restaurants/:id/reject', async (req, res) => {
     const id = req.params.id;
     const { reason } = req.body;
     try {
-        const restaurant = await prisma.restaurant.update({ where: { id }, data: { status: 'rejected' } });
+        const restaurant = await prisma.restaurant.update({
+            where: { id },
+            data: {
+                status: 'rejected', approval_status: 'rejected', account_status: 'inactive',
+                visibility_status: 'hidden', operating_status: 'closed', is_open: false,
+                rejection_reason: reason || null
+            }
+        });
         res.json({ success: true, data: restaurant, reason });
     }
     catch (error) {
@@ -341,7 +362,13 @@ router.patch('/restaurants/:id/reject', async (req, res) => {
 router.patch('/restaurants/:id/suspend', async (req, res) => {
     const id = req.params.id;
     try {
-        const restaurant = await prisma.restaurant.update({ where: { id }, data: { status: 'suspended' } });
+        const restaurant = await prisma.restaurant.update({
+            where: { id },
+            data: {
+                status: 'suspended', approval_status: 'suspended', account_status: 'inactive',
+                visibility_status: 'hidden', operating_status: 'closed', is_open: false
+            }
+        });
         res.json({ success: true, data: restaurant });
     }
     catch (error) {

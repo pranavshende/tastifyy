@@ -44,7 +44,7 @@ describe('Auth & RBAC E2E', () => {
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
       expect(res.body.user.role).toBe('customer');
-      expect(res.body.session.access_token).toBe('fake-token');
+      expect(res.body.session.access_token).toEqual(expect.stringMatching(/^eyJ/));
       expect(prismaMock.user.create).toHaveBeenCalledTimes(1);
     });
 

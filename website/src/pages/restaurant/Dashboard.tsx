@@ -310,12 +310,9 @@ export default function RestaurantDashboard() {
                   </div>
                 ) : (
                   readyOrders.map(order => renderOrderCard(order, 
-                    <button 
-                      onClick={() => updateOrderStatus(order.id, 'delivered')}
-                      className="w-full bg-green-600 text-white py-2.5 rounded-xl font-bold flex items-center justify-center hover:bg-green-700 transition-colors shadow-sm"
-                    >
-                      <Check className="w-4 h-4 mr-2" /> Complete Order
-                    </button>
+                    <div className="w-full rounded-xl border border-green-200 bg-green-50 px-3 py-2.5 text-center text-sm font-bold text-green-700">
+                      Ready for rider pickup
+                    </div>
                   ))
                 )}
               </div>

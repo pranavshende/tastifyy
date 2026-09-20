@@ -5,6 +5,23 @@ jest.unstable_mockModule('../src/utils/prisma.js', () => ({
   prisma: prismaMock,
 }));
 
+// Keep the JWT strategy importable on Node versions where Jest cannot synchronously load jose.
+jest.unstable_mockModule('jwks-rsa', () => ({
+  default: {
+    passportJwtSecret: jest.fn(() => (_request: unknown, _token: unknown, done: (error: Error | null, secret?: string) => void) => {
+      done(new Error('JWKS provider is not used in unit tests'));
+    })
+  }
+}));
+
+jest.unstable_mockModule('google-auth-library', () => ({
+  OAuth2Client: class {
+    async verifyIdToken() {
+      throw new Error('Google verification is not used in unit tests');
+    }
+  }
+}));
+
 // Also mock Supabase since we don't want real auth calls
 jest.unstable_mockModule('../src/utils/supabase.js', () => ({
   supabase: {

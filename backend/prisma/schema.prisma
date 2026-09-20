@@ -36,6 +36,29 @@ enum RestaurantStatus {
   rejected
 }
 
+enum RestaurantApprovalStatus {
+  pending
+  approved
+  rejected
+  changes_required
+  suspended
+}
+
+enum RestaurantAccountStatus {
+  active
+  inactive
+}
+
+enum RestaurantOperatingStatus {
+  open
+  closed
+}
+
+enum RestaurantVisibilityStatus {
+  visible
+  hidden
+}
+
 enum SubscriptionPlan {
   starter
   growth
@@ -238,6 +261,21 @@ model Restaurant {
   is_pure_veg               Boolean            @default(false)
   cuisine_tags              String[]           @default([])
   status                    RestaurantStatus   @default(pending)
+  approval_status           RestaurantApprovalStatus @default(pending)
+  account_status            RestaurantAccountStatus @default(inactive)
+  operating_status          RestaurantOperatingStatus @default(closed)
+  visibility_status         RestaurantVisibilityStatus @default(hidden)
+  rejection_reason          String?
+  admin_notes               String?
+  approved_by               String?            @db.Uuid
+  approved_at               DateTime?          @db.Timestamptz
+  formatted_address         String?
+  area                      String?
+  district                  String?
+  location_verified         Boolean            @default(false)
+  location_source           String?            @db.VarChar(20)
+  location_set_at           DateTime?          @db.Timestamptz
+  location_set_by           String?            @db.Uuid
   is_open                   Boolean            @default(false)
   commission_rate           Decimal            @db.Decimal(5, 2)
   subscription_plan         SubscriptionPlan   @default(starter)

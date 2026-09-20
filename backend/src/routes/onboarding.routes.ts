@@ -97,8 +97,12 @@ router.post('/restaurant', async (req: Request, res: Response) => {
           ...(avg_preparation_time_mins !== undefined && { avg_preparation_time_mins }),
           ...(is_pure_veg !== undefined && { is_pure_veg }),
           ...(cuisine_tags !== undefined && { cuisine_tags }),
-          status: 'active',
-          is_open: true,
+          status: 'pending',
+          approval_status: 'pending',
+          account_status: 'inactive',
+          visibility_status: 'hidden',
+          operating_status: 'closed',
+          is_open: false,
         }
       });
       res.json({ success: true, data: restaurant, onboarding_step });
@@ -122,8 +126,12 @@ router.post('/restaurant', async (req: Request, res: Response) => {
           is_pure_veg: is_pure_veg || false,
           cuisine_tags: cuisine_tags || [],
           commission_rate: 15.0,
-          status: 'active',
-          is_open: true,
+          status: 'pending',
+          approval_status: 'pending',
+          account_status: 'inactive',
+          visibility_status: 'hidden',
+          operating_status: 'closed',
+          is_open: false,
           partners: {
             create: {
               name: owner_name || user.name,
@@ -155,7 +163,14 @@ router.post('/restaurant/submit', async (req: Request, res: Response) => {
     }
     const restaurant = await prisma.restaurant.update({
       where: { id: partner.restaurant_id },
-      data: { status: 'pending' }
+      data: {
+        status: 'pending',
+        approval_status: 'pending',
+        account_status: 'inactive',
+        visibility_status: 'hidden',
+        operating_status: 'closed',
+        is_open: false
+      }
     });
     res.json({ success: true, data: restaurant, message: 'Application submitted for review' });
   } catch (error) {

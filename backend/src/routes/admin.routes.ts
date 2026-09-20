@@ -32,7 +32,14 @@ router.patch('/restaurants/:id/status', async (req: Request, res: Response) => {
   try {
     const updated = await prisma.restaurant.update({
       where: { id: req.params.id as string },
-      data: { status }
+      data: {
+        status,
+        approval_status: status === 'active' ? 'approved' : status,
+        account_status: status === 'active' ? 'active' : 'inactive',
+        visibility_status: status === 'active' ? 'visible' : 'hidden',
+        operating_status: status === 'active' ? 'open' : 'closed',
+        is_open: status === 'active'
+      }
     });
     res.json({ success: true, data: updated });
   } catch (error) {
@@ -347,7 +354,14 @@ router.get('/restaurants', async (req: Request, res: Response) => {
 router.patch('/restaurants/:id/approve', async (req: Request, res: Response) => {
   const id = req.params.id as string;
   try {
-    const restaurant = await prisma.restaurant.update({ where: { id }, data: { status: 'active' } });
+    const restaurant = await prisma.restaurant.update({
+      where: { id },
+      data: {
+        status: 'active', approval_status: 'approved', account_status: 'active',
+        visibility_status: 'visible', operating_status: 'open', is_open: true,
+        approved_by: (req.user as any).id, approved_at: new Date()
+      }
+    });
     res.json({ success: true, data: restaurant });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to approve restaurant' } });
@@ -359,7 +373,14 @@ router.patch('/restaurants/:id/reject', async (req: Request, res: Response) => {
   const id = req.params.id as string;
   const { reason } = req.body as { reason: string };
   try {
-    const restaurant = await prisma.restaurant.update({ where: { id }, data: { status: 'rejected' } });
+    const restaurant = await prisma.restaurant.update({
+      where: { id },
+      data: {
+        status: 'rejected', approval_status: 'rejected', account_status: 'inactive',
+        visibility_status: 'hidden', operating_status: 'closed', is_open: false,
+        rejection_reason: reason || null
+      }
+    });
     res.json({ success: true, data: restaurant, reason });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to reject restaurant' } });
@@ -370,7 +391,13 @@ router.patch('/restaurants/:id/reject', async (req: Request, res: Response) => {
 router.patch('/restaurants/:id/suspend', async (req: Request, res: Response) => {
   const id = req.params.id as string;
   try {
-    const restaurant = await prisma.restaurant.update({ where: { id }, data: { status: 'suspended' } });
+    const restaurant = await prisma.restaurant.update({
+      where: { id },
+      data: {
+        status: 'suspended', approval_status: 'suspended', account_status: 'inactive',
+        visibility_status: 'hidden', operating_status: 'closed', is_open: false
+      }
+    });
     res.json({ success: true, data: restaurant });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to suspend restaurant' } });

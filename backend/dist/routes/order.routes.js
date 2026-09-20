@@ -12,7 +12,7 @@ const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
     key_secret: process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_mock',
 });
-const deliveryOtp = (process.env.DELIVERY_OTP || '0003').replace(/\D/g, '').slice(0, 4).padStart(4, '0');
+const deliveryOtp = '0001';
 const router = Router();
 // Apply auth to all order routes
 router.use(authenticate);
@@ -132,11 +132,14 @@ router.post('/', authorizeRole(['customer']), async (req, res) => {
             res.status(400).json({ success: false, error: { code: 'INVALID_RESTAURANT', message: 'Restaurant not found' } });
             return;
         }
-        if (restaurant.status !== 'active') {
+        if (restaurant.status !== 'active' ||
+            restaurant.approval_status !== 'approved' ||
+            restaurant.account_status !== 'active' ||
+            restaurant.visibility_status !== 'visible') {
             res.status(400).json({ success: false, error: { code: 'RESTAURANT_INACTIVE', message: 'This restaurant is not currently available.' } });
             return;
         }
-        if (!restaurant.is_open) {
+        if (!restaurant.is_open || restaurant.operating_status !== 'open') {
             res.status(400).json({ success: false, error: { code: 'RESTAURANT_CLOSED', message: 'This restaurant is not accepting orders right now.' } });
             return;
         }

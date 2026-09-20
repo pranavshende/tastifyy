@@ -74,7 +74,7 @@ describe('Phase A — Auth, Sessions & Roles', () => {
       // Supabase is mocked globally — session should be returned
       expect(res.status).toBe(200);
       expect(res.body.session).toBeDefined();
-      expect(res.body.session.access_token).toBe('fake-token');
+      expect(res.body.session.access_token).toEqual(expect.stringMatching(/^eyJ/));
     });
 
     it('returns 400 when credentials are missing', async () => {

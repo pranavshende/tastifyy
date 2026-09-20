@@ -17,7 +17,14 @@ function formatMenuItem(item) {
 export const getActiveRestaurants = async (req, res) => {
     try {
         const restaurants = await prisma.restaurant.findMany({
-            where: { status: 'active', is_open: true },
+            where: {
+                status: 'active',
+                approval_status: 'approved',
+                account_status: 'active',
+                visibility_status: 'visible',
+                operating_status: 'open',
+                is_open: true
+            },
             include: {
                 menu_categories: { include: { menu_items: true } },
                 ratings: { select: { restaurant_rating: true } }
@@ -70,7 +77,18 @@ export const registerRestaurant = async (req, res) => {
 };
 export const updateRestaurant = async (req, res) => {
     const id = req.params.id;
-    const updates = req.body;
+    const allowedFields = [
+        'name', 'type', 'owner_name', 'phone', 'email', 'address_line', 'city', 'state', 'pincode',
+        'latitude', 'longitude', 'service_radius_km', 'logo_url', 'cover_image_url', 'is_pure_veg',
+        'cuisine_tags', 'avg_preparation_time_mins', 'is_open'
+    ];
+    const updates = Object.fromEntries(allowedFields
+        .filter(field => req.body[field] !== undefined)
+        .map(field => [field, req.body[field]]));
+    if (Object.keys(updates).length === 0) {
+        res.status(400).json({ error: 'No valid restaurant fields supplied' });
+        return;
+    }
     try {
         const existingRestaurant = await prisma.restaurant.findUnique({ where: { id } });
         if (!existingRestaurant) {
@@ -118,7 +136,12 @@ export const getNearbyRestaurants = async (req, res) => {
           )
         ) AS distance
         FROM restaurants
-        WHERE status = 'active' AND is_open = true
+        WHERE status = 'active'
+          AND approval_status = 'approved'
+          AND account_status = 'active'
+          AND visibility_status = 'visible'
+          AND operating_status = 'open'
+          AND is_open = true
       )
       SELECT * FROM distances
       WHERE distance <= ${maxDistance}
@@ -135,7 +158,15 @@ export const getRestaurantMenu = async (req, res) => {
     const id = req.params.id;
     try {
         const restaurant = await prisma.restaurant.findUnique({
-            where: { id },
+            where: {
+                id,
+                status: 'active',
+                approval_status: 'approved',
+                account_status: 'active',
+                visibility_status: 'visible',
+                operating_status: 'open',
+                is_open: true
+            },
             include: {
                 menu_categories: {
                     orderBy: { display_order: 'asc' },
@@ -178,6 +209,10 @@ export const searchRestaurants = async (req, res) => {
         const restaurantMatches = await prisma.restaurant.findMany({
             where: {
                 status: 'active',
+                approval_status: 'approved',
+                account_status: 'active',
+                visibility_status: 'visible',
+                operating_status: 'open',
                 is_open: true,
                 OR: [
                     { name: { contains: queryStr, mode: 'insensitive' } },
@@ -210,6 +245,10 @@ export const searchRestaurants = async (req, res) => {
                 is_available: true,
                 restaurant: {
                     status: 'active',
+                    approval_status: 'approved',
+                    account_status: 'active',
+                    visibility_status: 'visible',
+                    operating_status: 'open',
                     is_open: true
                 },
                 OR: [
