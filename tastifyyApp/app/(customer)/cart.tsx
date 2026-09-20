@@ -90,10 +90,12 @@ export default function CartScreen() {
 
     setLoading(true);
     try {
+      const idempotencyKey = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const res = await api.post('/orders', {
         restaurant_id: restaurantId,
         items: cartItems.map(i => ({ menu_item_id: i.menu_item_id, quantity: i.quantity, name: i.name, price: i.price })),
         payment_method: paymentMethod,
+        idempotency_key: idempotencyKey,
         delivery_address_id: selectedAddressId,
         confirm_address: true,
         coupon_code: appliedCouponCode

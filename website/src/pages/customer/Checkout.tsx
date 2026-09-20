@@ -170,6 +170,7 @@ export default function Checkout() {
     }
     setLoading(true);
     setError(null);
+    const idempotencyKey = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       
     if (!selectedAddressId) {
       setError('Please select a delivery address.');
@@ -194,6 +195,7 @@ export default function Checkout() {
           price: i.price,
         })),
         payment_method: paymentMethod,
+        idempotency_key: idempotencyKey,
         special_instructions: '',
         coupon_code: appliedCoupon ? appliedCoupon.code : undefined,
         confirm_address: isAddressConfirmed
