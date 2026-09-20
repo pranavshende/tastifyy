@@ -75,14 +75,7 @@ router.post('/restaurant', async (req: Request, res: Response) => {
 
   try {
     // Check if restaurant already exists for this user (via RestaurantPartner link)
-    const existingPartner = await prisma.restaurantPartner.findFirst({
-      where: {
-        OR: [
-          ...(user.phone ? [{ phone: user.phone }] : []),
-          ...(user.email ? [{ email: user.email }] : []),
-        ],
-      }
-    });
+    const existingPartner = await findRestaurantPartner(user);
 
     if (existingPartner) {
       // Update existing restaurant

@@ -230,6 +230,13 @@ router.put('/items/:id', upload.single('image'), async (req, res) => {
             res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Item not found' } });
             return;
         }
+        if (category_id !== undefined) {
+            const category = await prisma.menuCategory.findFirst({ where: { id: category_id, restaurant_id } });
+            if (!category) {
+                res.status(400).json({ success: false, error: { code: 'INVALID_CATEGORY', message: 'Category does not belong to this restaurant' } });
+                return;
+            }
+        }
         let imagePath = existing.image_url;
         if (file) {
             const validation = validateFile(file.buffer, file.mimetype, file.size);
