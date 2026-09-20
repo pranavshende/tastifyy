@@ -1,4 +1,5 @@
 type PartnerIdentity = {
+    id?: string | null;
     phone?: string | null;
     email?: string | null;
 };
@@ -10,7 +11,6 @@ export declare function findRestaurantPartner(user: PartnerIdentity): Promise<{
         email: string | null;
         created_at: Date;
         updated_at: Date;
-        pan_number: string | null;
         type: import("@prisma/client").$Enums.RestaurantType;
         owner_name: string;
         address_line: string;
@@ -37,6 +37,7 @@ export declare function findRestaurantPartner(user: PartnerIdentity): Promise<{
         bank_account_number: string | null;
         ifsc_code: string | null;
         bank_beneficiary_name: string | null;
+        pan_number: string | null;
     };
 } & {
     id: string;
@@ -58,7 +59,6 @@ export declare function findRestaurantPartnerUser(user: PartnerIdentity): Promis
             email: string | null;
             created_at: Date;
             updated_at: Date;
-            pan_number: string | null;
             type: import("@prisma/client").$Enums.RestaurantType;
             owner_name: string;
             address_line: string;
@@ -85,6 +85,7 @@ export declare function findRestaurantPartnerUser(user: PartnerIdentity): Promis
             bank_account_number: string | null;
             ifsc_code: string | null;
             bank_beneficiary_name: string | null;
+            pan_number: string | null;
         };
     } & {
         id: string;

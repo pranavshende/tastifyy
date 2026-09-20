@@ -31,9 +31,10 @@ const getOrCreatePartner = async (user) => {
 // ─── PROFILE ROUTES ─────────────────────────────────────────────────────────
 router.get('/profile', async (req, res) => {
     try {
-        const partner = await getOrCreatePartner(req.user);
+        const user = req.user;
+        const partner = await getOrCreatePartner(user);
         partner.profile_photo_url = getPublicUrl(partner.profile_photo_url);
-        res.json({ success: true, data: partner });
+        res.json({ success: true, data: { ...partner, user_id: user.id, identity_verified: partner.user_id === user.id } });
     }
     catch (error) {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch profile' } });
@@ -46,20 +47,28 @@ router.put('/profile', async (req, res) => {
         return;
     }
     try {
-        const partner = await getOrCreatePartner(req.user);
-        // Update User as well to keep in sync
-        await prisma.user.update({
-            where: { id: req.user.id },
-            data: { name, phone, email }
-        });
-        const updated = await prisma.deliveryPartner.update({
-            where: { id: partner.id },
-            data: { name, phone, email, vehicle_type, vehicle_number, vehicle_model, bank_account_number, ifsc_code, upi_id }
+        const user = req.user;
+        const partner = await getOrCreatePartner(user);
+        const updated = await prisma.$transaction(async (tx) => {
+            const currentUser = await tx.user.findUnique({ where: { id: user.id }, select: { id: true, phone: true, email: true } });
+            if (!currentUser || partner.user_id !== currentUser.id) {
+                throw Object.assign(new Error('Profile identity mismatch'), { code: 'PROFILE_IDENTITY_MISMATCH' });
+            }
+            // Update only the authenticated user's matching partner row, atomically.
+            await tx.user.update({ where: { id: currentUser.id }, data: { name, phone, email } });
+            return tx.deliveryPartner.update({
+                where: { user_id: currentUser.id },
+                data: { name, phone, email, vehicle_type, vehicle_number, vehicle_model, bank_account_number, ifsc_code, upi_id }
+            });
         });
         updated.profile_photo_url = getPublicUrl(updated.profile_photo_url);
         res.json({ success: true, data: updated });
     }
     catch (error) {
+        if (error.code === 'PROFILE_IDENTITY_MISMATCH') {
+            res.status(409).json({ success: false, error: { code: error.code, message: 'Profile identity mismatch. No profile was updated.' } });
+            return;
+        }
         if (error.code === 'P2002') {
             res.status(400).json({ success: false, error: { code: 'UNIQUE_CONSTRAINT', message: 'Phone or email already exists' } });
             return;

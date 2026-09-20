@@ -1,31 +1,42 @@
 import { prisma } from './prisma.js';
 export async function findRestaurantPartner(user) {
-    const identities = [
-        ...(user.phone ? [{ phone: user.phone }] : []),
-        ...(user.email ? [{ email: user.email }] : []),
-    ];
-    if (identities.length === 0)
+    if (!user.id)
         return null;
-    return prisma.restaurantPartner.findFirst({
-        where: { is_active: true, OR: identities },
-        include: { restaurant: true },
+    const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { id: true, phone: true, email: true, role: true }
     });
+    if (!dbUser || dbUser.role !== 'restaurant_partner')
+        return null;
+    const candidates = await prisma.restaurantPartner.findMany({
+        where: {
+            is_active: true,
+            OR: [
+                { phone: dbUser.phone },
+                ...(dbUser.email ? [{ email: dbUser.email }] : [])
+            ]
+        },
+        include: { restaurant: true }
+    });
+    const exactMatches = candidates.filter(partner => {
+        const phoneMatches = partner.phone === dbUser.phone;
+        const emailConflicts = Boolean(dbUser.email && partner.email && partner.email !== dbUser.email);
+        return phoneMatches && !emailConflicts;
+    });
+    if (exactMatches.length !== 1) {
+        if (exactMatches.length > 1) {
+            console.warn(`[ProfileIdentity] Ambiguous restaurant partner mapping for user ${dbUser.id}`);
+        }
+        return null;
+    }
+    return exactMatches[0];
 }
 export async function findRestaurantPartnerUser(user) {
     const partner = await findRestaurantPartner(user);
     if (!partner)
         return null;
-    const partnerUser = await prisma.user.findFirst({
-        where: {
-            role: 'restaurant_partner',
-            OR: [
-                { id: partner.id },
-                ...(partner.phone ? [{ phone: partner.phone }] : []),
-                ...(partner.email ? [{ email: partner.email }] : []),
-            ],
-        },
-    });
-    return partnerUser ? { partner, user: partnerUser } : { partner, user: null };
+    const partnerUser = await prisma.user.findUnique({ where: { id: user.id } });
+    return partnerUser ? { partner, user: partnerUser } : null;
 }
 export async function findRestaurantUserByRestaurantId(restaurantId) {
     const partner = await prisma.restaurantPartner.findFirst({
@@ -33,7 +44,7 @@ export async function findRestaurantUserByRestaurantId(restaurantId) {
     });
     if (!partner)
         return null;
-    return prisma.user.findFirst({
+    const users = await prisma.user.findMany({
         where: {
             role: 'restaurant_partner',
             OR: [
@@ -42,5 +53,11 @@ export async function findRestaurantUserByRestaurantId(restaurantId) {
             ],
         },
     });
+    if (users.length !== 1) {
+        if (users.length > 1)
+            console.warn(`[ProfileIdentity] Ambiguous restaurant user mapping for restaurant ${restaurantId}`);
+        return null;
+    }
+    return users[0];
 }
 //# sourceMappingURL=restaurantPartner.js.map

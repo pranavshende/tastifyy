@@ -2,6 +2,7 @@ import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import { verifyToken } from './utils/jwt.js';
 import { prisma } from './utils/prisma.js';
+import { findRestaurantPartner } from './utils/restaurantPartner.js';
 let io;
 export const initSocket = (server) => {
     io = new SocketIOServer(server, {
@@ -41,10 +42,8 @@ export const initSocket = (server) => {
         socket.on('join_restaurant', async (data) => {
             if (!authenticatedUser || authenticatedUser.role !== 'restaurant_partner')
                 return;
-            const partner = await prisma.restaurantPartner.findFirst({
-                where: { restaurant_id: data.restaurant_id, is_active: true, OR: [{ phone: (await prisma.user.findUnique({ where: { id: authenticatedUser.id } }))?.phone || '' }] }
-            });
-            if (!partner)
+            const partner = await findRestaurantPartner({ id: authenticatedUser.id });
+            if (!partner || partner.restaurant_id !== data.restaurant_id)
                 return;
             const room = `restaurant_${data.restaurant_id}`;
             socket.join(room);

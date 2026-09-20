@@ -47,6 +47,12 @@ router.get('/', async (req, res) => {
             ...restaurant,
             logo_url: getPublicUrl(restaurant.logo_url),
             cover_image_url: getPublicUrl(restaurant.cover_image_url),
+            profile_identity: {
+                user_id: req.user.id,
+                partner_id: req.partner.id,
+                restaurant_id: restaurant.id,
+                verified: true,
+            },
         };
         res.json({ success: true, data: result });
     }
