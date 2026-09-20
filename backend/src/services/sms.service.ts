@@ -13,18 +13,21 @@ export const sendOTP = async (phone: string, otp: string, messageTemplate?: stri
       ? messageTemplate.replace('{{otp}}', otp)
       : `Your Tastifyy OTP is ${otp}. Please use this to verify your account.`;
     
-    const url = new URL('https://blacksms.in/sms');
-    url.searchParams.append('number', phone);
-    url.searchParams.append('type', 'text');
-    url.searchParams.append('message', message);
-    url.searchParams.append('instance_id', senderId);
-    url.searchParams.append('access_token', authKey);
+    const url = 'https://blacksms.in/sms';
+    const payload = {
+      number: phone,
+      type: 'text',
+      message: message,
+      instance_id: senderId,
+      access_token: authKey
+    };
     
-    const response = await fetch(url.toString(), { 
-      method: 'GET',
+    const response = await fetch(url, { 
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify(payload)
     });
     
     if (!response.ok) {
@@ -60,18 +63,21 @@ export const sendDeliveryOTP = async (phone: string, otp: string): Promise<boole
   try {
     const message = `Your Tastifyy delivery OTP is ${otp}. Please share this with your delivery partner to receive your order.`;
     
-    const url = new URL('https://blacksms.in/sms');
-    url.searchParams.append('number', phone);
-    url.searchParams.append('type', 'text');
-    url.searchParams.append('message', message);
-    url.searchParams.append('instance_id', senderId);
-    url.searchParams.append('access_token', authKey);
+    const url = 'https://blacksms.in/sms';
+    const payload = {
+      number: phone,
+      type: 'text',
+      message: message,
+      instance_id: senderId,
+      access_token: authKey
+    };
     
-    const response = await fetch(url.toString(), { 
-      method: 'GET',
+    const response = await fetch(url, { 
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify(payload)
     });
     
     if (!response.ok) {
