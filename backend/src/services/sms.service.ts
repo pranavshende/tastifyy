@@ -39,7 +39,7 @@ export const sendOTP = async (phone: string, otp: string): Promise<boolean> => {
     let data: any;
     try { data = JSON.parse(responseText); } catch { return true; }
 
-    if (data.return === true) {
+    if (data.return === true || data.status === 1 || data.status === 'success') {
       console.log(`[SMS Service] OTP successfully sent to ${phone}`);
       return true;
     } else {
@@ -93,7 +93,7 @@ export const sendDeliveryOTP = async (phone: string, otp: string): Promise<boole
     let data: any;
     try { data = JSON.parse(responseText); } catch { return true; }
 
-    if (data.return === true) {
+    if (data.return === true || data.status === 1 || data.status === 'success') {
       console.log(`[SMS Service] Delivery OTP successfully sent to ${phone}`);
       return true;
     } else {
