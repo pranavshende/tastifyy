@@ -9,7 +9,8 @@
     "dev": "nodemon",
     "start": "node dist/index.js",
     "launch-reset": "tsx scripts/launch-reset.ts",
-    "inspect-partner-menus": "tsx scripts/inspect-partner-menus.ts"
+    "inspect-partner-menus": "tsx scripts/inspect-partner-menus.ts",
+    "sync-admin-credentials": "tsx scripts/sync-admin-credentials.ts"
   },
   "keywords": [],
   "author": "",

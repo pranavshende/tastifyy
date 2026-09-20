@@ -287,7 +287,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 };
 
 export const login = async (req: Request, res: Response): Promise<void> => {
-  const { email, password } = req.body;
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const { password, role } = req.body;
 
   if (!email || !password) {
     res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Email and password are required' } });
@@ -311,6 +312,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     if (!user) {
       res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User profile not found' } });
+      return;
+    }
+
+    if (role && user.role !== role) {
+      res.status(403).json({ success: false, error: { code: 'ROLE_MISMATCH', message: 'This account is not authorized for the requested login.' } });
       return;
     }
 
