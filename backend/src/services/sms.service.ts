@@ -8,8 +8,9 @@ export const sendOTP = async (phone: string, otp: string): Promise<boolean> => {
   }
 
   try {
-    // Strip leading + — API expects 91XXXXXXXXXX format
-    const numbers = phone.startsWith('+') ? phone.slice(1) : phone;
+    // BlackSMS requires exactly 10-digit number (no country code)
+    let numbers = phone.startsWith('+') ? phone.slice(1) : phone; // remove +
+    if (numbers.startsWith('91') && numbers.length === 12) numbers = numbers.slice(2); // remove 91 prefix
 
     const payload = {
       sender_id: senderId,
@@ -61,7 +62,9 @@ export const sendDeliveryOTP = async (phone: string, otp: string): Promise<boole
   }
 
   try {
-    const numbers = phone.startsWith('+') ? phone.slice(1) : phone;
+    // BlackSMS requires exactly 10-digit number (no country code)
+    let numbers = phone.startsWith('+') ? phone.slice(1) : phone;
+    if (numbers.startsWith('91') && numbers.length === 12) numbers = numbers.slice(2);
 
     const payload = {
       sender_id: senderId,
