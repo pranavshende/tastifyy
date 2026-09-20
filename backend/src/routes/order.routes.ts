@@ -14,6 +14,8 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_mock',
 });
 
+const deliveryOtp = (process.env.DELIVERY_OTP || '0003').replace(/\D/g, '').slice(0, 4).padStart(4, '0');
+
 const router = Router();
 
 // Apply auth to all order routes
@@ -395,7 +397,7 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
           idempotency_key: idempotency_key || randomUUID(),
           special_instructions,
           coupon_id: valid_coupon_id,
-          delivery_otp: Math.floor(1000 + Math.random() * 9000).toString(),
+          delivery_otp: deliveryOtp,
           order_items: {
             create: orderItemsData
           }
