@@ -73,7 +73,7 @@ export default function NotificationBell() {
     document.addEventListener('pointerdown', unlockOnInteraction, { once: true });
 
     // Socket.io for real-time updates
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://tastifyy.onrender.com';
     const socket = io(socketUrl, {
       auth: { token },
       transports: ['websocket'],
