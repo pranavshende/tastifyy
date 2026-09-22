@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate, authorizeRole } from '../middlewares/auth.js';
 import { prisma } from '../utils/prisma.js';
 import { findRestaurantPartner } from '../utils/restaurantPartner.js';
+import { Prisma, PaymentStatus } from '@prisma/client';
 import type { Request, Response } from 'express';
 
 const router = Router();
@@ -124,11 +125,11 @@ router.get('/restaurant', authorizeRole(['restaurant_partner']), async (req: Req
     todayStart.setHours(0, 0, 0, 0);
 
     // Base filter for the selected date range (delivered + successful payment)
-    const rangeOrderFilter = {
+    const rangeOrderFilter: Prisma.OrderWhereInput = {
       restaurant_id: partner.restaurant_id,
-      status: 'delivered' as const,
+      status: 'delivered',
       created_at: { gte: from, lte: to },
-      payment_status: 'success'
+      payment_status: PaymentStatus.success
     };
 
     const [
