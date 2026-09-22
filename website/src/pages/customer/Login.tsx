@@ -71,6 +71,8 @@ export default function CustomerLogin() {
       setError('Please enter a valid 6-digit OTP');
       return;
     }
+    // Set loading immediately (synchronous) to disable the button before any async work
+    // This prevents the double-submit race that showed "verification in progress"
     setLoading(true);
     setError('');
 

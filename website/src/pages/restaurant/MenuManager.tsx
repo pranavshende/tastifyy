@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../../api/axios';
 import { getStorageUrl } from '../../lib/supabase';
-import { Plus, Trash2, Search, ChevronDown, ChevronUp, MoreVertical, Camera, Loader2, X, AlertCircle, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Search, ChevronDown, ChevronUp, MoreVertical, Camera, Loader2, X, AlertCircle, Edit2, Upload, Download, Copy, PlusCircle, Layers, ShoppingBag, Check } from 'lucide-react';
 
 // ─── Image Placeholder ────────────────────────────────────────────────────────
 
@@ -220,7 +220,6 @@ function ItemModal({ isOpen, onClose, onSave, categories, existingItem, defaultC
                       className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium focus:outline-none focus:border-brand-primary resize-none" />
           </div>
 
-          {/* Price + Prep Time */}
           {/* Price, Prep Time, Stock */}
           <div className="grid grid-cols-3 gap-4">
             <div>
@@ -236,7 +235,7 @@ function ItemModal({ isOpen, onClose, onSave, categories, existingItem, defaultC
                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium focus:outline-none focus:border-brand-primary" />
             </div>
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1.5">Stock <span className="text-gray-400 font-normal">(Infinite)</span></label>
+              <label className="block text-sm font-bold text-gray-700 mb-1.5">Stock <span className="text-gray-400 font-normal">(∞)</span></label>
               <input type="number" min="0" placeholder="e.g. 50"
                      value={form.stock_quantity} onChange={e => setForm(f => ({ ...f, stock_quantity: e.target.value }))}
                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium focus:outline-none focus:border-brand-primary" />
@@ -277,6 +276,11 @@ function ItemModal({ isOpen, onClose, onSave, categories, existingItem, defaultC
             <label htmlFor="item-available" className="text-sm font-bold text-gray-700">Available / In Stock</label>
           </div>
 
+          {/* ── Variants Section (only when editing an existing item) ──────── */}
+          {existingItem && (
+            <VariantBuilder itemId={existingItem.id} />
+          )}
+
           {/* Actions */}
           <div className="pt-2 flex gap-3">
             <button type="button" onClick={onClose}
@@ -289,6 +293,292 @@ function ItemModal({ isOpen, onClose, onSave, categories, existingItem, defaultC
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Variant Builder ──────────────────────────────────────────────────────────
+
+function VariantBuilder({ itemId }: { itemId: string }) {
+  const [groups, setGroups] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('Size');
+  const [newOptions, setNewOptions] = useState([{ label: '', additional_price: '' }]);
+  const [saving, setSaving] = useState(false);
+
+  const fetchVariants = useCallback(async () => {
+    try {
+      const { data } = await api.get(`/menu/items/${itemId}/variants`);
+      setGroups(data.data || []);
+    } catch {}
+    setLoading(false);
+  }, [itemId]);
+
+  useEffect(() => { fetchVariants(); }, [fetchVariants]);
+
+  const handleAddGroup = async () => {
+    const validOptions = newOptions.filter(o => o.label.trim());
+    if (!newGroupName.trim() || validOptions.length === 0) return;
+    setSaving(true);
+    try {
+      await api.post(`/menu/items/${itemId}/variants`, {
+        group_name: newGroupName.trim(),
+        options: validOptions.map(o => ({ label: o.label.trim(), additional_price: parseFloat(o.additional_price) || 0 }))
+      });
+      setShowAdd(false);
+      setNewGroupName('Size');
+      setNewOptions([{ label: '', additional_price: '' }]);
+      fetchVariants();
+    } catch (e: any) {
+      alert(e.response?.data?.error?.message || 'Failed to save variants');
+    } finally { setSaving(false); }
+  };
+
+  const handleDeleteGroup = async (groupId: string) => {
+    if (!confirm('Delete this variant group?')) return;
+    try {
+      await api.delete(`/menu/items/${itemId}/variants/${groupId}`);
+      fetchVariants();
+    } catch { alert('Failed to delete'); }
+  };
+
+  return (
+    <div className="border border-dashed border-gray-200 rounded-xl p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Layers className="w-4 h-4 text-brand-primary" />
+          <span className="text-sm font-black text-gray-700">Variants / Sizes</span>
+          <span className="text-xs text-gray-400 font-medium">(e.g. Small / Medium / Large)</span>
+        </div>
+        {!showAdd && (
+          <button type="button" onClick={() => setShowAdd(true)}
+                  className="text-xs font-bold text-brand-primary hover:text-brand-secondary flex items-center gap-1">
+            <PlusCircle className="w-3.5 h-3.5" /> Add
+          </button>
+        )}
+      </div>
+
+      {loading ? <div className="text-xs text-gray-400">Loading...</div> : (
+        groups.length > 0 ? (
+          <div className="space-y-2">
+            {groups.map(g => (
+              <div key={g.id} className="bg-gray-50 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-black text-gray-700">{g.group_name}</span>
+                  <button type="button" onClick={() => handleDeleteGroup(g.id)}
+                          className="text-gray-300 hover:text-red-500 transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {g.options.map((o: any) => (
+                    <span key={o.id} className="inline-flex items-center gap-1 bg-white border border-gray-200 rounded-full px-2.5 py-1 text-xs font-bold text-gray-700">
+                      {o.label}
+                      {o.additional_price > 0 && <span className="text-brand-primary">+₹{o.additional_price}</span>}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : !showAdd && (
+          <p className="text-xs text-gray-400 font-medium">No variants yet. Add sizes or portions.</p>
+        )
+      )}
+
+      {/* Add new variant group inline form */}
+      {showAdd && (
+        <div className="bg-orange-50/50 border border-orange-100 rounded-xl p-4 space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-gray-600 mb-1">Group Name</label>
+            <input type="text" value={newGroupName} onChange={e => setNewGroupName(e.target.value)}
+                   placeholder="Size, Portion, Pack"
+                   className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:border-brand-primary" />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-gray-600">Options</label>
+            {newOptions.map((opt, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input type="text" value={opt.label}
+                       onChange={e => setNewOptions(opts => opts.map((o, j) => j === i ? { ...o, label: e.target.value } : o))}
+                       placeholder="Small"
+                       className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-brand-primary" />
+                <span className="text-xs font-bold text-gray-400">+₹</span>
+                <input type="number" value={opt.additional_price} min="0" step="1"
+                       onChange={e => setNewOptions(opts => opts.map((o, j) => j === i ? { ...o, additional_price: e.target.value } : o))}
+                       placeholder="0"
+                       className="w-20 bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm font-medium focus:outline-none focus:border-brand-primary" />
+                {i > 0 && (
+                  <button type="button" onClick={() => setNewOptions(opts => opts.filter((_, j) => j !== i))}
+                          className="text-gray-300 hover:text-red-500">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+            <button type="button" onClick={() => setNewOptions(o => [...o, { label: '', additional_price: '' }])}
+                    className="text-xs text-brand-primary font-bold flex items-center gap-1 hover:text-brand-secondary">
+              <Plus className="w-3 h-3" /> Add option
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => { setShowAdd(false); setNewOptions([{ label: '', additional_price: '' }]); }}
+                    className="flex-1 py-2 text-sm font-bold bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
+              Cancel
+            </button>
+            <button type="button" onClick={handleAddGroup} disabled={saving}
+                    className="flex-1 py-2 text-sm font-bold bg-brand-primary text-white rounded-lg hover:bg-brand-secondary disabled:opacity-60 flex items-center justify-center gap-1">
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              Save Variants
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Bulk Import Modal ────────────────────────────────────────────────────────
+
+function BulkImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const CSV_TEMPLATE = `Name,Description,Price,Category,IsVeg,PrepTimeMins
+Paneer Butter Masala,Rich creamy paneer in tomato gravy,280,Main Course,true,25
+Chicken Biryani,Fragrant basmati with tender chicken,320,Rice & Biryani,false,35
+Gulab Jamun,Soft milk solids soaked in rose syrup,80,Desserts,true,10
+`;
+
+  const handleDownloadTemplate = () => {
+    const blob = new Blob([CSV_TEMPLATE], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'menu_template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = async () => {
+    if (!file) return;
+    setImporting(true);
+    setError('');
+    setResult(null);
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const { data } = await api.post('/menu/bulk-import', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setResult(data.data);
+      if (data.data.created > 0) onDone();
+    } catch (e: any) {
+      setError(e.response?.data?.error?.message || 'Import failed');
+    } finally { setImporting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="bg-white rounded-2xl p-6 w-full max-w-lg relative z-10 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-black text-gray-900">Import Menu</h2>
+            <p className="text-sm text-gray-400 font-medium mt-0.5">Bulk-add items from a CSV file</p>
+          </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Step 1: Download Template */}
+        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
+          <p className="text-sm font-bold text-blue-800 mb-1">Step 1 — Download the template</p>
+          <p className="text-xs text-blue-600 font-medium mb-3">Fill in your menu items in the CSV. Each row = one menu item.</p>
+          <button onClick={handleDownloadTemplate}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors">
+            <Download className="w-4 h-4" /> Download Template
+          </button>
+        </div>
+
+        {/* CSV Format hint */}
+        <div className="bg-gray-50 rounded-xl p-3 mb-4 text-xs font-mono text-gray-500 overflow-x-auto">
+          Name, Description, Price, Category, IsVeg, PrepTimeMins
+        </div>
+
+        {/* Step 2: Upload */}
+        <div className="mb-4">
+          <p className="text-sm font-bold text-gray-700 mb-2">Step 2 — Upload your filled CSV</p>
+          <div
+            onClick={() => fileRef.current?.click()}
+            className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+              file ? 'border-brand-primary bg-orange-50/30' : 'border-gray-200 hover:border-brand-primary hover:bg-gray-50'
+            }`}
+          >
+            <Upload className={`w-6 h-6 mx-auto mb-2 ${file ? 'text-brand-primary' : 'text-gray-300'}`} />
+            {file ? (
+              <p className="text-sm font-bold text-brand-primary">{file.name}</p>
+            ) : (
+              <>
+                <p className="text-sm font-bold text-gray-600">Click to upload CSV</p>
+                <p className="text-xs text-gray-400 mt-1">Only .csv files supported</p>
+              </>
+            )}
+            <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden"
+                   onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setResult(null); setError(''); } }} />
+          </div>
+        </div>
+
+        {error && (
+          <div className="mb-4 bg-red-50 text-red-600 p-3 rounded-xl text-sm font-medium border border-red-100">
+            {error}
+          </div>
+        )}
+
+        {/* Result */}
+        {result && (
+          <div className="mb-4 space-y-3">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-gray-50 rounded-xl p-3 text-center">
+                <p className="text-xl font-black text-gray-900">{result.total}</p>
+                <p className="text-xs font-bold text-gray-400">Total rows</p>
+              </div>
+              <div className="bg-green-50 rounded-xl p-3 text-center">
+                <p className="text-xl font-black text-green-700">{result.created}</p>
+                <p className="text-xs font-bold text-green-500">Imported</p>
+              </div>
+              <div className={`rounded-xl p-3 text-center ${result.failed > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
+                <p className={`text-xl font-black ${result.failed > 0 ? 'text-red-600' : 'text-gray-400'}`}>{result.failed}</p>
+                <p className={`text-xs font-bold ${result.failed > 0 ? 'text-red-400' : 'text-gray-400'}`}>Failed</p>
+              </div>
+            </div>
+            {result.errors?.length > 0 && (
+              <div className="bg-red-50 rounded-xl p-3">
+                <p className="text-xs font-black text-red-700 mb-2">Errors:</p>
+                {result.errors.slice(0, 5).map((e: any, i: number) => (
+                  <p key={i} className="text-xs text-red-600">Row {e.row}: {e.reason}</p>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <button onClick={onClose}
+                  className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200">
+            {result ? 'Done' : 'Cancel'}
+          </button>
+          {!result && (
+            <button onClick={handleImport} disabled={!file || importing}
+                    className="flex-1 py-3 bg-brand-primary text-white rounded-xl font-bold hover:bg-brand-secondary disabled:opacity-60 flex items-center justify-center gap-2">
+              {importing ? <><Loader2 className="w-4 h-4 animate-spin" /> Importing...</> : <><Upload className="w-4 h-4" /> Import Items</>}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -311,6 +601,8 @@ export default function MenuManager() {
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [showImport, setShowImport] = useState(false);
+  const [activeTab, setActiveTab] = useState<'menu' | 'addons'>('menu');
 
   const [newCatName, setNewCatName] = useState('');
 
@@ -397,6 +689,13 @@ export default function MenuManager() {
     setShowItemModal(true);
   };
 
+  const handleDuplicateItem = async (id: string) => {
+    try {
+      await api.post(`/menu/items/${id}/duplicate`);
+      fetchMenu();
+    } catch { alert('Failed to duplicate item'); }
+  };
+
   const filteredCategories = categories.map(cat => ({
     ...cat,
     menu_items: cat.menu_items?.filter((item: any) =>
@@ -414,16 +713,46 @@ export default function MenuManager() {
           <h1 className="text-2xl font-black text-gray-900">Menu Manager</h1>
           <p className="text-gray-500 font-medium text-sm mt-0.5">Manage your menu items, categories and pricing.</p>
         </div>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button 
+            onClick={() => setShowImport(true)}
+            className="bg-gray-100 text-gray-700 px-5 py-2.5 rounded-lg text-sm font-bold flex items-center hover:bg-gray-200 transition-colors shadow-sm"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Import CSV
+          </button>
+          <button 
+            onClick={() => setShowCatModal(true)}
+            className="bg-brand-primary text-white px-5 py-2.5 rounded-lg text-sm font-bold flex items-center hover:bg-brand-secondary transition-colors shadow-sm"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Add Category
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Bar */}
+      <div className="flex gap-1 mb-5 shrink-0 bg-gray-100 rounded-xl p-1">
         <button
-          onClick={() => setShowCatModal(true)}
-          className="bg-brand-primary text-white px-5 py-2.5 rounded-lg text-sm font-bold flex items-center hover:bg-brand-secondary transition-colors shadow-sm self-start sm:self-auto"
+          onClick={() => setActiveTab('menu')}
+          className={`flex-1 py-2 text-sm font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+            activeTab === 'menu' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          }`}
         >
-          <Plus className="w-5 h-5 mr-2" />
-          Add Category
+          <Layers className="w-4 h-4" /> Menu Items
+        </button>
+        <button
+          onClick={() => setActiveTab('addons')}
+          className={`flex-1 py-2 text-sm font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+            activeTab === 'addons' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <ShoppingBag className="w-4 h-4" /> Add-ons
         </button>
       </div>
 
-      {/* Search Bar */}
+      {/* Search Bar — only for menu tab */}
+      {activeTab === 'menu' && (
       <div className="relative mb-6 shrink-0 max-w-xl">
         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
           <Search className="w-5 h-5 text-gray-400" />
@@ -436,10 +765,13 @@ export default function MenuManager() {
           className="w-full bg-white border border-gray-200 pl-11 pr-4 py-3 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary shadow-sm"
         />
       </div>
+      )}
 
-      {/* Menu List */}
+      {/* Content Area */}
       <div className="flex-1 overflow-y-auto scrollbar-hide pb-20">
-        {loading ? (
+        {activeTab === 'addons' ? (
+          <AddonsManager />
+        ) : loading ? (
           <div className="flex justify-center items-center h-40">
             <div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
           </div>
@@ -527,6 +859,11 @@ export default function MenuManager() {
                                   <div className={`w-1.5 h-1.5 rounded-full ${item.is_veg ? 'bg-green-600' : 'bg-red-600'}`}></div>
                                 </div>
                                 <h3 className="font-bold text-gray-900 text-sm truncate">{item.name}</h3>
+                                {item.customizations?.some((c: any) => c.variant_group) && (
+                                  <span className="text-[9px] font-black bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0.5 rounded-full">
+                                    VARIANTS
+                                  </span>
+                                )}
                               </div>
                               {item.description && (
                                 <p className="text-xs text-gray-500 font-medium truncate">{item.description}</p>
@@ -554,6 +891,13 @@ export default function MenuManager() {
                                 <Edit2 className="w-4 h-4" />
                               </button>
                               <button
+                                onClick={() => handleDuplicateItem(item.id)}
+                                className="p-2 text-gray-400 hover:text-blue-500 transition-colors hidden sm:block opacity-0 group-hover:opacity-100"
+                                title="Clone item"
+                              >
+                                <Copy className="w-4 h-4" />
+                              </button>
+                              <button
                                 onClick={() => handleDeleteItem(item.id)}
                                 className="p-2 text-gray-400 hover:text-red-500 transition-colors hidden sm:block opacity-0 group-hover:opacity-100"
                               >
@@ -570,12 +914,15 @@ export default function MenuManager() {
                               {openMenuId === item.id && (
                                 <>
                                   <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpenMenuId(null); }}></div>
-                                  <div className="absolute right-2 top-12 bg-white border border-gray-100 shadow-xl rounded-xl overflow-hidden z-20 w-44 sm:hidden">
-                                    <button onClick={() => { toggleItemAvailability(item.id, item.is_available); setOpenMenuId(null); }} className="w-full text-left px-4 py-3.5 text-sm font-bold text-gray-700 hover:bg-gray-50 border-b border-gray-50 flex items-center">
+                                  <div className="absolute right-2 top-12 bg-white border border-gray-100 shadow-xl rounded-xl overflow-hidden z-20 w-48 sm:hidden">
+                                    <button onClick={() => { toggleItemAvailability(item.id, item.is_available); setOpenMenuId(null); }} className="w-full text-left px-4 py-3.5 text-sm font-bold text-gray-700 hover:bg-gray-50 border-b border-gray-50">
                                       {item.is_available ? 'Mark Out of Stock' : 'Mark In Stock'}
                                     </button>
                                     <button onClick={() => { openEditItem(item); setOpenMenuId(null); }} className="w-full text-left px-4 py-3.5 text-sm font-bold text-brand-primary hover:bg-gray-50 border-b border-gray-50 flex items-center">
                                       <Edit2 className="w-4 h-4 mr-3" /> Edit Item
+                                    </button>
+                                    <button onClick={() => { handleDuplicateItem(item.id); setOpenMenuId(null); }} className="w-full text-left px-4 py-3.5 text-sm font-bold text-blue-600 hover:bg-blue-50 border-b border-gray-50 flex items-center">
+                                      <Copy className="w-4 h-4 mr-3" /> Clone Item
                                     </button>
                                     <button onClick={() => { handleDeleteItem(item.id); setOpenMenuId(null); }} className="w-full text-left px-4 py-3.5 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center">
                                       <Trash2 className="w-4 h-4 mr-3" /> Delete Item
@@ -595,6 +942,14 @@ export default function MenuManager() {
           </div>
         )}
       </div>
+
+      {/* Bulk Import Modal */}
+      {showImport && (
+        <BulkImportModal
+          onClose={() => setShowImport(false)}
+          onDone={() => { fetchMenu(); }}
+        />
+      )}
 
       {/* Add Category Modal */}
       {showCatModal && (
@@ -636,6 +991,199 @@ export default function MenuManager() {
         existingItem={editingItem}
         defaultCategoryId={activeCatId || undefined}
       />
+    </div>
+  );
+}
+
+// ─── Add-ons Manager (restaurant-level) ──────────────────────────────────────
+
+function AddonsManager() {
+  const [groups, setGroups] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<any>(null);
+  const [formGroupName, setFormGroupName] = useState('');
+  const [formOptions, setFormOptions] = useState([{ label: '', additional_price: '' }]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const fetchAddons = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get('/menu/addons');
+      setGroups(data.data || []);
+    } catch {}
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchAddons(); }, [fetchAddons]);
+
+  const openAdd = () => {
+    setEditingGroup(null);
+    setFormGroupName('');
+    setFormOptions([{ label: '', additional_price: '' }]);
+    setShowAdd(true);
+    setError('');
+  };
+
+  const openEdit = (g: any) => {
+    setEditingGroup(g);
+    setFormGroupName(g.group_name);
+    setFormOptions(g.options.map((o: any) => ({ label: o.label, additional_price: String(o.additional_price) })));
+    setShowAdd(true);
+    setError('');
+  };
+
+  const handleSave = async () => {
+    const validOptions = formOptions.filter(o => o.label.trim());
+    if (!formGroupName.trim() || validOptions.length === 0) {
+      setError('Group name and at least one option are required');
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        group_name: formGroupName.trim(),
+        options: validOptions.map(o => ({ label: o.label.trim(), additional_price: parseFloat(o.additional_price) || 0 }))
+      };
+      if (editingGroup) {
+        await api.put(`/menu/addons/${editingGroup.id}`, payload);
+      } else {
+        await api.post('/menu/addons', payload);
+      }
+      setShowAdd(false);
+      fetchAddons();
+    } catch (e: any) {
+      setError(e.response?.data?.error?.message || 'Failed to save add-on');
+    } finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this add-on group?')) return;
+    try {
+      await api.delete(`/menu/addons/${id}`);
+      fetchAddons();
+    } catch { alert('Failed to delete'); }
+  };
+
+  if (loading) return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" /></div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-black text-gray-900">Restaurant Add-ons</h2>
+          <p className="text-sm text-gray-400 font-medium">Extras customers can add to any order (e.g. Water Bottle, Extra Sauce)</p>
+        </div>
+        <button onClick={openAdd}
+                className="bg-brand-primary text-white px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-1.5 hover:bg-brand-secondary transition-colors">
+          <Plus className="w-4 h-4" /> Add Group
+        </button>
+      </div>
+
+      {groups.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-12 text-center">
+          <ShoppingBag className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+          <p className="font-bold text-gray-500">No add-ons yet</p>
+          <p className="text-sm text-gray-400 font-medium mt-1">Add beverages, sides, or extras that customers can include with any order.</p>
+          <button onClick={openAdd}
+                  className="mt-4 px-4 py-2 bg-brand-primary text-white rounded-xl text-sm font-bold hover:bg-brand-secondary">
+            Add your first add-on
+          </button>
+        </div>
+      ) : (
+        groups.map(g => (
+          <div key={g.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 flex items-center justify-between border-b border-gray-50">
+              <h3 className="font-black text-gray-900">{g.group_name}</h3>
+              <div className="flex items-center gap-2">
+                <button onClick={() => openEdit(g)}
+                        className="p-2 text-gray-400 hover:text-brand-primary transition-colors">
+                  <Edit2 className="w-4 h-4" />
+                </button>
+                <button onClick={() => handleDelete(g.id)}
+                        className="p-2 text-gray-400 hover:text-red-500 transition-colors">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="divide-y divide-gray-50">
+              {g.options.map((o: any) => (
+                <div key={o.id} className="px-5 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-brand-primary rounded-full"></div>
+                    <span className="text-sm font-bold text-gray-700">{o.label}</span>
+                  </div>
+                  <span className="text-sm font-black text-gray-900">+₹{Number(o.additional_price).toFixed(0)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))
+      )}
+
+      {/* Add/Edit Modal */}
+      {showAdd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAdd(false)}></div>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md relative z-10 shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-black text-gray-900">{editingGroup ? 'Edit Add-on Group' : 'New Add-on Group'}</h3>
+              <button onClick={() => setShowAdd(false)} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {error && <div className="mb-3 bg-red-50 text-red-600 p-3 rounded-xl text-sm font-medium">{error}</div>}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1.5">Group Name</label>
+                <input type="text" value={formGroupName} onChange={e => setFormGroupName(e.target.value)}
+                       placeholder="Beverages, Sides, Extras..."
+                       className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-medium focus:outline-none focus:border-brand-primary" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Options</label>
+                <div className="space-y-2">
+                  {formOptions.map((opt, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input type="text" value={opt.label}
+                             onChange={e => setFormOptions(opts => opts.map((o, j) => j === i ? { ...o, label: e.target.value } : o))}
+                             placeholder="Water Bottle"
+                             className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:border-brand-primary" />
+                      <span className="text-xs font-bold text-gray-400">₹</span>
+                      <input type="number" value={opt.additional_price} min="0" step="1"
+                             onChange={e => setFormOptions(opts => opts.map((o, j) => j === i ? { ...o, additional_price: e.target.value } : o))}
+                             placeholder="20"
+                             className="w-20 bg-gray-50 border border-gray-200 rounded-lg px-2 py-2 text-sm font-medium focus:outline-none focus:border-brand-primary" />
+                      {i > 0 && (
+                        <button type="button" onClick={() => setFormOptions(opts => opts.filter((_, j) => j !== i))}
+                                className="text-gray-300 hover:text-red-500">
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => setFormOptions(o => [...o, { label: '', additional_price: '' }])}
+                          className="text-sm text-brand-primary font-bold flex items-center gap-1 hover:text-brand-secondary">
+                    <Plus className="w-3.5 h-3.5" /> Add option
+                  </button>
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowAdd(false)}
+                        className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200">
+                  Cancel
+                </button>
+                <button onClick={handleSave} disabled={saving}
+                        className="flex-1 py-3 bg-brand-primary text-white rounded-xl font-bold hover:bg-brand-secondary disabled:opacity-60 flex items-center justify-center gap-2">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -335,17 +335,44 @@ router.patch('/addresses/:id/default', async (req: Request, res: Response) => {
 
 // ─── RESTAURANT & MENU ROUTES ───────────────────────────────────────────────
 
-// GET /api/customer/restaurants
-// Fetch all active restaurants. MVP: no complex geofencing, just return active ones.
+// GET /api/customer/restaurants?filter=for_you|trending|top_rated|fast_delivery|offers|veg
+// Returns active restaurants, optionally sorted/filtered by the given filter.
 router.get('/restaurants', async (req: Request, res: Response) => {
+  const filter = (req.query.filter as string) || 'all';
+  const customerId = (req.user as any).id;
+
   try {
+    const baseWhere = {
+      status: 'active' as const,
+      approval_status: 'approved' as const,
+      account_status: 'active' as const,
+      visibility_status: 'visible' as const,
+    };
+
+    // ── Build filter-specific where + orderBy ─────────────────────────
+    let extraWhere: any = {};
+    let orderBy: any = { created_at: 'desc' };
+
+    if (filter === 'veg') {
+      extraWhere = { is_pure_veg: true };
+    } else if (filter === 'fast_delivery') {
+      orderBy = { avg_preparation_time_mins: 'asc' };
+    } else if (filter === 'offers') {
+      const now = new Date();
+      // Only show restaurants that have active coupons right now
+      extraWhere = {
+        coupons: {
+          some: {
+            is_active: true,
+            valid_from: { lte: now },
+            valid_until: { gte: now }
+          }
+        }
+      };
+    }
+
     const restaurants = await prisma.restaurant.findMany({
-      where: { 
-        status: 'active',
-        approval_status: 'approved',
-        account_status: 'active',
-        visibility_status: 'visible'
-      },
+      where: { ...baseWhere, ...extraWhere },
       select: {
         id: true,
         name: true,
@@ -358,29 +385,85 @@ router.get('/restaurants', async (req: Request, res: Response) => {
         cuisine_tags: true,
         avg_preparation_time_mins: true,
         is_open: true,
-        ratings: { select: { restaurant_rating: true } }
-      },
-      orderBy: { created_at: 'desc' }
+        created_at: true,
+        ratings: { select: { restaurant_rating: true } },
+        coupons: {
+          where: {
+            is_active: true,
+            valid_from: { lte: new Date() },
+            valid_until: { gte: new Date() }
+          },
+          select: { id: true, code: true, discount_type: true, discount_value: true },
+          take: 1
+        },
+        orders: filter === 'trending' ? {
+          where: { created_at: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }, status: 'delivered' },
+          select: { id: true }
+        } : undefined
+      } as any,
+      orderBy
     });
-    const result = restaurants.map(r => {
+
+    // ── Post-process ──────────────────────────────────────────────────
+    let result = restaurants.map((r: any) => {
       let rating = 0;
+      let reviews_count = 0;
       if (r.ratings && r.ratings.length > 0) {
-        const sum = r.ratings.reduce((acc, curr) => acc + curr.restaurant_rating, 0);
+        const sum = r.ratings.reduce((acc: number, curr: any) => acc + curr.restaurant_rating, 0);
         rating = Number((sum / r.ratings.length).toFixed(1));
+        reviews_count = r.ratings.length;
       }
-      
-      const { ratings, ...rest } = r;
+      const recent_orders = r.orders ? r.orders.length : undefined;
+      const active_offer = r.coupons && r.coupons.length > 0 ? r.coupons[0] : null;
 
       return {
-        ...rest,
+        id: r.id,
+        name: r.name,
+        type: r.type,
+        address_line: r.address_line,
+        city: r.city,
+        is_pure_veg: r.is_pure_veg,
+        cuisine_tags: r.cuisine_tags,
+        avg_preparation_time_mins: r.avg_preparation_time_mins,
+        is_open: r.is_open,
+        created_at: r.created_at,
         rating,
-          reviews_count: r.ratings.length,
+        reviews_count,
+        recent_orders,
+        has_offer: !!active_offer,
+        active_offer,
         logo_url: getPublicUrl(r.logo_url),
         cover_image_url: getPublicUrl(r.cover_image_url),
       };
     });
+
+    // ── Filter/sort by filter type ────────────────────────────────────
+    if (filter === 'trending') {
+      result = result.sort((a: any, b: any) => (b.recent_orders || 0) - (a.recent_orders || 0));
+    } else if (filter === 'top_rated') {
+      result = result.sort((a: any, b: any) => b.rating - a.rating);
+    } else if (filter === 'for_you') {
+      // Find restaurants this customer has ordered from before
+      const pastOrders = await prisma.order.findMany({
+        where: { customer_id: customerId },
+        select: { restaurant_id: true },
+        distinct: ['restaurant_id'],
+        take: 20
+      });
+      const pastRestaurantIds = new Set(pastOrders.map((o: any) => o.restaurant_id));
+
+      // Sort: past restaurants first, then by rating
+      result = result.sort((a: any, b: any) => {
+        const aWas = pastRestaurantIds.has(a.id) ? 1 : 0;
+        const bWas = pastRestaurantIds.has(b.id) ? 1 : 0;
+        if (bWas !== aWas) return bWas - aWas;
+        return b.rating - a.rating;
+      });
+    }
+
     res.json({ success: true, data: result });
   } catch (error) {
+    console.error('Restaurants fetch error:', error);
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch restaurants' } });
   }
 });
@@ -427,7 +510,12 @@ router.get('/restaurants/:id/menu', async (req: Request, res: Response) => {
           orderBy: { name: 'asc' },
           include: {
             customizations: {
-              include: { options: true }
+              include: {
+                options: {
+                  where: { is_available: true },
+                  orderBy: { additional_price: 'asc' }
+                }
+              }
             }
           }
         }
@@ -435,13 +523,52 @@ router.get('/restaurants/:id/menu', async (req: Request, res: Response) => {
     });
 
     // Filter out empty categories for the customer view
-    const filteredCategories = categories.filter((cat: any) => cat.menu_items && cat.menu_items.length > 0).map((cat: any) => ({
-      ...cat,
-      menu_items: cat.menu_items.map((item: any) => ({
-        ...item,
-        image_url: getPublicUrl(item.image_url),
+    const filteredCategories = categories
+      .filter((cat: any) => cat.menu_items && cat.menu_items.length > 0)
+      .map((cat: any) => ({
+        ...cat,
+        menu_items: cat.menu_items.map((item: any) => ({
+          ...item,
+          image_url: getPublicUrl(item.image_url),
+          // Separate variants from regular customizations and addons
+          variants: item.customizations
+            .filter((c: any) => c.variant_group)
+            .flatMap((c: any) => c.options.map((o: any) => ({
+              id: o.id,
+              group_id: c.id,
+              group_name: c.group_name,
+              label: o.label,
+              additional_price: Number(o.additional_price),
+              is_available: o.is_available
+            }))),
+          customizations: item.customizations.filter((c: any) => !c.variant_group && !c.is_addon),
+          has_variants: item.customizations.some((c: any) => c.variant_group),
+        }))
+      }));
+
+    // Fetch restaurant-level add-ons (is_addon=true items linked to any category's items)
+    const addonGroups = await prisma.menuItemCustomization.findMany({
+      where: {
+        is_addon: true,
+        menu_item: { restaurant_id: id, is_deleted: false }
+      },
+      include: {
+        options: { where: { is_available: true }, orderBy: { additional_price: 'asc' } },
+        menu_item: { select: { restaurant_id: true } }
+      },
+      distinct: ['group_name']
+    });
+
+    const addons = addonGroups.flatMap((g: any) =>
+      g.options.map((o: any) => ({
+        group_id: g.id,
+        group_name: g.group_name,
+        option_id: o.id,
+        label: o.label,
+        price: Number(o.additional_price),
+        is_available: o.is_available
       }))
-    }));
+    );
 
     let rating = 0;
     if (restaurant.ratings && restaurant.ratings.length > 0) {
@@ -458,7 +585,7 @@ router.get('/restaurants/:id/menu', async (req: Request, res: Response) => {
       cover_image_url: getPublicUrl(restaurant.cover_image_url),
     };
 
-    res.json({ success: true, data: { restaurant: formattedRestaurant, menu: filteredCategories } });
+    res.json({ success: true, data: { restaurant: formattedRestaurant, menu: filteredCategories, addons } });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch menu' } });
   }

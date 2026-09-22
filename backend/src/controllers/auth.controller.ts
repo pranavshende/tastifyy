@@ -70,7 +70,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
   }
 
   if (verificationLocks.has(phone)) {
-    res.status(409).json({ success: false, error: { code: 'CONCURRENT_REQUEST', message: 'Verification already in progress' } });
+    res.status(409).json({ success: false, error: { code: 'CONCURRENT_REQUEST', message: 'Please wait — your OTP is being verified.' } });
     return;
   }
   

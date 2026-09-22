@@ -1,0 +1,3 @@
+ALTER TABLE menu_item_customizations ADD COLUMN IF NOT EXISTS variant_group BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE menu_item_customizations ADD COLUMN IF NOT EXISTS is_addon BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE menu_item_customization_options ADD COLUMN IF NOT EXISTS is_available BOOLEAN NOT NULL DEFAULT TRUE;

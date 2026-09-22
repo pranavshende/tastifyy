@@ -390,6 +390,8 @@ model MenuItemCustomization {
   group_name      String  @db.VarChar(100)
   is_required     Boolean @default(false)
   is_multi_select Boolean @default(false)
+  variant_group   Boolean @default(false)  // true = mutually-exclusive size/portion variants
+  is_addon        Boolean @default(false)  // true = restaurant-level add-on group
 
   menu_item MenuItem                      @relation(fields: [menu_item_id], references: [id])
   options   MenuItemCustomizationOption[]
@@ -402,6 +404,7 @@ model MenuItemCustomizationOption {
   customization_id String  @db.Uuid
   label            String  @db.VarChar(100)
   additional_price Decimal @default(0) @db.Decimal(10, 2)
+  is_available     Boolean @default(true)
 
   customization MenuItemCustomization @relation(fields: [customization_id], references: [id])
 
