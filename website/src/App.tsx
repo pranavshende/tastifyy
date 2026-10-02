@@ -49,7 +49,8 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Public */}
-      <Route path="/" element={<Landing />} />
+      <Route path="/" element={<Navigate to="/customer/home" replace />} />
+      <Route path="/landing" element={<Landing />} />
 
       {/* Auth Routes — redirect to dashboard if already logged in */}
       <Route
@@ -78,14 +79,7 @@ function AppRoutes() {
       />
 
       {/* Protected Customer Routes */}
-      <Route
-        path="/customer/home"
-        element={
-          <ProtectedRoute allowedRoles={['customer']}>
-            <CustomerHome />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/customer/home" element={<CustomerHome />} />
       <Route
         path="/customer/search"
         element={
