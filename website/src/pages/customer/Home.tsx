@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { isAxiosError } from 'axios';
 import api from '../../api/axios';
 import Header from '../../components/customer/Header';
 import RestaurantCard from '../../components/customer/RestaurantCard';
@@ -17,10 +18,11 @@ interface Restaurant {
   logo_url?: string;
   is_open: boolean;
   avg_preparation_time_mins?: number;
-  status: string;
   rating?: number;
   distance_km?: number;
   reviews_count?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface LocationState {
@@ -76,17 +78,73 @@ function getLocationSummary(city: string, loading: boolean, error: string | null
   return `Near ${city || 'your area'}`;
 }
 
-function normalizeRestaurant(restaurant: any): Restaurant {
+function toFiniteNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+function normalizeRestaurant(restaurant: Record<string, unknown>): Restaurant {
   return {
-    ...restaurant,
-    rating: typeof restaurant.rating === 'number' ? restaurant.rating : 4.2,
-    reviews_count: typeof restaurant.reviews_count === 'number' ? restaurant.reviews_count : 0,
-    distance_km: typeof restaurant.distance === 'number' ? restaurant.distance : restaurant.distance_km,
-    city: restaurant.city || 'Sakoli',
-    cuisine_tags: Array.isArray(restaurant.cuisine_tags) ? restaurant.cuisine_tags : [],
+    id: String(restaurant.id),
+    name: typeof restaurant.name === 'string' ? restaurant.name : 'Restaurant',
+    city: typeof restaurant.city === 'string' ? restaurant.city : '',
     is_pure_veg: Boolean(restaurant.is_pure_veg),
+    cuisine_tags: Array.isArray(restaurant.cuisine_tags)
+      ? restaurant.cuisine_tags.filter((tag): tag is string => typeof tag === 'string')
+      : [],
+    cover_image_url: typeof restaurant.cover_image_url === 'string' ? restaurant.cover_image_url : undefined,
+    logo_url: typeof restaurant.logo_url === 'string' ? restaurant.logo_url : undefined,
     is_open: restaurant.is_open !== false,
+    avg_preparation_time_mins: toFiniteNumber(restaurant.avg_preparation_time_mins),
+    rating: toFiniteNumber(restaurant.rating) ?? 0,
+    reviews_count: toFiniteNumber(restaurant.reviews_count) ?? 0,
+    latitude: toFiniteNumber(restaurant.latitude),
+    longitude: toFiniteNumber(restaurant.longitude),
+    distance_km: toFiniteNumber(restaurant.distance_km) ?? toFiniteNumber(restaurant.distance),
   };
+}
+
+function calculateDistanceKm(
+  from: { latitude: number; longitude: number },
+  to: { latitude?: number; longitude?: number }
+): number | undefined {
+  const { latitude, longitude } = from;
+  const destinationLatitude = to.latitude;
+  const destinationLongitude = to.longitude;
+  if (
+    typeof destinationLatitude !== 'number' ||
+    typeof destinationLongitude !== 'number' ||
+    (destinationLatitude === 0 && destinationLongitude === 0) ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    !Number.isFinite(destinationLatitude) ||
+    !Number.isFinite(destinationLongitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    destinationLatitude < -90 ||
+    destinationLatitude > 90 ||
+    longitude < -180 ||
+    longitude > 180 ||
+    destinationLongitude < -180 ||
+    destinationLongitude > 180
+  ) {
+    return undefined;
+  }
+
+  const radians = (degrees: number) => (degrees * Math.PI) / 180;
+  const latitudeDelta = radians(destinationLatitude - latitude);
+  const longitudeDelta = radians(destinationLongitude - longitude);
+  const haversine =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(radians(latitude)) *
+      Math.cos(radians(destinationLatitude)) *
+      Math.sin(longitudeDelta / 2) ** 2;
+  const boundedHaversine = Math.min(1, Math.max(0, haversine));
+  return 6371 * 2 * Math.atan2(Math.sqrt(boundedHaversine), Math.sqrt(1 - boundedHaversine));
 }
 
 export default function CustomerHome() {
@@ -98,21 +156,21 @@ export default function CustomerHome() {
   const [activeFilter, setActiveFilter] = useState<(typeof FILTERS)[number]['key']>('top_rated');
   const [activeOffer, setActiveOffer] = useState(0);
   const [isOfferPaused, setIsOfferPaused] = useState(false);
-  const [locationState, setLocationState] = useState<LocationState>({
-    city: 'Sakoli',
-    loading: true,
-    error: null,
-    coords: null,
+  const [locationState, setLocationState] = useState<LocationState>(() => {
+    const isGeolocationAvailable = typeof navigator !== 'undefined' && Boolean(navigator.geolocation);
+    return {
+      city: 'Sakoli',
+      loading: isGeolocationAvailable,
+      error: isGeolocationAvailable ? null : 'Geolocation is not supported on this device.',
+      coords: null,
+    };
   });
 
   const { user } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setLocationState({ city: 'Sakoli', loading: false, error: 'Geolocation is not supported on this device.', coords: null });
-      return;
-    }
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -156,44 +214,34 @@ export default function CustomerHome() {
       setError('');
 
       try {
-        const effectiveFilter = activeFilter === 'all' ? 'top_rated' : activeFilter;
         const [restaurantsResponse, favoritesResponse] = await Promise.all([
-          api.get('/customer/restaurants', {
-            params: {
-              filter: effectiveFilter,
-            },
-          }),
-          user ? api.get('/customer/favorites').catch(() => ({ data: { success: false } })) : Promise.resolve({ data: { success: false } }),
+          api.get<Record<string, unknown>[]>('/restaurants'),
+          user
+            ? api.get<{ success: boolean; data?: Array<{ id: string }> }>('/customer/favorites')
+                .catch(() => null)
+            : Promise.resolve(null),
         ]);
 
-        const restaurantData = Array.isArray(restaurantsResponse.data)
-          ? restaurantsResponse.data
-          : restaurantsResponse.data?.data || [];
+        setRestaurants(restaurantsResponse.data.map(normalizeRestaurant));
 
-        const normalizedRestaurants = restaurantData.map(normalizeRestaurant);
-        const sortedRestaurants = normalizedRestaurants.sort((a: Restaurant, b: Restaurant) => {
-          const distanceA = typeof a.distance_km === 'number' ? a.distance_km : Number.MAX_SAFE_INTEGER;
-          const distanceB = typeof b.distance_km === 'number' ? b.distance_km : Number.MAX_SAFE_INTEGER;
-          return distanceA - distanceB;
-        });
-
-        setRestaurants(sortedRestaurants);
-
-        if (favoritesResponse.data?.success) {
-          setFavoriteIds(new Set((favoritesResponse.data.data || []).map((favorite: any) => favorite.id)));
+        if (favoritesResponse?.data.success) {
+          setFavoriteIds(new Set((favoritesResponse.data.data || []).map((favorite) => favorite.id)));
         } else {
           setFavoriteIds(new Set());
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to load restaurants', err);
-        setError(err.response?.data?.error?.message || 'Failed to load restaurants nearby. Please try again.');
+        const message = isAxiosError<{ error?: { message?: string } }>(err)
+          ? err.response?.data?.error?.message
+          : undefined;
+        setError(message || 'Failed to load restaurants nearby. Please try again.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchRestaurantsAndFavorites();
-  }, [locationState.coords, user, activeFilter]);
+  }, [user]);
 
   const toggleFavorite = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
@@ -234,16 +282,36 @@ export default function CustomerHome() {
     { name: 'More', isMore: true },
   ];
 
+  const sortedRestaurants = useMemo(() => {
+    return restaurants
+      .map((restaurant) => ({
+        ...restaurant,
+        distance_km: locationState.coords
+          ? calculateDistanceKm(locationState.coords, restaurant)
+          : undefined,
+      }))
+      .sort((a, b) => {
+        if (locationState.coords) {
+          const distanceA = a.distance_km ?? Number.MAX_SAFE_INTEGER;
+          const distanceB = b.distance_km ?? Number.MAX_SAFE_INTEGER;
+          if (distanceA !== distanceB) return distanceA - distanceB;
+        }
+        if (a.rating !== b.rating) return (b.rating ?? 0) - (a.rating ?? 0);
+        return Number(b.is_open) - Number(a.is_open);
+      });
+  }, [locationState.coords, restaurants]);
+
   const filteredRestaurants = useMemo(() => {
-    return restaurants.filter((restaurant) => {
+    return sortedRestaurants.filter((restaurant) => {
       if (activeFilter === 'all') return true;
-      if (activeFilter === 'nearby') return typeof restaurant.distance_km === 'number' && restaurant.distance_km <= 5;
+      if (activeFilter === 'nearby') {
+        return !locationState.coords || restaurant.distance_km === undefined || restaurant.distance_km <= 10;
+      }
       if (activeFilter === 'veg') return restaurant.is_pure_veg;
       if (activeFilter === 'open') return restaurant.is_open;
-      if (activeFilter === 'top_rated') return Number(restaurant.rating ?? 0) >= 4.5;
       return true;
     });
-  }, [activeFilter, restaurants]);
+  }, [activeFilter, locationState.coords, sortedRestaurants]);
 
   const currentOffer = OFFER_SLIDES[activeOffer];
 
@@ -473,7 +541,7 @@ export default function CustomerHome() {
               </div>
             ) : filteredRestaurants.length === 0 ? (
               <div className="w-full bg-gray-50 text-gray-500 font-medium p-8 rounded-2xl text-center border border-gray-100">
-                {locationState.error ? 'Location unavailable. Showing popular restaurants in Sakoli.' : 'No restaurants found nearby. Try exploring other locations!'}
+                No restaurants match this filter. Try another filter or view all restaurants.
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
