@@ -341,6 +341,9 @@ router.get('/dashboard', async (_req: Request, res: Response) => {
       totalOrders,
       openComplaints,
       launchSettings,
+      totalCustomers,
+      activeCustomers,
+      activeDeliveryPartners,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.restaurant.count(),
@@ -351,6 +354,9 @@ router.get('/dashboard', async (_req: Request, res: Response) => {
       prisma.order.count(),
       prisma.supportTicket.count({ where: { status: 'open' } }),
       getLaunchDaySettings(),
+      prisma.user.count({ where: { role: 'customer' } }),
+      prisma.user.count({ where: { role: 'customer', is_active: true } }),
+      prisma.deliveryPartner.count({ where: { status: 'active' } }),
     ]);
 
     res.json({
@@ -365,6 +371,9 @@ router.get('/dashboard', async (_req: Request, res: Response) => {
         totalOrders,
         openComplaints,
         launchSettings,
+        totalCustomers,
+        activeCustomers,
+        activeDeliveryPartners,
       }
     });
   } catch (error) {

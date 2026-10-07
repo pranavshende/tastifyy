@@ -67,9 +67,9 @@ function OverviewTab() {
   }
 
   const cards = [
-    { title: 'Total Users', value: metrics?.totalUsers || 0, icon: <Users />, color: 'bg-blue-50 text-blue-600 border-blue-100' },
-    { title: 'Active Restaurants', value: metrics?.activeRestaurants || 0, icon: <Store />, color: 'bg-green-50 text-green-600 border-green-100' },
-    { title: 'Delivery Fleet', value: metrics?.totalDeliveryPartners || 0, icon: <Bike />, color: 'bg-purple-50 text-purple-600 border-purple-100' },
+    { title: 'Customers', value: <><span className="text-3xl font-black">{metrics?.activeCustomers || 0}</span><span className="text-xl font-bold opacity-50"> / {metrics?.totalCustomers || 0}</span></>, icon: <Users />, color: 'bg-blue-50 text-blue-600 border-blue-100' },
+    { title: 'Restaurants', value: <><span className="text-3xl font-black">{metrics?.activeRestaurants || 0}</span><span className="text-xl font-bold opacity-50"> / {metrics?.totalRestaurants || 0}</span></>, icon: <Store />, color: 'bg-green-50 text-green-600 border-green-100' },
+    { title: 'Delivery Fleet', value: <><span className="text-3xl font-black">{metrics?.activeDeliveryPartners || 0}</span><span className="text-xl font-bold opacity-50"> / {metrics?.totalDeliveryPartners || 0}</span></>, icon: <Bike />, color: 'bg-purple-50 text-purple-600 border-purple-100' },
     { title: 'Total Orders', value: metrics?.totalOrders || 0, icon: <ShoppingBag />, color: 'bg-brand-primary/10 text-brand-primary border-brand-primary/20' },
     { title: 'Avg Order Value', value: `₹${analytics.kpis?.aov?.toFixed(0) || 0}`, icon: <TrendingUp />, color: 'bg-indigo-50 text-indigo-600 border-indigo-100' },
     { title: 'Platform Revenue', value: `₹${analytics.kpis?.estCommission?.toFixed(0) || 0}`, icon: <TrendingUp />, color: 'bg-yellow-50 text-yellow-600 border-yellow-100' },
