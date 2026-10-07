@@ -63,14 +63,21 @@ export default function FoodieBot() {
 
   return (
     <>
-      <button
-        type="button"
-        aria-label="Open Tastifyy AI Assistant"
-        onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gray-900 text-white shadow-xl shadow-gray-900/20 transition-transform hover:scale-105"
-      >
-        <Bot className="h-6 w-6" />
-      </button>
+      <div className="fixed bottom-6 right-5 z-40 group flex items-center gap-3">
+        <div className="absolute right-16 px-3 py-1.5 bg-gray-900 text-white text-xs font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-lg">
+          Ask AI Assistant
+          <div className="absolute top-1/2 -right-1 -translate-y-1/2 border-4 border-transparent border-l-gray-900"></div>
+        </div>
+        <button
+          type="button"
+          aria-label="Open Tastifyy AI Assistant"
+          onClick={() => setOpen(true)}
+          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-brand-primary text-white shadow-xl shadow-brand-primary/40 transition-transform hover:scale-110"
+        >
+          <span className="absolute inset-0 rounded-full bg-brand-primary animate-ping opacity-40"></span>
+          <Bot className="relative h-6 w-6" />
+        </button>
+      </div>
 
       {open && (
         <div className="fixed bottom-24 right-4 z-50 flex w-[min(390px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">

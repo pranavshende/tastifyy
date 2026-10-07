@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isAxiosError } from 'axios';
 import api from '../../api/axios';
@@ -393,26 +393,6 @@ export default function CustomerHome() {
           <span>Trending now</span>
           <span className="rounded-full bg-brand-primary/10 px-3 py-1 text-brand-primary">{currentOffer.title}</span>
         </div>
-
-        <div className="mb-6">
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {FILTERS.map((filter) => (
-              <button
-                key={filter.key}
-                type="button"
-                onClick={() => setActiveFilter(filter.key)}
-                className={`flex-shrink-0 rounded-full border px-4 py-2 text-sm font-bold transition-colors ${
-                  activeFilter === filter.key
-                    ? 'border-brand-primary bg-brand-primary text-white shadow-md shadow-brand-primary/20'
-                    : 'border-gray-200 bg-white text-gray-700 hover:border-brand-primary hover:text-brand-primary'
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         <section className="py-4 md:py-6">
           <div
             className="relative overflow-hidden rounded-[28px] shadow-lg border border-gray-100 bg-white"
@@ -482,14 +462,30 @@ export default function CustomerHome() {
           </div>
         </section>
 
+        <div className="mb-6 mt-6">
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {FILTERS.map((filter) => (
+              <button
+                key={filter.key}
+                type="button"
+                onClick={() => setActiveFilter(filter.key)}
+                className={`flex-shrink-0 rounded-full border px-4 py-2 text-sm font-bold transition-colors ${
+                  activeFilter === filter.key
+                    ? 'border-brand-primary bg-brand-primary text-white shadow-md shadow-brand-primary/20'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-brand-primary hover:text-brand-primary'
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <section className="py-6 md:py-8 border-b border-gray-100">
           <div className="flex justify-between items-end mb-6">
             <div>
               <h2 className="text-xl md:text-[22px] font-black text-gray-900 tracking-tight">What's on your mind?</h2>
             </div>
-            <button onClick={() => navigate('/customer/restaurants')} className="text-xs md:text-sm text-brand-primary font-bold hover:underline cursor-pointer flex items-center mb-1 transition-all">
-              See all <ArrowRight className="w-3 h-3 md:w-3.5 md:h-3.5 ml-1" />
-            </button>
           </div>
           <div className="flex gap-3 md:gap-6 lg:gap-8 overflow-x-auto scrollbar-hide pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 snap-x">
             {cuisines.map((cat, idx) => (
@@ -524,9 +520,6 @@ export default function CustomerHome() {
                 {activeFilter === 'veg' ? 'Veg Picks' : activeFilter === 'top_rated' ? 'Top Rated Near You' : activeFilter === 'nearby' ? 'Nearby Restaurants' : activeFilter === 'open' ? 'Open Now' : 'Top Rated Near You'}
               </h2>
             </div>
-            <button onClick={() => navigate('/customer/restaurants')} className="text-xs text-brand-primary font-bold hover:underline flex items-center cursor-pointer mb-1">
-              View all <ArrowRight className="w-3 h-3 ml-0.5" />
-            </button>
           </div>
 
           <div className="w-full">

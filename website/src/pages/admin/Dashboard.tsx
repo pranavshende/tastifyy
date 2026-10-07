@@ -163,7 +163,7 @@ function OverviewTab() {
 // ─── RESTAURANTS TAB ─────────────────────────────────────────────────────────
 function RestaurantsTab() {
   const [restaurants, setRestaurants] = useState<any[]>([]);
-  const [statusFilter, setStatusFilter] = useState('pending');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const fetchRestaurants = () => {
     api.get(`/admin/restaurants?status=${statusFilter === 'all' ? '' : statusFilter}`).then((res) => {
@@ -271,7 +271,7 @@ function RestaurantsTab() {
 // ─── DELIVERY TAB ────────────────────────────────────────────────────────────
 function DeliveryTab() {
   const [partners, setPartners] = useState<any[]>([]);
-  const [statusFilter, setStatusFilter] = useState('pending');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const fetchPartners = () => {
     api.get(`/admin/delivery-partners?status=${statusFilter === 'all' ? '' : statusFilter}`).then((res) => {
@@ -376,7 +376,7 @@ function UsersTab() {
   const [search, setSearch] = useState('');
 
   const fetchUsers = () => {
-    api.get(`/admin/users?search=${search}`).then((res) => setUsers(res.data.data));
+    api.get(`/admin/users?search=${search}&limit=1000`).then((res) => setUsers(res.data.data));
   };
 
   useEffect(() => {
@@ -467,7 +467,7 @@ function UsersTab() {
 // ─── SUPPORT TAB ─────────────────────────────────────────────────────────────
 function SupportTab() {
   const [tickets, setTickets] = useState<any[]>([]);
-  const [statusFilter, setStatusFilter] = useState('open');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const fetchTickets = () => {
     api.get(`/admin/support?status=${statusFilter === 'all' ? '' : statusFilter}`).then((res) => setTickets(res.data.data));

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useCartStore } from '../../store/cartStore';
-import { Search, MapPin, User, ChevronDown, Receipt, Menu, ShoppingCart } from 'lucide-react';
+import { Search, MapPin, User, ChevronDown, Receipt, Menu, ShoppingCart, Phone } from 'lucide-react';
 import { Logo } from '../ui/Logo';
 import MobileNav from './MobileNav';
 import LocationModal from './LocationModal';
@@ -56,7 +56,7 @@ export default function Header({ showSearch = true, searchQuery = '', onSearchCh
 
   return (
     <>
-    {user && <FoodieBot />}
+    <FoodieBot />
     <header className="bg-white/95 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)]">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="flex items-center justify-between h-16 lg:h-20 gap-4">
@@ -130,6 +130,9 @@ export default function Header({ showSearch = true, searchQuery = '', onSearchCh
 
           {/* Right Actions */}
           <div className="flex items-center gap-3 sm:gap-6 shrink-0">
+            <a href="tel:+919876543210" className="hidden lg:flex items-center gap-1.5 text-sm font-bold text-gray-700 hover:text-brand-primary bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 transition-colors">
+              <Phone className="w-4 h-4" /> <span className="hidden xl:inline">Customer Care: </span>+91 98765 43210
+            </a>
             {user && <NotificationBell />}
             <Link to="/customer/checkout" className="relative p-2 text-gray-700 hover:bg-gray-50 rounded-full transition-colors">
               <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
