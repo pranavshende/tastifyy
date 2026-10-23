@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
 import { Logo } from '../../components/ui/Logo';
+import CompanyAttribution from '../../components/ui/CompanyAttribution';
 
 export default function AdminLogin() {
   const { setAuth } = useAuthStore();
@@ -85,6 +86,10 @@ export default function AdminLogin() {
           <Link to="/" className="text-gray-500 hover:text-white transition-colors text-sm font-medium">
             &larr; Back to main site
           </Link>
+          <CompanyAttribution
+            variant="platform"
+            className="mt-4 text-xs text-gray-400"
+          />
         </div>
       </div>
     </div>

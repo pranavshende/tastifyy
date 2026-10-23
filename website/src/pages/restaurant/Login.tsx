@@ -4,6 +4,7 @@ import { Logo } from '../../components/ui/Logo';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
+import CompanyAttribution from '../../components/ui/CompanyAttribution';
 
 export default function RestaurantLogin() {
   const { setAuth } = useAuthStore();
@@ -140,6 +141,10 @@ export default function RestaurantLogin() {
                 {isRegister ? 'Log in here' : 'Sign up here'}
               </button>
             </div>
+            <CompanyAttribution
+              variant="platform"
+              className="mt-6 text-center text-xs text-gray-500"
+            />
           </div>
         </div>
       </div>

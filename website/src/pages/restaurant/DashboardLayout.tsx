@@ -6,6 +6,7 @@ import { Logo } from '../../components/ui/Logo';
 import api from '../../api/axios';
 import { getStorageUrl } from '../../lib/supabase';
 import NotificationBell from '../../components/NotificationBell';
+import CompanyAttribution from '../../components/ui/CompanyAttribution';
 
 export default function DashboardLayout() {
   const location = useLocation();
@@ -145,6 +146,10 @@ export default function DashboardLayout() {
         <main className="flex-1 p-4 sm:p-6 h-[calc(100vh-3.5rem)] overflow-y-auto">
           <div className="max-w-5xl mx-auto w-full h-full flex flex-col">
             <Outlet />
+            <CompanyAttribution
+              variant="powered"
+              className="shrink-0 border-t border-gray-200 mt-6 pt-4 pb-2 text-center text-xs text-gray-500"
+            />
           </div>
         </main>
       </div>

@@ -7,6 +7,7 @@ import {
   TrendingUp, AlertCircle, RefreshCw, User, Phone, Mail, Save, Loader2
 } from 'lucide-react';
 import { ImageUploadButton } from '../../components/ui/ImageUploadButton';
+import CompanyAttribution from '../../components/ui/CompanyAttribution';
 
 type Tab = 'overview' | 'restaurants' | 'orders' | 'delivery' | 'users' | 'payouts' | 'support' | 'audit' | 'config' | 'profile';
 
@@ -29,6 +30,10 @@ export default function AdminDashboard() {
           {activeTab === 'audit' && <AuditTab />}
           {activeTab === 'config' && <ConfigTab />}
           {activeTab === 'profile' && <ProfileTab />}
+          <div className="mt-10 border-t border-gray-200 pt-4 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-center sm:text-left">
+            <span className="text-xs text-gray-500">Tastifyy Platform |</span>
+            <CompanyAttribution className="text-xs text-gray-500" />
+          </div>
         </div>
       </main>
     </div>
@@ -214,6 +219,7 @@ function RestaurantsTab() {
             <thead className="bg-gray-50/50 text-gray-500 text-xs font-black uppercase tracking-wider border-b border-gray-100">
               <tr>
                 <th className="px-6 py-4">Restaurant</th>
+                <th className="px-6 py-4">Mobile</th>
                 <th className="px-6 py-4">Location</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
@@ -224,7 +230,13 @@ function RestaurantsTab() {
                 <tr key={r.id} className="hover:bg-gray-50/50 transition-colors group">
                   <td className="px-6 py-4">
                     <p className="font-black text-gray-900 text-base">{r.name}</p>
-                    <p className="text-sm font-medium text-gray-500 mt-0.5">{r.type} {r.is_pure_veg && <span className="text-green-600 ml-1">🌿 Pure Veg</span>}</p>
+                    <p className="text-sm font-medium text-gray-500 mt-0.5">
+                      {r.type} {r.is_pure_veg && <span className="text-green-600 ml-1">🌿 Pure Veg</span>}
+                    </p>
+                    <p className="text-sm font-medium text-gray-600 mt-1">Owner: {r.owner_name || 'Not provided'}</p>
+                  </td>
+                  <td className="px-6 py-4 text-sm font-medium text-gray-700 whitespace-nowrap">
+                    {r.phone || 'Not provided'}
                   </td>
                   <td className="px-6 py-4 text-gray-700 font-medium">
                     {r.city}, {r.state}
@@ -258,7 +270,7 @@ function RestaurantsTab() {
                 </tr>
               ))}
               {restaurants.length === 0 && (
-                <tr><td colSpan={4} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No restaurants found in this category.</td></tr>
+                <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No restaurants found in this category.</td></tr>
               )}
             </tbody>
           </table>
@@ -415,6 +427,7 @@ function UsersTab() {
             <thead className="bg-gray-50/50 text-gray-500 text-xs font-black uppercase tracking-wider border-b border-gray-100">
               <tr>
                 <th className="px-6 py-4">User</th>
+                <th className="px-6 py-4">Mobile</th>
                 <th className="px-6 py-4">Role</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
@@ -424,8 +437,11 @@ function UsersTab() {
               {users.map((u) => (
                 <tr key={u.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-4">
-                    <p className="font-black text-gray-900 text-base">{u.name}</p>
-                    <p className="text-sm font-medium text-gray-500">{u.email || u.phone}</p>
+                    <p className="font-black text-gray-900 text-base">{u.name || 'Name not provided'}</p>
+                    {u.email && <p className="text-sm font-medium text-gray-500">{u.email}</p>}
+                  </td>
+                  <td className="px-6 py-4 text-sm font-medium text-gray-700 whitespace-nowrap">
+                    {u.phone || 'Not provided'}
                   </td>
                   <td className="px-6 py-4">
                     <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider">{u.role}</span>
@@ -454,7 +470,7 @@ function UsersTab() {
                 </tr>
               ))}
               {users.length === 0 && (
-                <tr><td colSpan={4} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No users found.</td></tr>
+                <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No users found.</td></tr>
               )}
             </tbody>
           </table>
@@ -674,6 +690,7 @@ function OrdersTab() {
               <tr>
                 <th className="px-6 py-4">Order ID & Time</th>
                 <th className="px-6 py-4">Customer</th>
+                <th className="px-6 py-4">Mobile</th>
                 <th className="px-6 py-4">Restaurant</th>
                 <th className="px-6 py-4">Amount</th>
                 <th className="px-6 py-4 text-right">Live Status</th>
@@ -687,7 +704,10 @@ function OrdersTab() {
                     <p className="text-sm font-medium text-gray-500 mt-0.5">{new Date(o.created_at).toLocaleString()}</p>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="font-bold text-gray-800">{o.customer?.name}</p>
+                    <p className="font-bold text-gray-800">{o.customer?.name || 'Customer'}</p>
+                  </td>
+                  <td className="px-6 py-4 text-sm font-medium text-gray-700 whitespace-nowrap">
+                    {o.customer?.phone || 'Not provided'}
                   </td>
                   <td className="px-6 py-4">
                     <p className="font-bold text-gray-800">{o.restaurant?.name}</p>
@@ -703,7 +723,7 @@ function OrdersTab() {
                 </tr>
               ))}
               {orders.length === 0 && (
-                <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No orders found.</td></tr>
+                <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-400 font-bold text-lg">No orders found.</td></tr>
               )}
             </tbody>
           </table>

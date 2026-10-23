@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, MapPin, Star, Clock, ArrowRight, Bike, CheckCircle, ChefHat, Zap, ShieldCheck, Download, X } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
+import CompanyAttribution from '../components/ui/CompanyAttribution';
 import api from '../api/axios';
 import RestaurantCard from '../components/customer/RestaurantCard';
 import MobileBottomNav from '../components/customer/MobileBottomNav';
@@ -427,8 +428,9 @@ export default function Landing() {
               <div className="mb-6">
                 <Logo size="sm" />
               </div>
+              <p className="text-gray-700 text-sm font-bold mb-3">Local Food. Real Flavours.</p>
               <p className="text-gray-500 text-sm leading-relaxed mb-6">
-                Your favorite food, delivered fast. We partner with the best local restaurants to bring you hot, fresh meals.
+                Food discovery, ordering and delivery platform.
               </p>
             </div>
             
@@ -464,7 +466,7 @@ export default function Landing() {
           <div className="pt-8 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="text-center md:text-left">
               <p className="text-gray-400 text-sm font-medium">© {new Date().getFullYear()} Tastifyy. All rights reserved.</p>
-              <p className="text-gray-500 text-xs font-bold mt-1">Powered by NKSKILLEDGE PVT LTD</p>
+              <CompanyAttribution className="text-gray-500 text-xs font-medium mt-1" />
             </div>
             <div className="flex gap-4">
               {/* Social icons placeholder */}

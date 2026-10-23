@@ -3,6 +3,7 @@ import api from '../../api/axios';
 import { Logo } from '../../components/ui/Logo';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import CompanyAttribution from '../../components/ui/CompanyAttribution';
 
 export default function RestaurantRegister() {
   const navigate = useNavigate();
@@ -68,6 +69,10 @@ export default function RestaurantRegister() {
             </button>
           </form>
         </div>
+        <CompanyAttribution
+          variant="platform"
+          className="mt-4 text-center text-xs text-gray-500"
+        />
       </div>
     </div>
   );

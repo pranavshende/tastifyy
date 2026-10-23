@@ -4,6 +4,7 @@ import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
 import { Eye, EyeOff, UtensilsCrossed, ChevronLeft } from 'lucide-react';
 import { Logo } from '../../components/ui/Logo';
+import CompanyAttribution from '../../components/ui/CompanyAttribution';
 import { GoogleLogin } from '@react-oauth/google';
 
 type Mode = 'phone' | 'otp' | 'email';
@@ -322,6 +323,10 @@ export default function CustomerLogin() {
               </form>
             )}
 
+            <CompanyAttribution
+              variant="platform"
+              className="mt-8 text-center text-xs text-gray-500"
+            />
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
 import { Bike } from 'lucide-react';
+import CompanyAttribution from '../../components/ui/CompanyAttribution';
 
 export default function DeliveryLogin() {
   const { setAuth } = useAuthStore();
@@ -124,6 +125,10 @@ export default function DeliveryLogin() {
             {isRegister ? 'Already have an account? Login' : 'New here? Join us'}
           </button>
         </div>
+        <CompanyAttribution
+          variant="platform"
+          className="mt-6 text-center text-xs text-gray-500"
+        />
       </div>
     </div>
   );
