@@ -10,6 +10,8 @@ import { useLocationStore } from '../../store/locationStore';
 import NotificationBell from '../NotificationBell';
 import FoodieBot from './FoodieBot';
 
+const CUSTOMER_CARE_PHONE = '+91 98815 36081';
+
 interface HeaderProps {
   showSearch?: boolean;
   searchQuery?: string;
@@ -130,8 +132,8 @@ export default function Header({ showSearch = true, searchQuery = '', onSearchCh
 
           {/* Right Actions */}
           <div className="flex items-center gap-3 sm:gap-6 shrink-0">
-            <a href="tel:+919876543210" className="hidden lg:flex items-center gap-1.5 text-sm font-bold text-gray-700 hover:text-brand-primary bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 transition-colors">
-              <Phone className="w-4 h-4" /> <span className="hidden xl:inline">Customer Care: </span>+91 98765 43210
+            <a href={`tel:${CUSTOMER_CARE_PHONE.replace(/\s/g, '')}`} className="hidden lg:flex items-center gap-1.5 text-sm font-bold text-gray-700 hover:text-brand-primary bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 transition-colors">
+              <Phone className="w-4 h-4" /> <span className="hidden xl:inline">Customer Care: </span>{CUSTOMER_CARE_PHONE}
             </a>
             {user && <NotificationBell />}
             <Link to="/customer/checkout" className="relative p-2 text-gray-700 hover:bg-gray-50 rounded-full transition-colors">
