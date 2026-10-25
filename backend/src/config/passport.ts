@@ -10,12 +10,14 @@ import jwt from 'jsonwebtoken';
 
 const SUPABASE_JWKS_URL = process.env.SUPABASE_JWKS_URL || '';
 
-const jwksProvider = jwksRsa.passportJwtSecret({
-  cache: true,
-  rateLimit: true,
-  jwksRequestsPerMinute: 5,
-  jwksUri: SUPABASE_JWKS_URL
-});
+const jwksProvider = SUPABASE_JWKS_URL
+  ? jwksRsa.passportJwtSecret({
+      cache: true,
+      rateLimit: true,
+      jwksRequestsPerMinute: 5,
+      jwksUri: SUPABASE_JWKS_URL
+    })
+  : null;
 
 const customSecretProvider = (request: any, rawJwtToken: any, done: any) => {
   try {
@@ -28,6 +30,9 @@ const customSecretProvider = (request: any, rawJwtToken: any, done: any) => {
       const secret = process.env.JWT_SECRET || 'fallback_development_secret';
       return done(null, secret);
     } else if (decoded.header.alg === 'RS256') {
+      if (!jwksProvider) {
+        return done(new Error('JWKS configuration missing'), null);
+      }
       return jwksProvider(request, rawJwtToken, done);
     } else {
       return done(new Error('Unsupported algorithm'), null);
