@@ -133,6 +133,7 @@ Website (on Vercel):
 
 | Date | Change |
 |---|---|
+| 2026-10-31 | Redesigned Customer Web Home, RestaurantCard, and MobileNav to match reference phone design with circular avatar, green Open badge, horizontal dynamic dish previews, and category filters |
 | 2026-10-31 | Removed Delivering to location bar widget from customer Header (desktop + mobile) |
 | 2026-10-31 | Began Mobile-First Homepage Overhaul matching reference UI (dynamic restaurant preview carousel) |
 | 2026-09-13 | Implemented Redis + BullMQ infrastructure for background jobs |
