@@ -31,6 +31,7 @@ export default function CustomerLayout() {
           paddingBottom: 8,
           paddingTop: 4,
         },
+        tabBarItemStyle: { flex: 1, alignItems: 'center', justifyContent: 'center' },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       }}
     >

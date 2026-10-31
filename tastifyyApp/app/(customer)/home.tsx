@@ -869,7 +869,7 @@ const styles = StyleSheet.create({
   // Floating AI Assistant
   aiFloatingBtn: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 80,
     right: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -881,7 +881,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
+    elevation: 10,
+    zIndex: 999,
   },
   aiFloatingText: {
     color: '#ffffff',
