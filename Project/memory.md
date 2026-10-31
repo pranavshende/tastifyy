@@ -133,6 +133,7 @@ Website (on Vercel):
 
 | Date | Change |
 |---|---|
+| 2026-10-31 | Removed Delivering to location bar widget from customer Header (desktop + mobile) |
 | 2026-10-31 | Began Mobile-First Homepage Overhaul matching reference UI (dynamic restaurant preview carousel) |
 | 2026-09-13 | Implemented Redis + BullMQ infrastructure for background jobs |
 | 2026-09-13 | Migrated OTP storage from in-memory Map to Redis for durability |

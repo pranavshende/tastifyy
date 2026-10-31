@@ -2,11 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useCartStore } from '../../store/cartStore';
-import { Search, MapPin, User, ChevronDown, Receipt, Menu, ShoppingCart, Phone } from 'lucide-react';
+import { Search, User, ChevronDown, Receipt, Menu, ShoppingCart, Phone } from 'lucide-react';
 import { Logo } from '../ui/Logo';
 import MobileNav from './MobileNav';
-import LocationModal from './LocationModal';
-import { useLocationStore } from '../../store/locationStore';
 import NotificationBell from '../NotificationBell';
 import FoodieBot from './FoodieBot';
 
@@ -25,12 +23,10 @@ export default function Header({ showSearch = true, searchQuery = '', onSearchCh
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
-  const profileRef = useRef<HTMLDivElement>(null);
+    const profileRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
-  const { city, selectedZone } = useLocationStore();
-
+  
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
@@ -82,24 +78,7 @@ export default function Header({ showSearch = true, searchQuery = '', onSearchCh
             <Logo size="md" />
           </Link>
 
-          {/* Location (Desktop & Tablet) */}
-          <button 
-            onClick={() => setIsLocationModalOpen(true)}
-            className="hidden sm:flex items-center gap-2 lg:gap-2.5 px-3 lg:px-4 py-2 lg:py-2.5 rounded-2xl hover:bg-gray-50/80 transition-colors border border-transparent hover:border-gray-100 cursor-pointer text-left"
-          >
-            <div className="w-8 h-8 lg:w-9 lg:h-9 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
-              <MapPin className="w-4 h-4 lg:w-4.5 lg:h-4.5 text-brand-primary fill-brand-primary/20" />
-            </div>
-            <div className="flex flex-col min-w-[100px] lg:min-w-[120px] max-w-[160px] lg:max-w-[200px]">
-              <span className="text-[11px] lg:text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                Delivering to {city === 'Sakoli' ? '' : `• ${city}`}
-              </span>
-              <span className="text-xs lg:text-sm font-black text-gray-900 truncate leading-tight mt-0.5 flex items-center gap-1.5">
-                {selectedZone ? selectedZone.name : 'Select Delivery Zone'}
-                <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-              </span>
-            </div>
-          </button>
+          
 
           {/* Center Nav Links (Desktop Only) */}
           <nav className="hidden lg:flex items-center gap-8 mx-auto">
@@ -201,26 +180,7 @@ export default function Header({ showSearch = true, searchQuery = '', onSearchCh
         </div>
       </div>
       
-      {/* Location Bar (Mobile Only) */}
-      <div 
-        onClick={() => setIsLocationModalOpen(true)}
-        className="sm:hidden bg-white px-4 py-3 flex items-center gap-3 border-b border-gray-100 shadow-[0_4px_15px_-10px_rgba(0,0,0,0.05)] cursor-pointer"
-      >
-        <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
-          <MapPin className="w-4.5 h-4.5 text-brand-primary fill-brand-primary/20" />
-        </div>
-        <div className="flex flex-col flex-1 min-w-0">
-          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-            Delivering to {city === 'Sakoli' ? '' : `• ${city}`}
-          </span>
-          <span className="text-[13px] font-black text-gray-900 truncate leading-tight mt-0.5">
-            {selectedZone ? selectedZone.name : 'Select Delivery Zone'}
-          </span>
-        </div>
-        <ChevronDown className="w-4 h-4 text-gray-400" />
-      </div>
-
-     </header>
+      </header>
 
       {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
@@ -250,10 +210,7 @@ export default function Header({ showSearch = true, searchQuery = '', onSearchCh
         </div>
       )}
 
-      <LocationModal 
-        isOpen={isLocationModalOpen} 
-        onClose={() => setIsLocationModalOpen(false)} 
-      />
+      
 
     <MobileNav />
     </>
