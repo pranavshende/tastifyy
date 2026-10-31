@@ -4,12 +4,26 @@ import { getPublicUrl } from '../services/storage.service.js';
 import { findRestaurantPartner } from '../utils/restaurantPartner.js';
 
 function formatRestaurant(r: any) {
-  const allItems = r.menu_items || r.menu_categories?.flatMap((c: any) => c.menu_items || []) || [];
+  const allItems = (r.menu_items && r.menu_items.length > 0)
+    ? r.menu_items
+    : r.menu_categories?.flatMap((c: any) => c.menu_items || []) || [];
+
+  // Prioritize dishes that have real uploaded photos, then bestsellers
+  const sortedItems = [...allItems].sort((a: any, b: any) => {
+    const aHasImg = Boolean(a.image_url && String(a.image_url).trim() !== '' && a.image_url !== 'null');
+    const bHasImg = Boolean(b.image_url && String(b.image_url).trim() !== '' && b.image_url !== 'null');
+    if (aHasImg && !bHasImg) return -1;
+    if (!aHasImg && bHasImg) return 1;
+    if (a.is_bestseller && !b.is_bestseller) return -1;
+    if (!a.is_bestseller && b.is_bestseller) return 1;
+    return 0;
+  });
+
   return {
     ...r,
     logo_url: getPublicUrl(r.logo_url),
     cover_image_url: getPublicUrl(r.cover_image_url),
-    menu_items: allItems.slice(0, 6).map((item: any) => ({
+    menu_items: sortedItems.slice(0, 6).map((item: any) => ({
       id: item.id,
       name: item.name,
       price: Number(item.price),
@@ -39,7 +53,8 @@ export const getActiveRestaurants = async (req: Request, res: Response): Promise
         is_open: true
       },
       include: { 
-        menu_categories: { include: { menu_items: true } },
+        menu_items: { where: { is_available: true, is_deleted: false }, orderBy: [{ is_bestseller: 'desc' }, { created_at: 'asc' }] },
+        menu_categories: { include: { menu_items: { where: { is_available: true, is_deleted: false } } } },
         ratings: { select: { restaurant_rating: true } }
       }
     });
