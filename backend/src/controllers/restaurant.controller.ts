@@ -4,10 +4,19 @@ import { getPublicUrl } from '../services/storage.service.js';
 import { findRestaurantPartner } from '../utils/restaurantPartner.js';
 
 function formatRestaurant(r: any) {
+  const allItems = r.menu_items || r.menu_categories?.flatMap((c: any) => c.menu_items || []) || [];
   return {
     ...r,
     logo_url: getPublicUrl(r.logo_url),
     cover_image_url: getPublicUrl(r.cover_image_url),
+    menu_items: allItems.slice(0, 6).map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      price: Number(item.price),
+      image_url: getPublicUrl(item.image_url),
+      is_veg: item.is_veg,
+      is_bestseller: item.is_bestseller
+    }))
   };
 }
 

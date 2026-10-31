@@ -16,10 +16,11 @@ interface RestaurantCardProps {
   reviewsCount?: string;
   isFavorite?: boolean;
   onToggleFavorite?: (e: React.MouseEvent) => void;
+  menuItems?: Array<{ id: string; name: string; price: number; image_url?: string; is_veg?: boolean }>;
 }
 
 export default function RestaurantCard({
-  id, name, coverImage, cuisineTags, rating, prepTime, isOpen, isPureVeg, distance, reviewsCount, isFavorite = false, onToggleFavorite
+  id, name, coverImage, cuisineTags, rating, prepTime, isOpen, isPureVeg, distance, reviewsCount, isFavorite = false, onToggleFavorite, menuItems
 }: RestaurantCardProps) {
   return (
     <Link to={`/customer/restaurants/${id}`} className="group bg-white rounded-[20px] overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300 border border-gray-100/80 flex flex-col cursor-pointer block relative">
@@ -94,6 +95,27 @@ export default function RestaurantCard({
           {cuisineTags.length > 0 ? cuisineTags.slice(0, 3).join(' • ') : 'Various Cuisines'}
         </div>
         
+        {menuItems && menuItems.length > 0 && (
+          <div className="mt-2.5 pt-2.5 border-t border-gray-100 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {menuItems.map(dish => (
+              <div key={dish.id} className="w-20 shrink-0 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 p-1 flex flex-col">
+                <div className="w-full h-12 rounded-lg overflow-hidden bg-gray-200 relative mb-1">
+                  <img
+                    src={dish.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=200&auto=format&fit=crop'}
+                    alt={dish.name}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className={"absolute top-0.5 left-0.5 w-2 h-2 rounded-[2px] border flex items-center justify-center " + (dish.is_veg ? "border-green-600 bg-white" : "border-red-600 bg-white")}>
+                    <div className={"w-1 h-1 rounded-full " + (dish.is_veg ? "bg-green-600" : "bg-red-600")} />
+                  </div>
+                </div>
+                <p className="text-[10px] font-bold text-gray-800 truncate leading-tight">{dish.name}</p>
+                <p className="text-[11px] font-black text-brand-primary mt-auto">₹{dish.price}</p>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="flex items-center gap-4 text-xs font-bold text-gray-600 mt-auto pt-3 border-t border-gray-50">
           <div className="flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5 text-gray-400" />

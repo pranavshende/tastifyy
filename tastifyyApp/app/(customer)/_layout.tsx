@@ -44,22 +44,22 @@ export default function CustomerLayout() {
       <Tabs.Screen
         name="search"
         options={{
-          title: 'Search',
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'search' : 'search-outline'} focused={focused} />,
+          title: 'Restaurants',
+          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'restaurant' : 'restaurant-outline'} focused={focused} />,
         }}
       />
 
       <Tabs.Screen
         name="orders"
         options={{
-          title: 'Orders',
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'bag' : 'bag-outline'} focused={focused} />,
+          title: 'Offers',
+          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'pricetag' : 'pricetag-outline'} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'Account',
           tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'person' : 'person-outline'} focused={focused} />,
         }}
       />

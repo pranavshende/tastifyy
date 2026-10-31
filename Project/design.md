@@ -1,4 +1,4 @@
-﻿# Design System — Tastifyy
+# Design System — Tastifyy
 
 ```
 Last Updated: 2026-09-12
@@ -97,6 +97,26 @@ Status: Current (describes implemented design)
 - Orange rounded square with "T" (72x72, radius 20)
 - "Tastifyy" brand name (28px, fontWeight 900)
 - Orange spinner
+
+### Mobile Customer Home Screen (Redesign Reference)
+- **Top Bar:** Tastifyy brand logo + "Tastifyy", Search icon, Cart button with dynamic badge counter (`useCartStore`), and profile/menu shortcut.
+- **Hero Banner:** Full-bleed rich dark food banner with overlay:
+  - Pill subtitle: "Good Food • Great Mood"
+  - Main headline: "Multiple Restaurants \nOne Platform" (accentuated with brand primary orange)
+  - Description: "Explore a variety of cuisines from your favorite restaurants."
+  - Embedded Search Input: Rounded pill search bar with search icon and placeholder "Search for restaurants or cuisines..."
+- **Horizontal Cuisine Filter Carousel:** Circular category icon badges with active underline indicator:
+  - "All", "Burgers", "Pizza", "Indian", "Sushi", "Desserts", "Beverages".
+- **Top Restaurants Section:**
+  - Section header: "Top Restaurants" (bold), subtitle "Discover the best food from top restaurants near you.", and right-aligned "View All →".
+- **Dynamic Restaurant Card with Menu Items Preview Carousel:**
+  - Header Row: Circular restaurant logo/monogram, Restaurant name, cuisine tags, star rating with reviews count (`★ 4.5 (1.2k+)`), delivery time (`🛵 30-40 min`), "Open" status badge, and chevron.
+  - Preview Dish Carousel: Horizontal scroll of real menu items belonging to that restaurant, showing dish photo with rounded corners, dish title, and bold brand orange price (`₹${price}`).
+- **Bottom Navigation Bar (Mobile):** 4 clean tabs matching reference mockup:
+  - 1. Home (active brand orange)
+  - 2. Restaurants
+  - 3. Offers
+  - 4. Account
 
 ### Navigation (Mobile)
 - Tab-based navigation (expo-router layout groups)

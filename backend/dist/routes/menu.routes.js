@@ -75,7 +75,7 @@ router.get('/categories', async (req, res) => {
         const categories = await prisma.menuCategory.findMany({
             where: { restaurant_id },
             orderBy: { display_order: 'asc' },
-            include: { menu_items: { orderBy: { name: 'asc' } } }
+            include: { menu_items: { where: { is_deleted: false }, orderBy: { name: 'asc' } } }
         });
         // Convert image paths to public URLs
         const result = categories.map(cat => ({
@@ -151,7 +151,7 @@ router.get('/items', async (req, res) => {
     const restaurant_id = req.restaurant_id;
     try {
         const items = await prisma.menuItem.findMany({
-            where: { restaurant_id },
+            where: { restaurant_id, is_deleted: false },
             include: { category: true },
             orderBy: { name: 'asc' }
         });
@@ -331,11 +331,398 @@ router.delete('/items/:id', async (req, res) => {
         if (existing.image_url) {
             await deleteFile(existing.image_url);
         }
-        await prisma.menuItem.delete({ where: { id: id } });
+        await prisma.menuItem.update({
+            where: { id: id },
+            data: { is_deleted: true }
+        });
         res.json({ success: true, message: 'Item deleted' });
     }
     catch (error) {
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to delete item' } });
+    }
+});
+// ─── DUPLICATE ITEM ───────────────────────────────────────────────────────────
+// POST /api/menu/items/:id/duplicate — quickly clone a menu item
+router.post('/items/:id/duplicate', async (req, res) => {
+    const restaurant_id = req.restaurant_id;
+    const { id } = req.params;
+    try {
+        const existing = await prisma.menuItem.findFirst({
+            where: { id: id, restaurant_id: restaurant_id },
+            include: { customizations: { include: { options: true } } }
+        });
+        if (!existing) {
+            res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Item not found' } });
+            return;
+        }
+        const { id: _, created_at, updated_at, customizations, ...itemData } = existing;
+        const newItem = await prisma.menuItem.create({
+            data: {
+                ...itemData,
+                name: `${existing.name} (Copy)`,
+                image_url: null, // Don't duplicate the image path — it's shared storage
+            }
+        });
+        // Duplicate customizations/variants
+        for (const group of customizations) {
+            const { id: gId, menu_item_id, options, ...groupData } = group;
+            const newGroup = await prisma.menuItemCustomization.create({
+                data: { ...groupData, menu_item_id: newItem.id }
+            });
+            for (const opt of options) {
+                const { id: oId, customization_id, ...optData } = opt;
+                await prisma.menuItemCustomizationOption.create({
+                    data: { ...optData, customization_id: newGroup.id }
+                });
+            }
+        }
+        res.status(201).json({ success: true, data: formatItemWithUrl(newItem) });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to duplicate item' } });
+    }
+});
+// ─── VARIANTS ─────────────────────────────────────────────────────────────────
+// GET /api/menu/items/:id/variants
+router.get('/items/:id/variants', async (req, res) => {
+    const restaurant_id = req.restaurant_id;
+    const { id } = req.params;
+    try {
+        const item = await prisma.menuItem.findFirst({ where: { id: id, restaurant_id: restaurant_id } });
+        if (!item) {
+            res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Item not found' } });
+            return;
+        }
+        const variants = await prisma.menuItemCustomization.findMany({
+            where: { menu_item_id: id, variant_group: true },
+            include: { options: { orderBy: { additional_price: 'asc' } } }
+        });
+        res.json({ success: true, data: variants });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch variants' } });
+    }
+});
+// POST /api/menu/items/:id/variants — create a variant group with options
+// Body: { group_name: "Size", options: [{ label: "Small", additional_price: 0 }, ...] }
+router.post('/items/:id/variants', async (req, res) => {
+    const restaurant_id = req.restaurant_id;
+    const { id } = req.params;
+    const { group_name, options } = req.body;
+    if (!group_name || !Array.isArray(options) || options.length === 0) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'group_name and at least one option are required' } });
+        return;
+    }
+    try {
+        const item = await prisma.menuItem.findFirst({ where: { id: id, restaurant_id: restaurant_id } });
+        if (!item) {
+            res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Item not found' } });
+            return;
+        }
+        const group = await prisma.menuItemCustomization.create({
+            data: {
+                menu_item_id: id,
+                group_name,
+                is_required: true,
+                is_multi_select: false,
+                variant_group: true,
+                is_addon: false,
+                options: {
+                    create: options.map((o) => ({
+                        label: o.label,
+                        additional_price: parseFloat(o.additional_price) || 0,
+                        is_available: o.is_available !== false
+                    }))
+                }
+            },
+            include: { options: true }
+        });
+        res.status(201).json({ success: true, data: group });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to create variant group' } });
+    }
+});
+// PUT /api/menu/items/:itemId/variants/:groupId — update variant group + options
+router.put('/items/:itemId/variants/:groupId', async (req, res) => {
+    const restaurant_id = req.restaurant_id;
+    const { itemId, groupId } = req.params;
+    const { group_name, options } = req.body;
+    try {
+        const item = await prisma.menuItem.findFirst({ where: { id: itemId, restaurant_id: restaurant_id } });
+        if (!item) {
+            res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Item not found' } });
+            return;
+        }
+        const existing = await prisma.menuItemCustomization.findFirst({ where: { id: groupId, menu_item_id: itemId } });
+        if (!existing) {
+            res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Variant group not found' } });
+            return;
+        }
+        // Delete old options and recreate
+        await prisma.menuItemCustomizationOption.deleteMany({ where: { customization_id: groupId } });
+        const updated = await prisma.menuItemCustomization.update({
+            where: { id: groupId },
+            data: {
+                group_name: group_name || existing.group_name,
+                options: {
+                    create: (options || []).map((o) => ({
+                        label: o.label,
+                        additional_price: parseFloat(o.additional_price) || 0,
+                        is_available: o.is_available !== false
+                    }))
+                }
+            },
+            include: { options: true }
+        });
+        res.json({ success: true, data: updated });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to update variant group' } });
+    }
+});
+// DELETE /api/menu/items/:itemId/variants/:groupId
+router.delete('/items/:itemId/variants/:groupId', async (req, res) => {
+    const restaurant_id = req.restaurant_id;
+    const { itemId, groupId } = req.params;
+    try {
+        const item = await prisma.menuItem.findFirst({ where: { id: itemId, restaurant_id: restaurant_id } });
+        if (!item) {
+            res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Item not found' } });
+            return;
+        }
+        await prisma.menuItemCustomizationOption.deleteMany({ where: { customization_id: groupId } });
+        await prisma.menuItemCustomization.delete({ where: { id: groupId } });
+        res.json({ success: true, message: 'Variant group deleted' });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to delete variant group' } });
+    }
+});
+// PATCH /api/menu/variants/options/:optionId/status — enable/disable individual variant option
+router.patch('/variants/options/:optionId/status', async (req, res) => {
+    const { optionId } = req.params;
+    const { is_available } = req.body;
+    try {
+        const option = await prisma.menuItemCustomizationOption.update({
+            where: { id: optionId },
+            data: { is_available }
+        });
+        res.json({ success: true, data: option });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to update option status' } });
+    }
+});
+// ─── ADD-ONS ─────────────────────────────────────────────────────────────────
+// GET /api/menu/addons — fetch all add-on groups for this restaurant
+router.get('/addons', async (req, res) => {
+    const restaurant_id = req.restaurant_id;
+    try {
+        // Add-ons are stored as customization groups with is_addon=true
+        // They're attached to a "container" menu item per restaurant
+        // We query all is_addon groups for this restaurant's items
+        const addonGroups = await prisma.menuItemCustomization.findMany({
+            where: {
+                is_addon: true,
+                menu_item: { restaurant_id: restaurant_id, is_deleted: false }
+            },
+            include: {
+                options: { orderBy: { additional_price: 'asc' } },
+                menu_item: { select: { id: true, name: true } }
+            }
+        });
+        res.json({ success: true, data: addonGroups });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch add-ons' } });
+    }
+});
+// POST /api/menu/addons — create a new add-on group
+// Body: { group_name: "Beverages", options: [{ label: "Water Bottle", additional_price: 20 }, ...] }
+// Add-ons are attached to the first non-deleted menu item of the restaurant as a container
+router.post('/addons', async (req, res) => {
+    const restaurant_id = req.restaurant_id;
+    const { group_name, options } = req.body;
+    if (!group_name || !Array.isArray(options) || options.length === 0) {
+        res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'group_name and options are required' } });
+        return;
+    }
+    try {
+        // Find or use any non-deleted item as the container
+        const containerItem = await prisma.menuItem.findFirst({
+            where: { restaurant_id: restaurant_id, is_deleted: false }
+        });
+        if (!containerItem) {
+            res.status(400).json({ success: false, error: { code: 'NO_MENU_ITEMS', message: 'Add at least one regular menu item before adding add-ons' } });
+            return;
+        }
+        const group = await prisma.menuItemCustomization.create({
+            data: {
+                menu_item_id: containerItem.id,
+                group_name,
+                is_required: false,
+                is_multi_select: true,
+                variant_group: false,
+                is_addon: true,
+                options: {
+                    create: options.map((o) => ({
+                        label: o.label,
+                        additional_price: parseFloat(o.additional_price) || 0,
+                        is_available: o.is_available !== false
+                    }))
+                }
+            },
+            include: { options: true }
+        });
+        res.status(201).json({ success: true, data: group });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to create add-on group' } });
+    }
+});
+// PUT /api/menu/addons/:groupId — update add-on group
+router.put('/addons/:groupId', async (req, res) => {
+    const { groupId } = req.params;
+    const { group_name, options } = req.body;
+    try {
+        await prisma.menuItemCustomizationOption.deleteMany({ where: { customization_id: groupId } });
+        const updated = await prisma.menuItemCustomization.update({
+            where: { id: groupId },
+            data: {
+                group_name,
+                options: {
+                    create: (options || []).map((o) => ({
+                        label: o.label,
+                        additional_price: parseFloat(o.additional_price) || 0,
+                        is_available: o.is_available !== false
+                    }))
+                }
+            },
+            include: { options: true }
+        });
+        res.json({ success: true, data: updated });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to update add-on group' } });
+    }
+});
+// DELETE /api/menu/addons/:groupId
+router.delete('/addons/:groupId', async (req, res) => {
+    const { groupId } = req.params;
+    try {
+        await prisma.menuItemCustomizationOption.deleteMany({ where: { customization_id: groupId } });
+        await prisma.menuItemCustomization.delete({ where: { id: groupId } });
+        res.json({ success: true, message: 'Add-on group deleted' });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to delete add-on' } });
+    }
+});
+// ─── BULK IMPORT ──────────────────────────────────────────────────────────────
+// POST /api/menu/bulk-import — import menu items from CSV
+// CSV format: Name,Description,Price,Category,IsVeg,PrepTimeMins
+// First line is header. If category doesn't exist, it will be created.
+router.post('/bulk-import', upload.single('file'), async (req, res) => {
+    const restaurant_id = req.restaurant_id;
+    const file = req.file;
+    if (!file) {
+        res.status(400).json({ success: false, error: { code: 'MISSING_FILE', message: 'CSV file is required' } });
+        return;
+    }
+    if (!file.mimetype.includes('csv') && !file.originalname.endsWith('.csv')) {
+        res.status(400).json({ success: false, error: { code: 'INVALID_FILE', message: 'Only CSV files are supported' } });
+        return;
+    }
+    try {
+        const csv = file.buffer.toString('utf-8');
+        const lines = csv.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) {
+            res.status(400).json({ success: false, error: { code: 'EMPTY_FILE', message: 'CSV must have a header row and at least one data row' } });
+            return;
+        }
+        // Skip header line
+        const dataLines = lines.slice(1);
+        const created = [];
+        const failed = [];
+        // Cache category name → id to avoid repeated lookups
+        const categoryCache = {};
+        for (let i = 0; i < dataLines.length; i++) {
+            const line = dataLines[i].trim();
+            if (!line)
+                continue;
+            // Parse CSV line (basic — handles quoted fields)
+            const fields = line.match(/(".*?"|[^,]+)(?=,|$)/g) || line.split(',');
+            const [nameRaw, descRaw, priceRaw, categoryRaw, isVegRaw, prepTimeRaw] = fields.map(f => f.replace(/^"|"$/g, '').trim());
+            const name = nameRaw || '';
+            const description = descRaw || '';
+            const price = parseFloat(priceRaw || '0');
+            const categoryName = categoryRaw || 'General';
+            const isVeg = ['true', '1', 'yes', 'veg', 'vegetarian'].includes((isVegRaw || '').toLowerCase());
+            const prepTime = parseInt(prepTimeRaw || '0') || null;
+            if (!name) {
+                failed.push({ row: i + 2, reason: 'Name is required' });
+                continue;
+            }
+            if (isNaN(price) || price < 0) {
+                failed.push({ row: i + 2, reason: `Invalid price: "${priceRaw}"` });
+                continue;
+            }
+            try {
+                // Get or create category
+                let category_id = categoryCache[categoryName.toLowerCase()];
+                if (!category_id) {
+                    const existingCat = await prisma.menuCategory.findFirst({
+                        where: { restaurant_id: restaurant_id, name: { equals: categoryName, mode: 'insensitive' } }
+                    });
+                    if (existingCat) {
+                        category_id = existingCat.id;
+                    }
+                    else {
+                        const count = await prisma.menuCategory.count({ where: { restaurant_id: restaurant_id } });
+                        const newCat = await prisma.menuCategory.create({
+                            data: { restaurant_id: restaurant_id, name: categoryName, display_order: count }
+                        });
+                        category_id = newCat.id;
+                    }
+                    categoryCache[categoryName.toLowerCase()] = category_id;
+                }
+                const item = await prisma.menuItem.create({
+                    data: {
+                        restaurant_id: restaurant_id,
+                        category_id,
+                        name,
+                        description: description || undefined,
+                        price,
+                        is_veg: isVeg,
+                        is_available: true,
+                        preparation_time_mins: prepTime
+                    }
+                });
+                created.push({ row: i + 2, id: item.id, name: item.name });
+            }
+            catch (itemError) {
+                failed.push({ row: i + 2, reason: itemError.message || 'Unknown error' });
+            }
+        }
+        res.json({
+            success: true,
+            data: {
+                total: dataLines.filter(l => l.trim()).length,
+                created: created.length,
+                failed: failed.length,
+                created_items: created,
+                errors: failed
+            }
+        });
+    }
+    catch (error) {
+        console.error('Bulk import error:', error);
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to process CSV file' } });
     }
 });
 export default router;

@@ -18,6 +18,82 @@ const router = Router();
 // All admin routes require authentication + admin role
 router.use(authenticate, authorizeRole(['admin']));
 // ─── RESTAURANT MANAGEMENT ──────────────────────────────────────────────────
+router.get('/restaurants', async (req, res) => {
+    const { status } = req.query;
+    try {
+        const whereClause = {};
+        if (status && status !== 'all') {
+            whereClause.approval_status = status;
+        }
+        const restaurants = await prisma.restaurant.findMany({
+            where: whereClause,
+            orderBy: { created_at: 'desc' }
+        });
+        res.json({ success: true, data: restaurants });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch restaurants' } });
+    }
+});
+router.patch('/restaurants/:id/approve', async (req, res) => {
+    try {
+        const updated = await prisma.restaurant.update({
+            where: { id: req.params.id },
+            data: {
+                status: 'active',
+                approval_status: 'approved',
+                account_status: 'active',
+                visibility_status: 'visible',
+                operating_status: 'open',
+                is_open: true
+            }
+        });
+        res.json({ success: true, data: updated });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to approve restaurant' } });
+    }
+});
+router.patch('/restaurants/:id/reject', async (req, res) => {
+    const { rejection_reason } = req.body;
+    try {
+        const updated = await prisma.restaurant.update({
+            where: { id: req.params.id },
+            data: {
+                status: 'rejected',
+                approval_status: 'rejected',
+                account_status: 'inactive',
+                visibility_status: 'hidden',
+                operating_status: 'closed',
+                is_open: false,
+                // Assuming there is a rejection_reason or notes field if we want to store it. We can just use the status for now, or log it.
+            }
+        });
+        res.json({ success: true, data: updated });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to reject restaurant' } });
+    }
+});
+router.patch('/restaurants/:id/suspend', async (req, res) => {
+    try {
+        const updated = await prisma.restaurant.update({
+            where: { id: req.params.id },
+            data: {
+                status: 'suspended',
+                approval_status: 'suspended',
+                account_status: 'inactive',
+                visibility_status: 'hidden',
+                operating_status: 'closed',
+                is_open: false
+            }
+        });
+        res.json({ success: true, data: updated });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to suspend restaurant' } });
+    }
+});
 router.patch('/restaurants/:id/status', async (req, res) => {
     const { status } = req.body;
     if (!['pending', 'active', 'suspended', 'rejected'].includes(status)) {
@@ -236,7 +312,7 @@ router.put('/whatsapp-alerts/recipients', async (req, res) => {
 // GET /admin/dashboard — platform metrics
 router.get('/dashboard', async (_req, res) => {
     try {
-        const [totalUsers, totalRestaurants, activeRestaurants, pendingRestaurants, totalDeliveryPartners, pendingDeliveryPartners, totalOrders, openComplaints, launchSettings,] = await Promise.all([
+        const [totalUsers, totalRestaurants, activeRestaurants, pendingRestaurants, totalDeliveryPartners, pendingDeliveryPartners, totalOrders, openComplaints, launchSettings, totalCustomers, activeCustomers, activeDeliveryPartners,] = await Promise.all([
             prisma.user.count(),
             prisma.restaurant.count(),
             prisma.restaurant.count({ where: { status: 'active' } }),
@@ -246,6 +322,9 @@ router.get('/dashboard', async (_req, res) => {
             prisma.order.count(),
             prisma.supportTicket.count({ where: { status: 'open' } }),
             getLaunchDaySettings(),
+            prisma.user.count({ where: { role: 'customer' } }),
+            prisma.user.count({ where: { role: 'customer', is_active: true } }),
+            prisma.deliveryPartner.count({ where: { status: 'active' } }),
         ]);
         res.json({
             success: true,
@@ -259,6 +338,9 @@ router.get('/dashboard', async (_req, res) => {
                 totalOrders,
                 openComplaints,
                 launchSettings,
+                totalCustomers,
+                activeCustomers,
+                activeDeliveryPartners,
             }
         });
     }

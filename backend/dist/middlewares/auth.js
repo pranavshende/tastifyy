@@ -13,6 +13,14 @@ export const authenticate = (req, res, next) => {
         next();
     })(req, res, next);
 };
+export const optionalAuthenticate = (req, res, next) => {
+    passport.authenticate('jwt', { session: false }, (_err, user) => {
+        if (user) {
+            req.user = user;
+        }
+        next();
+    })(req, res, next);
+};
 export const authorizeRole = (allowedRoles) => {
     return (req, res, next) => {
         const user = req.user;

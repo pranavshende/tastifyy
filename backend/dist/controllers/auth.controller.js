@@ -6,19 +6,38 @@ import { OAuth2Client } from 'google-auth-library';
 import { getPublicUrl, uploadFile, validateFile, generateFilename } from '../services/storage.service.js';
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 import { redisClient } from '../utils/redis.js';
+// Prevent concurrent verification race conditions
+const verificationLocks = new Set();
 export const sendOtp = async (req, res) => {
-    const { phone, role } = req.body;
+    const { phone } = req.body; // Ignore client-provided role
     if (!phone) {
         res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Phone number is required' } });
         return;
     }
     try {
+        // Rate limit: check if user recently requested an OTP (cooldown 30s)
+        const cooldown = await redisClient.get(`otp_cooldown:${phone}`);
+        if (cooldown) {
+            res.status(429).json({ success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Please wait before requesting another OTP' } });
+            return;
+        }
+        // Role Isolation: Prevent non-customers from using this endpoint
+        const existingUser = await prisma.user.findFirst({ where: { phone } });
+        if (existingUser && existingUser.role !== 'customer') {
+            res.status(409).json({ success: false, error: { code: 'PHONE_ALREADY_REGISTERED', message: 'This phone number belongs to another account type. Please login via the appropriate portal.' } });
+            return;
+        }
         // Generate 6-digit OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        // Store in Redis with 5 minute TTL (300 seconds)
-        await redisClient.setex(`otp:${phone}`, 300, JSON.stringify({ otp, role }));
+        // Store in Redis with 5 minute TTL (300 seconds) and set attempts to 0
+        await redisClient.setex(`otp:${phone}`, 300, JSON.stringify({ otp, role: 'customer', attempts: 0 }));
+        // Set 30 second cooldown
+        await redisClient.setex(`otp_cooldown:${phone}`, 30, '1');
+        if (process.env.NODE_ENV !== 'production') {
+            console.log(`[DEV ONLY] Generated OTP for ${phone}: ${otp}`);
+        }
         // Queue via BullMQ
-        await smsQueue.add('send-auth-otp', { type: 'auth', phone, otp, role }, {
+        await smsQueue.add('send-auth-otp', { type: 'auth', phone, otp, role: 'customer' }, {
             attempts: 3,
             backoff: { type: 'exponential', delay: 2000 }
         });
@@ -35,21 +54,36 @@ export const verifyOtp = async (req, res) => {
         res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Phone and OTP are required' } });
         return;
     }
+    if (verificationLocks.has(phone)) {
+        res.status(409).json({ success: false, error: { code: 'CONCURRENT_REQUEST', message: 'Please wait — your OTP is being verified.' } });
+        return;
+    }
+    verificationLocks.add(phone);
     const raw = await redisClient.get(`otp:${phone}`);
     if (!raw) {
         res.status(401).json({ success: false, error: { code: 'INVALID_OTP', message: 'Invalid or expired OTP' } });
         return;
     }
     const record = JSON.parse(raw);
+    if (record.attempts >= 5) {
+        await redisClient.del(`otp:${phone}`);
+        res.status(403).json({ success: false, error: { code: 'TOO_MANY_ATTEMPTS', message: 'Too many invalid attempts. Please request a new OTP.' } });
+        return;
+    }
     if (record.otp !== otp) {
+        // Increment attempts
+        record.attempts += 1;
+        // We need to fetch current TTL to preserve it, but simpler to just setex with a fresh or remaining TTL
+        // The easiest way is to use redisClient.ttl or just keep it simple and give them 5 mins from the last attempt.
+        await redisClient.setex(`otp:${phone}`, 300, JSON.stringify(record));
         res.status(401).json({ success: false, error: { code: 'INVALID_OTP', message: 'Invalid OTP' } });
         return;
     }
     // OTP is valid, clear it
     await redisClient.del(`otp:${phone}`);
     try {
-        // Determine user role (default to customer if not specified during sendOtp)
-        const role = record.role || 'customer';
+        // Server-enforced role for this endpoint
+        const role = 'customer';
         // 1. Check if user exists in Supabase by phone
         // We can't directly list by phone with the generic admin API easily, so we'll check our DB first
         let dbUser = await prisma.user.findFirst({ where: { phone } });
@@ -114,6 +148,9 @@ export const verifyOtp = async (req, res) => {
     catch (error) {
         console.error('Verify OTP Error:', error);
         res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Internal server error during verification' } });
+    }
+    finally {
+        verificationLocks.delete(phone);
     }
 };
 export const register = async (req, res) => {

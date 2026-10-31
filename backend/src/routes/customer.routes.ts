@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, authorizeRole } from '../middlewares/auth.js';
+import { authenticate, authorizeRole, optionalAuthenticate } from '../middlewares/auth.js';
 import { prisma } from '../utils/prisma.js';
 import { getPublicUrl, uploadFile, deleteFile, validateFile, generateFilename } from '../services/storage.service.js';
 import multer from 'multer';
@@ -12,9 +12,11 @@ const upload = multer({
 
 const router = Router();
 
-router.use(authenticate, authorizeRole(['customer']));
-
-router.use(authenticate, authorizeRole(['customer']));
+const customerAuth = [authenticate, authorizeRole(['customer'])];
+router.use('/notifications', customerAuth);
+router.use('/favorites', customerAuth);
+router.use('/profile', customerAuth);
+router.use('/addresses', customerAuth);
 
 // ─── NOTIFICATIONS ─────────────────────────────────────────────────────────
 
@@ -337,9 +339,9 @@ router.patch('/addresses/:id/default', async (req: Request, res: Response) => {
 
 // GET /api/customer/restaurants?filter=for_you|trending|top_rated|fast_delivery|offers|veg
 // Returns active restaurants, optionally sorted/filtered by the given filter.
-router.get('/restaurants', async (req: Request, res: Response) => {
+router.get('/restaurants', optionalAuthenticate, async (req: Request, res: Response) => {
   const filter = (req.query.filter as string) || 'all';
-  const customerId = (req.user as any).id;
+  const customerId = (req.user as any)?.id;
 
   try {
     const baseWhere = {
@@ -387,6 +389,12 @@ router.get('/restaurants', async (req: Request, res: Response) => {
         is_open: true,
         created_at: true,
         ratings: { select: { restaurant_rating: true } },
+        menu_items: {
+          where: { is_available: true, is_deleted: false },
+          select: { id: true, name: true, price: true, image_url: true, is_veg: true, is_bestseller: true },
+          take: 6,
+          orderBy: [{ is_bestseller: 'desc' }, { created_at: 'asc' }]
+        },
         coupons: {
           where: {
             is_active: true,
@@ -434,6 +442,14 @@ router.get('/restaurants', async (req: Request, res: Response) => {
         active_offer,
         logo_url: getPublicUrl(r.logo_url),
         cover_image_url: getPublicUrl(r.cover_image_url),
+        menu_items: Array.isArray(r.menu_items) ? r.menu_items.map((m: any) => ({
+          id: m.id,
+          name: m.name,
+          price: Number(m.price),
+          image_url: getPublicUrl(m.image_url),
+          is_veg: m.is_veg,
+          is_bestseller: m.is_bestseller
+        })) : [],
       };
     });
 
@@ -470,7 +486,7 @@ router.get('/restaurants', async (req: Request, res: Response) => {
 
 // GET /api/customer/restaurants/:id/menu
 // Fetch restaurant details and its active menu items, grouped by category
-router.get('/restaurants/:id/menu', async (req: Request, res: Response) => {
+router.get('/restaurants/:id/menu', optionalAuthenticate, async (req: Request, res: Response) => {
   const id = req.params.id as string;
   try {
     const restaurant = await prisma.restaurant.findUnique({

@@ -23,6 +23,7 @@ interface Restaurant {
   reviews_count?: number;
   latitude?: number;
   longitude?: number;
+  menu_items?: Array<{ id: string; name: string; price: number; image_url?: string; is_veg?: boolean }>;
 }
 
 interface LocationState {
@@ -105,6 +106,7 @@ function normalizeRestaurant(restaurant: Record<string, unknown>): Restaurant {
     latitude: toFiniteNumber(restaurant.latitude),
     longitude: toFiniteNumber(restaurant.longitude),
     distance_km: toFiniteNumber(restaurant.distance_km) ?? toFiniteNumber(restaurant.distance),
+    menu_items: Array.isArray(restaurant.menu_items) ? (restaurant.menu_items as any) : undefined,
   };
 }
 
@@ -553,6 +555,7 @@ export default function CustomerHome() {
                       prepTime={restaurant.avg_preparation_time_mins}
                       distance={formatDistance(restaurant.distance_km)}
                       reviewsCount={restaurant.reviews_count ? String(restaurant.reviews_count) : undefined}
+                      menuItems={restaurant.menu_items}
                       isFavorite={favoriteIds.has(restaurant.id)}
                       onToggleFavorite={(e) => toggleFavorite(e, restaurant.id)}
                     />
@@ -588,7 +591,8 @@ export default function CustomerHome() {
                     prepTime={restaurant.avg_preparation_time_mins}
                     distance={formatDistance(restaurant.distance_km)}
                     reviewsCount={restaurant.reviews_count ? String(restaurant.reviews_count) : undefined}
-                    isFavorite={favoriteIds.has(restaurant.id)}
+                    menuItems={restaurant.menu_items}
+                      isFavorite={favoriteIds.has(restaurant.id)}
                     onToggleFavorite={(e) => toggleFavorite(e, restaurant.id)}
                   />
                 </div>
