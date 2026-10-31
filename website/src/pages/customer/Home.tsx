@@ -4,7 +4,7 @@ import { isAxiosError } from 'axios';
 import api from '../../api/axios';
 import Header from '../../components/customer/Header';
 import RestaurantCard from '../../components/customer/RestaurantCard';
-import { Search, ArrowRight } from 'lucide-react';
+import { Search, ArrowRight, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 interface Restaurant {
@@ -33,6 +33,39 @@ const CUISINE_CATEGORIES = [
   { id: 'sushi', name: 'Sushi', icon: '🍣', bg: 'bg-indigo-100', text: 'text-indigo-700' },
   { id: 'desserts', name: 'Desserts', icon: '🍰', bg: 'bg-pink-100', text: 'text-pink-700' },
   { id: 'beverages', name: 'Beverages', icon: '🥤', bg: 'bg-cyan-100', text: 'text-cyan-700' },
+];
+
+const OFFER_SLIDES = [
+  {
+    id: 1,
+    tag: 'LIMITED TIME DEAL',
+    title: '50% OFF',
+    subtitle: 'Up to ₹200 off on your first delicious order',
+    cta: 'Order Now',
+    link: '/customer/restaurants',
+    gradient: 'from-[#FF4112] via-[#FF5B33] to-[#FF7B33]',
+    image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600&auto=format&fit=crop',
+  },
+  {
+    id: 2,
+    tag: 'FREE DELIVERY',
+    title: 'Zero Delivery Fee',
+    subtitle: 'Enjoy lightning-fast delivery on orders above ₹199',
+    cta: 'Explore Deals',
+    link: '/customer/restaurants',
+    gradient: 'from-[#171717] via-[#242424] to-[#383838]',
+    image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=600&auto=format&fit=crop',
+  },
+  {
+    id: 3,
+    tag: 'CHEFS SPECIAL',
+    title: 'Taste of Sakoli',
+    subtitle: 'Fresh combos & authentic flavors from top local spots',
+    cta: 'Discover More',
+    link: '/customer/restaurants',
+    gradient: 'from-[#16A34A] via-[#15803D] to-[#14532D]',
+    image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=600&auto=format&fit=crop',
+  },
 ];
 
 function toFiniteNumber(value: unknown): number | undefined {
@@ -73,8 +106,23 @@ export default function CustomerHome() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
 
+  // Offer scrolling window state
+  const [activeOffer, setActiveOffer] = useState(0);
+  const [isOfferPaused, setIsOfferPaused] = useState(false);
+
   const { user } = useAuthStore();
   const navigate = useNavigate();
+
+  // Auto-scroll promotional window carousel
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      if (!isOfferPaused) {
+        setActiveOffer((curr) => (curr + 1) % OFFER_SLIDES.length);
+      }
+    }, 4500);
+
+    return () => window.clearInterval(interval);
+  }, [isOfferPaused]);
 
   useEffect(() => {
     const fetchRestaurants = async () => {
@@ -132,11 +180,11 @@ export default function CustomerHome() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] font-sans text-gray-900 flex flex-col pb-24 md:pb-12">
+    <div className="min-h-screen bg-[#F8F9FA] font-sans text-gray-900 flex flex-col pb-28 md:pb-16">
       <Header showSearch={false} />
 
       <main className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-6">
-        {/* Hero Banner (Target Design) */}
+        {/* Hero Banner Window */}
         <section className="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg bg-[#111315] text-white">
           {/* Background image & gradient overlay */}
           <div className="absolute inset-0 z-0">
@@ -176,9 +224,9 @@ export default function CustomerHome() {
           </div>
         </section>
 
-        {/* Cuisines Circular Filter Bar */}
-        <section className="mt-5 sm:mt-8">
-          <div className="flex items-center gap-3.5 sm:gap-6 overflow-x-auto pb-2 scrollbar-none justify-start md:justify-center">
+        {/* Cuisines Horizontal Scrolling Window */}
+        <section className="mt-5 sm:mt-7">
+          <div className="flex items-center gap-3 sm:gap-6 overflow-x-auto pb-2 scrollbar-none justify-start md:justify-center">
             {CUISINE_CATEGORIES.map((cat) => {
               const isActive = activeCategory === cat.id;
               return (
@@ -212,8 +260,94 @@ export default function CustomerHome() {
           </div>
         </section>
 
+        {/* Promotional Scrolling Window Carousel */}
+        <section className="mt-6 sm:mt-8">
+          <div
+            className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-md border border-gray-100 bg-white"
+            onMouseEnter={() => setIsOfferPaused(true)}
+            onMouseLeave={() => setIsOfferPaused(false)}
+          >
+            {/* Sliding Container */}
+            <div
+              className="flex transition-transform duration-500 ease-out"
+              style={{ transform: `translateX(-${activeOffer * 100}%)` }}
+            >
+              {OFFER_SLIDES.map((slide) => (
+                <div
+                  key={slide.id}
+                  className={`min-w-full relative overflow-hidden bg-gradient-to-r ${slide.gradient} text-white p-5 sm:p-8 flex items-center justify-between gap-4`}
+                >
+                  <div className="relative z-10 max-w-sm sm:max-w-md">
+                    <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur-sm px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider text-white mb-2">
+                      <Sparkles className="w-3 h-3 text-amber-300" />
+                      {slide.tag}
+                    </span>
+                    <h3 className="text-xl sm:text-3xl font-black tracking-tight leading-tight mt-1 mb-1">
+                      {slide.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-white/90 font-medium mb-3">
+                      {slide.subtitle}
+                    </p>
+                    <Link
+                      to={slide.link}
+                      className="inline-flex items-center gap-1.5 bg-white text-gray-900 font-bold rounded-full px-4 py-2 text-xs sm:text-sm shadow-md hover:bg-gray-100 transition-colors"
+                    >
+                      <span>{slide.cta}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+
+                  <div className="relative h-24 w-24 sm:h-36 sm:w-36 shrink-0">
+                    <img
+                      src={slide.image}
+                      alt={slide.title}
+                      className="h-full w-full object-cover rounded-full border-2 sm:border-4 border-white/30 shadow-lg"
+                      loading="lazy"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Previous/Next Scrolling Buttons */}
+            <button
+              type="button"
+              aria-label="Previous offer"
+              onClick={() =>
+                setActiveOffer((curr) => (curr - 1 + OFFER_SLIDES.length) % OFFER_SLIDES.length)
+              }
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 rounded-full bg-white/80 backdrop-blur-sm p-1.5 text-gray-900 shadow hover:bg-white transition-all hidden sm:flex"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              aria-label="Next offer"
+              onClick={() => setActiveOffer((curr) => (curr + 1) % OFFER_SLIDES.length)}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full bg-white/80 backdrop-blur-sm p-1.5 text-gray-900 shadow hover:bg-white transition-all hidden sm:flex"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+
+            {/* Pagination Dots */}
+            <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+              {OFFER_SLIDES.map((slide, index) => (
+                <button
+                  key={slide.id}
+                  type="button"
+                  aria-label={`Slide ${index + 1}`}
+                  onClick={() => setActiveOffer(index)}
+                  className={`h-1.5 rounded-full transition-all ${
+                    activeOffer === index ? 'w-6 bg-white' : 'w-1.5 bg-white/60 hover:bg-white'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Top Restaurants Section */}
-        <section className="mt-6 sm:mt-10">
+        <section className="mt-7 sm:mt-10">
           <div className="flex items-end justify-between mb-3.5 sm:mb-5">
             <div>
               <h2 className="text-lg sm:text-2xl font-black text-gray-900 tracking-tight">
@@ -247,9 +381,9 @@ export default function CustomerHome() {
                       <div className="w-1/2 h-3 bg-gray-100 rounded" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-4 gap-2 mt-4 pt-3 border-t border-gray-50">
+                  <div className="flex gap-2.5 mt-4 pt-3 border-t border-gray-50 overflow-hidden">
                     {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="space-y-1.5">
+                      <div key={i} className="w-24 shrink-0 space-y-1.5">
                         <div className="w-full aspect-[4/3] rounded-lg bg-gray-200" />
                         <div className="w-3/4 h-2.5 bg-gray-200 rounded" />
                         <div className="w-1/2 h-2.5 bg-gray-100 rounded" />
@@ -301,6 +435,45 @@ export default function CustomerHome() {
             </div>
           )}
         </section>
+
+        {/* Recommended For You: Horizontal Scrolling Window of Restaurants */}
+        {!loading && filteredRestaurants.length > 2 && (
+          <section className="mt-10 sm:mt-14 pt-6 border-t border-gray-100">
+            <div className="flex items-end justify-between mb-4">
+              <div>
+                <h2 className="text-lg sm:text-2xl font-black text-gray-900 tracking-tight">
+                  Recommended For You
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-500 font-medium mt-0.5">
+                  Popular handpicked spots loved by foodies nearby
+                </p>
+              </div>
+            </div>
+
+            {/* Horizontal Scrolling Window */}
+            <div className="flex gap-4 sm:gap-5 overflow-x-auto scrollbar-none pb-3 snap-x -mx-4 px-4 sm:mx-0 sm:px-0">
+              {filteredRestaurants.slice(0, 6).map((restaurant) => (
+                <div
+                  key={`rec-${restaurant.id}`}
+                  className="w-[280px] sm:w-[320px] shrink-0 snap-start"
+                >
+                  <RestaurantCard
+                    id={restaurant.id}
+                    name={restaurant.name}
+                    logo={restaurant.logo_url}
+                    coverImage={restaurant.cover_image_url}
+                    cuisineTags={restaurant.cuisine_tags}
+                    rating={restaurant.rating}
+                    prepTime={restaurant.avg_preparation_time_mins}
+                    isOpen={restaurant.is_open}
+                    reviewsCount={restaurant.reviews_count ? String(restaurant.reviews_count) : undefined}
+                    menuItems={restaurant.menu_items}
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );

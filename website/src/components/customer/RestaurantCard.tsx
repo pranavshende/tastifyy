@@ -151,7 +151,8 @@ export default function RestaurantCard({
       })
     : [];
 
-  const displayDishes = sortedMenuItems.slice(0, 4).map((m) => ({
+  // Take up to 6 dishes for the scrolling window
+  const displayDishes = sortedMenuItems.slice(0, 6).map((m) => ({
     name: m.name,
     price: m.price,
     image: resolveDishPhoto(m.name, m.image_url),
@@ -232,11 +233,11 @@ export default function RestaurantCard({
         </div>
       </div>
 
-      {/* Bottom Dishes Row */}
+      {/* Bottom Dishes Row: Smooth horizontal scrolling window */}
       {displayDishes.length > 0 && (
-        <div className="grid grid-cols-4 gap-2 sm:gap-2.5 mt-3 pt-2.5 border-t border-gray-50">
+        <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none pt-2.5 mt-3 border-t border-gray-50 snap-x">
           {displayDishes.map((dish, idx) => (
-            <div key={idx} className="flex flex-col min-w-0">
+            <div key={idx} className="w-[84px] sm:w-[96px] shrink-0 flex flex-col snap-start">
               <div className="w-full aspect-[4/3] rounded-lg sm:rounded-xl overflow-hidden bg-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.06)] relative group-hover:shadow transition-shadow">
                 <img
                   src={dish.image}
@@ -244,7 +245,6 @@ export default function RestaurantCard({
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   loading="lazy"
                   onError={(e) => {
-                    // Fallback to dish-category default if specific URL fails
                     (e.target as HTMLImageElement).src =
                       'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=300&auto=format&fit=crop';
                   }}
