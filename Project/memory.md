@@ -142,6 +142,7 @@ Website (on Vercel):
 | 2026-10-31 | Brought back scrolling windows: auto-sliding promotional offer carousel with touch/controls, horizontal dish scrolling window in cards, and recommended spots carousel |
 | 2026-10-31 | Shifted AI FoodieBot button up higher (bottom-24 sm:bottom-28 z-[80]) and added universal scrollbar hiding utilities in index.css |
 | 2026-10-31 | Fixed AI FoodieBot positioning above mobile bottom nav bar (z-[70], bottom-20) and resolved dish photos (prioritizing uploaded Supabase photos + dish-specific smart resolver) |
+| 2026-11-01 | Re-positioned customer FoodieBot AI icon to the right side on mobile, decreased length of bottom cart and live order cards docked to the left side, preventing overlap |
 | 2026-10-31 | Redesigned Customer Web Home, RestaurantCard, and MobileNav to match reference phone design with circular avatar, green Open badge, horizontal dynamic dish previews, and category filters |
 | 2026-10-31 | Removed Delivering to location bar widget from customer Header (desktop + mobile) |
 | 2026-10-31 | Began Mobile-First Homepage Overhaul matching reference UI (dynamic restaurant preview carousel) |

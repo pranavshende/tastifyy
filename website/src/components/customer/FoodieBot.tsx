@@ -70,8 +70,8 @@ export default function FoodieBot() {
 
   return (
     <>
-      {/* Floating AI Button: positioned safely above mobile bottom navigation bar */}
-      <div className="fixed bottom-24 sm:bottom-28 md:bottom-8 right-4 sm:right-6 z-[80] group flex items-center gap-3">
+      {/* Floating AI Button: on phone view kept strictly to the right side, with cart/orders on the left */}
+      <div className="fixed bottom-[60px] sm:bottom-[68px] md:bottom-6 right-2.5 sm:right-4 md:right-6 z-[80] group flex items-center gap-2">
         {/* Desktop Tooltip */}
         <div className="hidden md:block absolute right-16 px-3 py-1.5 bg-gray-900 text-white text-xs font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-lg">
           Ask FoodieBot AI
@@ -83,15 +83,15 @@ export default function FoodieBot() {
           type="button"
           aria-label="Open Tastifyy AI Assistant"
           onClick={() => setOpen((prev) => !prev)}
-          className="relative flex h-14 w-14 sm:h-15 sm:w-15 items-center justify-center rounded-full bg-gradient-to-tr from-brand-primary to-orange-500 text-white shadow-[0_8px_25px_rgba(255,91,51,0.5)] hover:shadow-[0_10px_30px_rgba(255,91,51,0.65)] transition-all duration-300 hover:scale-105 active:scale-95 border-2 border-white"
+          className="relative flex h-12 w-12 sm:h-13 sm:w-13 md:h-14 md:w-14 items-center justify-center rounded-full bg-gradient-to-tr from-brand-primary to-orange-500 text-white shadow-[0_6px_20px_rgba(255,91,51,0.45)] hover:shadow-[0_8px_25px_rgba(255,91,51,0.6)] transition-all duration-300 hover:scale-105 active:scale-95 border-2 border-white shrink-0"
         >
           {/* Subtle pulse animation */}
-          <span className="absolute inset-0 rounded-full bg-brand-primary animate-ping opacity-30"></span>
+          <span className="absolute inset-0 rounded-full bg-brand-primary animate-ping opacity-25"></span>
 
-          <Bot className="relative h-7 w-7" />
+          <Bot className="relative h-6 w-6 sm:h-6.5 sm:w-6.5 md:h-7 md:w-7" />
 
           {/* AI Sparkle Pill Badge */}
-          <span className="absolute -top-1 -right-1 bg-gray-900 text-[10px] text-amber-300 font-black px-1.5 py-0.5 rounded-full border border-amber-300/40 shadow-sm flex items-center gap-0.5">
+          <span className="absolute -top-1 -right-1 bg-gray-900 text-[9px] text-amber-300 font-black px-1.5 py-0.5 rounded-full border border-amber-300/40 shadow-sm flex items-center gap-0.5">
             <Sparkles className="w-2.5 h-2.5" />
             <span>AI</span>
           </span>
@@ -100,7 +100,7 @@ export default function FoodieBot() {
 
       {/* Chatbot Window */}
       {open && (
-        <div className="fixed bottom-[110px] md:bottom-24 right-2 sm:right-6 z-[85] flex w-[min(400px,calc(100vw-1rem))] flex-col overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-100 bg-white shadow-2xl animate-in slide-in-from-bottom-4">
+        <div className="fixed bottom-[118px] sm:bottom-[128px] md:bottom-22 right-2 sm:right-6 z-[85] flex w-[min(390px,calc(100vw-1rem))] max-h-[min(520px,calc(100vh-130px))] flex-col overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-100 bg-white shadow-2xl animate-in slide-in-from-bottom-4">
           {/* Top Bar */}
           <div className="flex items-center justify-between bg-gradient-to-r from-gray-950 to-gray-900 px-4 py-3.5 text-white">
             <div className="flex items-center gap-2.5">

@@ -7,6 +7,7 @@ import socketService from '../../api/socket';
 import ImageWithFallback from '../../components/ui/ImageWithFallback';
 import MobileNav from '../../components/customer/MobileNav';
 import CustomerBottomCards from '../../components/customer/CustomerBottomCards';
+import FoodieBot from '../../components/customer/FoodieBot';
 
 export default function Orders() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -235,6 +236,7 @@ export default function Orders() {
       </main>
 
       <CustomerBottomCards />
+      <FoodieBot />
       <MobileNav />
     </div>
   );
