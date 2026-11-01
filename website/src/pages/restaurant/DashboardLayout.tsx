@@ -143,7 +143,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 sm:p-6 h-[calc(100vh-3.5rem)] overflow-y-auto">
+        <main className="flex-1 p-4 sm:p-6 pb-20 md:pb-6 h-[calc(100vh-3.5rem)] overflow-y-auto">
           <div className="max-w-5xl mx-auto w-full h-full flex flex-col">
             <Outlet />
             <CompanyAttribution
@@ -153,6 +153,33 @@ export default function DashboardLayout() {
           </div>
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation Bar for Restaurant Partner */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#161B22] border-t border-gray-800 z-40 grid grid-cols-5 items-center py-2 px-1 text-white shadow-2xl pb-safe">
+        {[
+          { path: '/restaurant/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+          { path: '/restaurant/menu', label: 'Menu', icon: <UtensilsCrossed className="w-5 h-5" /> },
+          { path: '/restaurant/analytics', label: 'Analytics', icon: <TrendingUp className="w-5 h-5" /> },
+          { path: '/restaurant/reviews', label: 'Reviews', icon: <Star className="w-5 h-5" /> },
+          { path: '/restaurant/profile', label: 'Profile', icon: <User className="w-5 h-5" /> },
+        ].map((item) => {
+          const isActive = location.pathname.startsWith(item.path);
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex flex-col items-center justify-center py-1 transition-colors ${
+                isActive ? 'text-brand-primary' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {item.icon}
+              <span className={`text-[10px] font-bold mt-1 tracking-tight ${isActive ? 'text-brand-primary font-black' : 'text-gray-400'}`}>
+                {item.label}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { Search, User, ChevronDown, Receipt, Menu, ShoppingCart, Phone, MapPin }
 import { Logo } from '../ui/Logo';
 import MobileNav from './MobileNav';
 import LocationModal from './LocationModal';
+import CustomerBottomCards from './CustomerBottomCards';
 import NotificationBell from '../NotificationBell';
 import FoodieBot from './FoodieBot';
 
@@ -261,6 +262,7 @@ export default function Header({ showSearch = true, searchQuery = '', onSearchCh
         onClose={() => setIsLocationModalOpen(false)} 
       />
 
+      <CustomerBottomCards />
       <MobileNav />
     </>
   );

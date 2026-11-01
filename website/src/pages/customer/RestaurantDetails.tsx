@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useCartStore } from '../../store/cartStore';
 import api from '../../api/axios';
 import Header from '../../components/customer/Header';
@@ -58,7 +58,6 @@ interface Restaurant {
 
 export default function RestaurantDetails() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const cart = useCartStore();
   
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
@@ -163,8 +162,6 @@ export default function RestaurantDetails() {
       </div>
     );
   }
-
-  const totals = cart.getTotals();
   const isOpen = restaurant.is_open !== false; // Default true if missing
 
   return (
@@ -315,31 +312,7 @@ export default function RestaurantDetails() {
         />
       )}
 
-      {/* Floating Cart Summary */}
-      {cart.items.length > 0 && cart.restaurantId === id && (
-        <div className="fixed bottom-0 left-0 right-0 p-3 bg-white border-t border-gray-100 z-50">
-          <div className="max-w-3xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-50 rounded-full flex items-center justify-center text-brand-primary relative">
-                <span className="text-lg">🛍️</span>
-                <span className="absolute -top-1 -right-1 bg-brand-dark text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border border-white">
-                  {cart.items.reduce((a,c) => a+c.quantity, 0)}
-                </span>
-              </div>
-              <div>
-                <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Your Cart</p>
-                <p className="text-gray-900 font-black text-lg leading-none mt-0.5">₹{totals.itemSubtotal}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/customer/checkout')}
-              className="bg-brand-primary hover:bg-brand-secondary text-white font-bold py-2.5 px-5 rounded-lg transition-all flex items-center gap-2 text-sm"
-            >
-              Checkout <span>→</span>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
+

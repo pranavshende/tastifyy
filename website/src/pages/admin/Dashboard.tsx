@@ -18,7 +18,7 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-brand-light flex font-sans text-brand-dark">
       <Sidebar role="admin" activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as Tab)} />
 
-      <main className="flex-1 lg:ml-64 p-6 lg:p-8 h-screen overflow-y-auto">
+      <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 pb-20 lg:pb-8 h-screen overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           {activeTab === 'overview' && <OverviewTab />}
           {activeTab === 'orders' && <OrdersTab />}
@@ -36,6 +36,33 @@ export default function AdminDashboard() {
           </div>
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation for Admin */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-brand-dark text-white border-t border-gray-800 z-40 grid grid-cols-5 items-center py-2 px-1 shadow-2xl pb-safe">
+        {[
+          { id: 'overview', label: 'Overview', icon: <TrendingUp className="w-5 h-5" /> },
+          { id: 'orders', label: 'Orders', icon: <ShoppingBag className="w-5 h-5" /> },
+          { id: 'restaurants', label: 'Stores', icon: <Store className="w-5 h-5" /> },
+          { id: 'delivery', label: 'Fleet', icon: <Bike className="w-5 h-5" /> },
+          { id: 'profile', label: 'Admin', icon: <User className="w-5 h-5" /> },
+        ].map((item) => {
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id as Tab)}
+              className={`flex flex-col items-center justify-center py-1 transition-colors ${
+                isActive ? 'text-brand-primary' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {item.icon}
+              <span className={`text-[10px] font-bold mt-1 tracking-tight ${isActive ? 'text-brand-primary font-black' : 'text-gray-400'}`}>
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }
