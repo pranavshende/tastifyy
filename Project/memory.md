@@ -133,6 +133,7 @@ Website (on Vercel):
 
 | Date | Change |
 |---|---|
+| 2026-11-01 | Aligned customer live location fetching with Checkout logic: full detailed address reverse-geocoding via OpenStreetMap Nominatim with BigDataCloud fallback, dynamic city/locality detection (supporting any city e.g. Nagpur), customer saved default address synchronization on Home, and unconditional live location auto-fetch on mount |
 | 2026-11-01 | Increased top padding (`pt-3.5`) and adjusted margins on the Cuisines scrolling container and Recommended horizontal carousel in customer Home to prevent active ring indicators and hover scale effects from clipping |
 | 2026-11-01 | Restored live GPS location auto-detection on Customer Home (/customer/home), mounted location selectors in Customer Header (desktop chip + mobile sub-bar + LocationModal), added robust multi-tier reverse geocoding with BigDataCloud and OSM Nominatim, and re-enabled live distance calculation on restaurant cards |
 | 2026-10-31 | Fixed Account tab vanishing on small mobile viewports (converted MobileNav to strict 4-column grid with user auth routing) and elevated AI bot above bottom navigation bar in both web and mobile app |

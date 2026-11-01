@@ -22,7 +22,7 @@ export default function Header({ showSearch = true, searchQuery = '', onSearchCh
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const { items } = useCartStore();
-  const { selectedZone, isLocating } = useLocationStore();
+  const { selectedZone, fullAddress, shortName, isLocating } = useLocationStore();
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -77,12 +77,12 @@ export default function Header({ showSearch = true, searchQuery = '', onSearchCh
                 <div className="w-7 h-7 rounded-full bg-orange-50 flex items-center justify-center shrink-0 group-hover:bg-orange-100 transition-colors">
                   <MapPin className={`w-3.5 h-3.5 text-brand-primary ${isLocating ? 'animate-bounce' : ''}`} />
                 </div>
-                <div className="flex flex-col max-w-[120px] lg:max-w-[160px] min-w-0">
+                <div className="flex flex-col max-w-[130px] lg:max-w-[180px] min-w-0">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider leading-none truncate">
                     Delivering to
                   </span>
-                  <span className="text-xs font-black text-gray-900 truncate leading-tight flex items-center gap-1 mt-0.5">
-                    <span className="truncate">{selectedZone ? selectedZone.name : (isLocating ? 'Locating...' : 'Select Location')}</span>
+                  <span className="text-xs font-black text-gray-900 truncate leading-tight flex items-center gap-1 mt-0.5" title={fullAddress || shortName || ''}>
+                    <span className="truncate">{shortName || selectedZone?.name || (isLocating ? 'Locating...' : 'Select Location')}</span>
                     <ChevronDown className="w-3 h-3 text-gray-400 shrink-0" />
                   </span>
                 </div>
@@ -222,8 +222,8 @@ export default function Header({ showSearch = true, searchQuery = '', onSearchCh
             </div>
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="text-[10px] font-bold text-gray-400 uppercase shrink-0">Delivering to:</span>
-              <span className="text-xs font-black text-gray-900 truncate">
-                {selectedZone ? selectedZone.name : (isLocating ? 'Detecting location...' : 'Select Location')}
+              <span className="text-xs font-black text-gray-900 truncate" title={fullAddress || shortName || ''}>
+                {shortName || selectedZone?.name || (isLocating ? 'Detecting location...' : 'Select Location')}
               </span>
             </div>
           </div>

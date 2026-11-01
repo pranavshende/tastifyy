@@ -143,15 +143,37 @@ export default function CustomerHome() {
   const [isOfferPaused, setIsOfferPaused] = useState(false);
 
   const { user } = useAuthStore();
-  const { coords, selectedZone, isLocating, detectLiveLocation } = useLocationStore();
+  const { coords, selectedZone, fullAddress, shortName, isLocating, detectLiveLocation } = useLocationStore();
   const navigate = useNavigate();
 
-  // Auto-detect live location on initial mount if coords not yet present
+  // Load customer default address if logged in, and always detect live GPS location on home mount
   useEffect(() => {
-    if (!coords) {
-      detectLiveLocation();
+    if (user) {
+      api.get('/customer/addresses')
+        .then((res) => {
+          const list = res.data?.data;
+          if (Array.isArray(list) && list.length > 0) {
+            const defaultAddr = list.find((a: any) => a.is_default) || list[0];
+            if (defaultAddr && !useLocationStore.getState().coords) {
+              const full = `${defaultAddr.address_line}, ${defaultAddr.city}, ${defaultAddr.state} - ${defaultAddr.pincode}`;
+              useLocationStore.getState().setDetectedAddress({
+                displayName: full,
+                shortName: `${defaultAddr.address_line?.split(',')[0] || defaultAddr.city}, ${defaultAddr.city}`,
+                city: defaultAddr.city,
+                state: defaultAddr.state,
+                pincode: defaultAddr.pincode,
+                latitude: defaultAddr.latitude || 21.0833,
+                longitude: defaultAddr.longitude || 79.9833,
+              });
+            }
+          }
+        })
+        .catch(() => {});
     }
-  }, [coords, detectLiveLocation]);
+
+    // Always fetch live GPS location on customer home mount
+    detectLiveLocation();
+  }, [user, detectLiveLocation]);
 
   // Auto-scroll promotional window carousel
   useEffect(() => {
@@ -245,15 +267,17 @@ export default function CustomerHome() {
             {/* Live Location Pill */}
             <button
               type="button"
-              onClick={() => detectLiveLocation()}
-              className="inline-flex items-center gap-1.5 bg-black/40 hover:bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold text-white/95 border border-white/15 mb-2.5 transition-colors shadow-sm text-left"
-              title="Click to detect or refresh live GPS location"
+              onClick={() => detectLiveLocation(true)}
+              className="inline-flex items-center gap-1.5 bg-black/40 hover:bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold text-white/95 border border-white/15 mb-2.5 transition-colors shadow-sm text-left max-w-full"
+              title={fullAddress || 'Click to detect or refresh live GPS location'}
             >
               <MapPin className={`w-3.5 h-3.5 text-[#FF5B33] shrink-0 ${isLocating ? 'animate-bounce' : ''}`} />
-              <span className="truncate max-w-[190px] sm:max-w-xs">
-                {isLocating ? 'Detecting live location...' : (selectedZone ? selectedZone.name : 'Detect Live Location')}
+              <span className="truncate max-w-[220px] sm:max-w-md">
+                {isLocating
+                  ? 'Detecting live location...'
+                  : (fullAddress || shortName || selectedZone?.name || 'Detect Live Location')}
               </span>
-              <span className="text-[10px] text-white/60 font-medium">({isLocating ? 'Locating' : 'Live'})</span>
+              <span className="text-[10px] text-white/60 font-medium shrink-0">({isLocating ? 'Locating' : 'Live'})</span>
             </button>
 
             <p className="text-[11px] sm:text-xs font-bold text-gray-300 tracking-wider uppercase mb-1 sm:mb-1.5">

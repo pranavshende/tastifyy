@@ -6,9 +6,20 @@ export interface LocationZone {
   name: string;
   deliveryTime: string;
   baseFee: number;
+  fullAddress?: string;
 }
 
 export interface Coordinates {
+  latitude: number;
+  longitude: number;
+}
+
+export interface DetectedAddress {
+  displayName: string;
+  shortName: string;
+  city: string;
+  state?: string;
+  pincode?: string;
   latitude: number;
   longitude: number;
 }
@@ -33,58 +44,33 @@ export const DELIVERY_ZONES: LocationZone[] = [
   { id: '12', name: 'Sakoli Lake / Tourist Side', deliveryTime: '25-30 mins', baseFee: 35 },
 ];
 
-export type City = 'Sakoli' | 'Sendurwafa' | 'Khairlanji';
+export type City = string;
 
 interface LocationState {
   city: City;
   selectedZone: LocationZone | null;
+  fullAddress: string | null;
+  shortName: string | null;
   coords: Coordinates | null;
   isLocating: boolean;
   locationError: string | null;
   setCity: (city: City) => void;
   setZone: (zone: LocationZone) => void;
   setCoords: (coords: Coordinates | null) => void;
-  detectLiveLocation: () => Promise<boolean>;
+  setDetectedAddress: (addr: DetectedAddress) => void;
+  detectLiveLocation: (force?: boolean) => Promise<boolean>;
 }
 
 /**
- * Reverse geocodes coordinates to a user-friendly locality name.
- * 1. BigDataCloud client API (designed for client-side CORS, fast, no API key).
- * 2. OpenStreetMap Nominatim API (fallback).
- * 3. Proximity fallback to Sakoli locality.
+ * Reverse geocodes coordinates to a full user-friendly address.
+ * Primary: OpenStreetMap Nominatim (matches Checkout.tsx).
+ * Fallback: BigDataCloud Client API.
  */
-async function reverseGeocode(latitude: number, longitude: number): Promise<string> {
-  // 1. Try BigDataCloud free client reverse geocoding
+async function fetchLiveAddress(latitude: number, longitude: number): Promise<DetectedAddress> {
+  // 1. Try Nominatim (same reliable endpoint used by Checkout.tsx)
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
-    const res = await fetch(
-      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
-      { signal: controller.signal }
-    );
-    clearTimeout(timeoutId);
-
-    if (res.ok) {
-      const data = await res.json();
-      const locality =
-        data.locality ||
-        data.city ||
-        (Array.isArray(data.localityInfo?.administrative) &&
-          data.localityInfo.administrative[data.localityInfo.administrative.length - 1]?.name) ||
-        data.principalSubdivision;
-
-      if (locality && typeof locality === 'string' && locality.trim()) {
-        return locality.trim();
-      }
-    }
-  } catch {
-    // Continue to fallback
-  }
-
-  // 2. Try OpenStreetMap Nominatim reverse geocoding
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
       {
@@ -97,24 +83,61 @@ async function reverseGeocode(latitude: number, longitude: number): Promise<stri
     if (res.ok) {
       const data = await res.json();
       const addr = data.address || {};
-      const name =
-        addr.suburb ||
-        addr.neighbourhood ||
-        addr.road ||
-        addr.village ||
-        addr.town ||
-        addr.city ||
-        data.name;
+      const detectedCity = addr.city || addr.town || addr.village || addr.county || addr.state_district || 'Nagpur';
+      const localityPart = addr.suburb || addr.neighbourhood || addr.road || '';
+      const short = localityPart && localityPart !== detectedCity
+        ? `${localityPart}, ${detectedCity}`
+        : detectedCity;
 
-      if (name && typeof name === 'string' && name.trim()) {
-        return name.trim();
-      }
+      return {
+        displayName: data.display_name || `${short}, ${addr.state || ''} ${addr.postcode || ''}`.trim(),
+        shortName: short,
+        city: detectedCity,
+        state: addr.state || '',
+        pincode: addr.postcode || '',
+        latitude,
+        longitude,
+      };
     }
-  } catch {
-    // Continue to fallback
+  } catch (e) {
+    console.warn('Nominatim reverse geocode error:', e);
   }
 
-  return 'Current Location';
+  // 2. Fallback: BigDataCloud free client reverse geocoding
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
+      { signal: controller.signal }
+    );
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      const detectedCity = data.city || data.locality || 'Nagpur';
+      const state = data.principalSubdivision || '';
+      return {
+        displayName: `${detectedCity}, ${state}`.trim(),
+        shortName: detectedCity,
+        city: detectedCity,
+        state,
+        pincode: data.postcode || '',
+        latitude,
+        longitude,
+      };
+    }
+  } catch (e) {
+    console.warn('BigDataCloud reverse geocode error:', e);
+  }
+
+  return {
+    displayName: 'Current Location',
+    shortName: 'Current Location',
+    city: 'Nagpur',
+    latitude,
+    longitude,
+  };
 }
 
 function getBrowserPosition(): Promise<GeolocationPosition> {
@@ -124,30 +147,23 @@ function getBrowserPosition(): Promise<GeolocationPosition> {
       return;
     }
 
-    // Try high accuracy first (e.g. mobile GPS), fallback to standard accuracy (laptops / Wi-Fi)
     navigator.geolocation.getCurrentPosition(
       resolve,
-      (err) => {
-        // If user denied permission explicitly, don't retry
-        if (err.code === err.PERMISSION_DENIED) {
-          reject(new Error('Location permission was denied. Please allow location access in your browser.'));
-          return;
-        }
-
-        // For timeout or unavailable, retry with relaxed constraints
+      (_err) => {
+        // Retry with relaxed constraints if high accuracy fails/times out
         navigator.geolocation.getCurrentPosition(
           resolve,
           (retryErr) => {
             const msg =
               retryErr.code === retryErr.PERMISSION_DENIED
-                ? 'Location permission was denied.'
+                ? 'Location permission was denied. Please allow location access in your browser.'
                 : 'Unable to retrieve your location.';
             reject(new Error(msg));
           },
           { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
         );
       },
-      { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   });
 }
@@ -157,15 +173,41 @@ export const useLocationStore = create<LocationState>()(
     (set, get) => ({
       city: 'Sakoli',
       selectedZone: null,
+      fullAddress: null,
+      shortName: null,
       coords: null,
       isLocating: false,
       locationError: null,
 
       setCity: (city: City) => set({ city }),
-      setZone: (zone: LocationZone) => set({ selectedZone: zone, locationError: null }),
+      setZone: (zone: LocationZone) =>
+        set({
+          selectedZone: zone,
+          shortName: zone.name,
+          fullAddress: zone.fullAddress || zone.name,
+          locationError: null,
+        }),
       setCoords: (coords: Coordinates | null) => set({ coords }),
 
-      detectLiveLocation: async () => {
+      setDetectedAddress: (addr: DetectedAddress) => {
+        const zone: LocationZone = {
+          id: 'saved_or_gps',
+          name: addr.shortName,
+          fullAddress: addr.displayName,
+          deliveryTime: '20-30 mins',
+          baseFee: 30,
+        };
+        set({
+          selectedZone: zone,
+          fullAddress: addr.displayName,
+          shortName: addr.shortName,
+          city: addr.city,
+          coords: { latitude: addr.latitude, longitude: addr.longitude },
+          locationError: null,
+        });
+      },
+
+      detectLiveLocation: async (_force = false) => {
         // Prevent concurrent requests
         if (get().isLocating) return false;
 
@@ -175,19 +217,22 @@ export const useLocationStore = create<LocationState>()(
           const position = await getBrowserPosition();
           const { latitude, longitude } = position.coords;
 
-          const locationName = await reverseGeocode(latitude, longitude);
+          const detected = await fetchLiveAddress(latitude, longitude);
 
           const gpsZone: LocationZone = {
             id: 'gps',
-            name: locationName,
+            name: detected.shortName,
+            fullAddress: detected.displayName,
             deliveryTime: '20-30 mins',
             baseFee: 30,
           };
 
           set({
             selectedZone: gpsZone,
+            fullAddress: detected.displayName,
+            shortName: detected.shortName,
             coords: { latitude, longitude },
-            city: 'Sakoli',
+            city: detected.city,
             isLocating: false,
             locationError: null,
           });
@@ -209,6 +254,8 @@ export const useLocationStore = create<LocationState>()(
       partialize: (state) => ({
         city: state.city,
         selectedZone: state.selectedZone,
+        fullAddress: state.fullAddress,
+        shortName: state.shortName,
         coords: state.coords,
       }),
     }

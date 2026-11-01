@@ -9,7 +9,7 @@ interface LocationModalProps {
 }
 
 export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
-  const { city, selectedZone, setCity, setZone, isLocating, locationError, detectLiveLocation } = useLocationStore();
+  const { city, selectedZone, fullAddress, setCity, setZone, isLocating, locationError, detectLiveLocation } = useLocationStore();
   const [searchQuery, setSearchQuery] = useState('');
 
   if (!isOpen) return null;
@@ -89,10 +89,12 @@ export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
                 <p className="font-bold text-[#148F4D] text-[15px]">
                   {isLocating ? 'Detecting Live GPS Location...' : 'Use Current GPS Location'}
                 </p>
-                <p className="text-xs font-semibold text-[#23C16B]">
-                  {selectedZone?.id === 'gps'
-                    ? `Currently active: ${selectedZone.name}`
-                    : 'Auto-detect locality via device GPS'}
+                <p className="text-xs font-semibold text-[#23C16B] truncate max-w-sm">
+                  {fullAddress
+                    ? `Currently active: ${fullAddress}`
+                    : selectedZone?.name
+                      ? `Currently active: ${selectedZone.name}`
+                      : 'Auto-detect locality via device GPS'}
                 </p>
               </div>
             </div>
