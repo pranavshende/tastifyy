@@ -4,8 +4,9 @@ import { isAxiosError } from 'axios';
 import api from '../../api/axios';
 import Header from '../../components/customer/Header';
 import RestaurantCard from '../../components/customer/RestaurantCard';
-import { Search, ArrowRight, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { Search, ArrowRight, ChevronLeft, ChevronRight, Sparkles, MapPin } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { useLocationStore } from '../../store/locationStore';
 
 interface Restaurant {
   id: string;
@@ -99,6 +100,37 @@ function normalizeRestaurant(restaurant: Record<string, unknown>): Restaurant {
   };
 }
 
+function calculateDistanceKm(
+  from: { latitude: number; longitude: number },
+  to: { latitude?: number; longitude?: number }
+): number | undefined {
+  const { latitude, longitude } = from;
+  const destinationLatitude = to.latitude;
+  const destinationLongitude = to.longitude;
+  if (
+    typeof destinationLatitude !== 'number' ||
+    typeof destinationLongitude !== 'number' ||
+    (destinationLatitude === 0 && destinationLongitude === 0) ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    !Number.isFinite(destinationLatitude) ||
+    !Number.isFinite(destinationLongitude)
+  ) {
+    return undefined;
+  }
+
+  const radians = (degrees: number) => (degrees * Math.PI) / 180;
+  const latitudeDelta = radians(destinationLatitude - latitude);
+  const longitudeDelta = radians(destinationLongitude - longitude);
+  const haversine =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(radians(latitude)) *
+      Math.cos(radians(destinationLatitude)) *
+      Math.sin(longitudeDelta / 2) ** 2;
+  const boundedHaversine = Math.min(1, Math.max(0, haversine));
+  return 6371 * 2 * Math.atan2(Math.sqrt(boundedHaversine), Math.sqrt(1 - boundedHaversine));
+}
+
 export default function CustomerHome() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,7 +143,15 @@ export default function CustomerHome() {
   const [isOfferPaused, setIsOfferPaused] = useState(false);
 
   const { user } = useAuthStore();
+  const { coords, selectedZone, isLocating, detectLiveLocation } = useLocationStore();
   const navigate = useNavigate();
+
+  // Auto-detect live location on initial mount if coords not yet present
+  useEffect(() => {
+    if (!coords) {
+      detectLiveLocation();
+    }
+  }, [coords, detectLiveLocation]);
 
   // Auto-scroll promotional window carousel
   useEffect(() => {
@@ -147,7 +187,12 @@ export default function CustomerHome() {
   }, [user]);
 
   const filteredRestaurants = useMemo(() => {
-    return restaurants.filter((restaurant) => {
+    return restaurants
+      .map((restaurant) => ({
+        ...restaurant,
+        distance_km: coords ? calculateDistanceKm(coords, restaurant) : restaurant.distance_km,
+      }))
+      .filter((restaurant) => {
       // Category filter
       if (activeCategory !== 'all') {
         const text = `${restaurant.name} ${restaurant.cuisine_tags.join(' ')}`.toLowerCase();
@@ -170,7 +215,7 @@ export default function CustomerHome() {
 
       return true;
     });
-  }, [activeCategory, restaurants, searchQuery]);
+  }, [activeCategory, coords, restaurants, searchQuery]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,6 +242,20 @@ export default function CustomerHome() {
           </div>
 
           <div className="relative z-10 px-5 py-6 sm:px-8 sm:py-10 max-w-xl">
+            {/* Live Location Pill */}
+            <button
+              type="button"
+              onClick={() => detectLiveLocation()}
+              className="inline-flex items-center gap-1.5 bg-black/40 hover:bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold text-white/95 border border-white/15 mb-2.5 transition-colors shadow-sm text-left"
+              title="Click to detect or refresh live GPS location"
+            >
+              <MapPin className={`w-3.5 h-3.5 text-[#FF5B33] shrink-0 ${isLocating ? 'animate-bounce' : ''}`} />
+              <span className="truncate max-w-[190px] sm:max-w-xs">
+                {isLocating ? 'Detecting live location...' : (selectedZone ? selectedZone.name : 'Detect Live Location')}
+              </span>
+              <span className="text-[10px] text-white/60 font-medium">({isLocating ? 'Locating' : 'Live'})</span>
+            </button>
+
             <p className="text-[11px] sm:text-xs font-bold text-gray-300 tracking-wider uppercase mb-1 sm:mb-1.5">
               Good Food • Great Mood
             </p>
@@ -225,8 +284,8 @@ export default function CustomerHome() {
         </section>
 
         {/* Cuisines Horizontal Scrolling Window */}
-        <section className="mt-5 sm:mt-7">
-          <div className="flex items-center gap-3 sm:gap-6 overflow-x-auto pb-2 scrollbar-none justify-start md:justify-center">
+        <section className="mt-4 sm:mt-6">
+          <div className="flex items-center gap-3 sm:gap-6 overflow-x-auto pt-3.5 pb-2.5 px-2 scrollbar-none justify-start md:justify-center">
             {CUISINE_CATEGORIES.map((cat) => {
               const isActive = activeCategory === cat.id;
               return (
@@ -427,6 +486,7 @@ export default function CustomerHome() {
                   cuisineTags={restaurant.cuisine_tags}
                   rating={restaurant.rating}
                   prepTime={restaurant.avg_preparation_time_mins}
+                  distance={restaurant.distance_km ? `${restaurant.distance_km < 10 ? restaurant.distance_km.toFixed(1) : Math.round(restaurant.distance_km)} km` : undefined}
                   isOpen={restaurant.is_open}
                   reviewsCount={restaurant.reviews_count ? String(restaurant.reviews_count) : undefined}
                   menuItems={restaurant.menu_items}
@@ -451,7 +511,7 @@ export default function CustomerHome() {
             </div>
 
             {/* Horizontal Scrolling Window */}
-            <div className="flex gap-4 sm:gap-5 overflow-x-auto scrollbar-none pb-3 snap-x -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div className="flex gap-4 sm:gap-5 overflow-x-auto scrollbar-none pt-2 pb-3.5 snap-x -mx-4 px-4 sm:mx-0 sm:px-0">
               {filteredRestaurants.slice(0, 6).map((restaurant) => (
                 <div
                   key={`rec-${restaurant.id}`}
@@ -465,6 +525,7 @@ export default function CustomerHome() {
                     cuisineTags={restaurant.cuisine_tags}
                     rating={restaurant.rating}
                     prepTime={restaurant.avg_preparation_time_mins}
+                    distance={restaurant.distance_km ? `${restaurant.distance_km < 10 ? restaurant.distance_km.toFixed(1) : Math.round(restaurant.distance_km)} km` : undefined}
                     isOpen={restaurant.is_open}
                     reviewsCount={restaurant.reviews_count ? String(restaurant.reviews_count) : undefined}
                     menuItems={restaurant.menu_items}

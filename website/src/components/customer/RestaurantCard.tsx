@@ -135,6 +135,7 @@ export default function RestaurantCard({
   rating = 4.5,
   prepTime,
   isOpen = true,
+  distance,
   reviewsCount,
   menuItems,
 }: RestaurantCardProps) {
@@ -217,6 +218,12 @@ export default function RestaurantCard({
               <span>🛵</span>
               <span>{formattedTime}</span>
             </span>
+            {distance && (
+              <>
+                <span className="text-gray-300">•</span>
+                <span className="text-gray-500 font-medium">📍 {distance}</span>
+              </>
+            )}
           </div>
         </div>
 

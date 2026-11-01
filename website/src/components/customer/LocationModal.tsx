@@ -9,9 +9,8 @@ interface LocationModalProps {
 }
 
 export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
-  const { city, selectedZone, setCity, setZone } = useLocationStore();
+  const { city, selectedZone, setCity, setZone, isLocating, locationError, detectLiveLocation } = useLocationStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLocating, setIsLocating] = useState(false);
 
   if (!isOpen) return null;
 
@@ -29,45 +28,16 @@ export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
 
   const CITIES: City[] = ['Sakoli'];
 
-  const handleGPSLocation = () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
-      return;
+  const handleGPSLocation = async () => {
+    const success = await detectLiveLocation();
+    if (success) {
+      onClose();
+    } else {
+      const err = useLocationStore.getState().locationError;
+      if (err) {
+        alert(err);
+      }
     }
-    
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const { latitude, longitude } = position.coords;
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-          const data = await res.json();
-          
-          let locationName = 'Detected Location';
-          if (data && data.address) {
-            locationName = data.address.suburb || data.address.neighbourhood || data.address.road || data.address.city || 'Detected Location';
-          }
-
-          setZone({
-            id: 'gps',
-            name: locationName,
-            deliveryTime: '20-30 mins',
-            baseFee: 35
-          });
-          onClose();
-        } catch (error) {
-          console.error('Error fetching location:', error);
-          alert('Failed to detect location address.');
-        } finally {
-          setIsLocating(false);
-        }
-      },
-      () => {
-        setIsLocating(false);
-        alert('Failed to get your location. Please ensure location permissions are granted.');
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
   };
 
   return (
@@ -93,6 +63,7 @@ export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
             </div>
           </div>
           <button 
+            type="button"
             onClick={onClose}
             className="p-2 -mr-2 bg-gray-50 hover:bg-gray-100 rounded-xl text-gray-500 transition-colors"
           >
@@ -105,23 +76,34 @@ export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
           
           {/* GPS Button */}
           <button 
+            type="button"
             onClick={handleGPSLocation}
             disabled={isLocating}
-            className={`w-full flex items-center justify-between p-4 mb-6 border border-[#23C16B]/30 bg-[#23C16B]/5 hover:bg-[#23C16B]/10 rounded-2xl transition-colors border-dashed ${isLocating ? 'opacity-70' : ''}`}
+            className={`w-full flex items-center justify-between p-4 mb-4 border border-[#23C16B]/30 bg-[#23C16B]/5 hover:bg-[#23C16B]/10 rounded-2xl transition-colors border-dashed ${isLocating ? 'opacity-70 cursor-wait' : ''}`}
           >
             <div className="flex items-center gap-3">
               <div className="text-[#23C16B]">
-                <Target className={`w-6 h-6 ${isLocating ? 'animate-pulse' : ''}`} />
+                <Target className={`w-6 h-6 ${isLocating ? 'animate-spin' : ''}`} />
               </div>
               <div className="text-left">
                 <p className="font-bold text-[#148F4D] text-[15px]">
-                  {isLocating ? 'Locating...' : 'Use Current GPS Location'}
+                  {isLocating ? 'Detecting Live GPS Location...' : 'Use Current GPS Location'}
                 </p>
-                <p className="text-xs font-semibold text-[#23C16B]">Auto-detect locality via device GPS</p>
+                <p className="text-xs font-semibold text-[#23C16B]">
+                  {selectedZone?.id === 'gps'
+                    ? `Currently active: ${selectedZone.name}`
+                    : 'Auto-detect locality via device GPS'}
+                </p>
               </div>
             </div>
             {!isLocating && <ArrowRight className="w-5 h-5 text-[#23C16B]" />}
           </button>
+
+          {locationError && (
+            <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-xs font-medium border border-red-100">
+              {locationError}
+            </div>
+          )}
 
           {/* Search */}
           <div className="relative mb-6">
@@ -142,6 +124,7 @@ export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
             {CITIES.map((c) => (
               <button
                 key={c}
+                type="button"
                 onClick={() => setCity(c)}
                 className={`px-4 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 border transition-all ${
                   city === c 
@@ -166,6 +149,7 @@ export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
                   return (
                     <button
                       key={zone.id}
+                      type="button"
                       onClick={() => handleZoneSelect(zone.id)}
                       className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between ${
                         isSelected 
