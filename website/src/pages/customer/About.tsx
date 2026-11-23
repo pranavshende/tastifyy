@@ -3,6 +3,7 @@ import Header from '../../components/customer/Header';
 import { Logo } from '../../components/ui/Logo';
 import CompanyAttribution from '../../components/ui/CompanyAttribution';
 import SeoMetadata from '../../components/SeoMetadata';
+import { Link } from 'react-router-dom';
 
 export default function About() {
   return (
@@ -28,6 +29,11 @@ export default function About() {
               Tastifyy is a food discovery, ordering, and delivery platform that connects customers with local restaurants.
             </p>
             <CompanyAttribution className="text-sm font-semibold text-gray-600" />
+            <p className="text-center">
+              <Link to="/contact" className="font-bold text-brand-primary hover:underline">
+                Contact Tastifyy customer care
+              </Link>
+            </p>
           </div>
         </div>
       </main>

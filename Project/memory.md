@@ -133,6 +133,8 @@ Website (on Vercel):
 
 | Date | Change |
 |---|---|
+| 2026-11-23 | Added a public Contact page using only the existing customer-care number, linked it from About, included a ContactPoint on its ContactPage schema, and added Contact to the sitemap while preserving the 50,000-URL limit. |
+| 2026-11-23 | Added the internal SEO intent map and Search Console setup steps; split non-core page routes into lazy-loaded chunks with a shared loading fallback while retaining core public pages in the app shell, reducing the entry bundle from 795.60 KB to 261.37 KB (200.36 KB to 76.91 KB gzip). |
 | 2026-11-23 | Added public SEO metadata/schema, data-backed Sakoli discovery and restaurant detail metadata, crawler rules, and a database-backed sitemap; added focused sitemap tests and updated product/architecture/design documentation. Local builds passed; live sitemap/API verification is blocked because Render reports the backend service as suspended (HTTP 503). |
 | 2026-11-01 | Implemented unified bottom cards across all post-login pages: Global Floating Cart Bar (live items count, subtotal, and Checkout link), Live Active Order Status Card (real-time order state, tracking button, and dismiss action), and dedicated Mobile Bottom Navigation bars for Customer, Restaurant Partner, Delivery Partner, and Admin |
 | 2026-11-01 | Aligned customer live location fetching with Checkout logic: full detailed address reverse-geocoding via OpenStreetMap Nominatim with BigDataCloud fallback, dynamic city/locality detection (supporting any city e.g. Nagpur), customer saved default address synchronization on Home, and unconditional live location auto-fetch on mount |

@@ -86,6 +86,7 @@ Status: Current (describes implemented design)
   - Right: Form panel
 - **Customer Home:** Header + hero search + restaurant grid
 - **Public Sakoli Discovery:** Existing customer header, responsive local-food introduction, live restaurant cards, current cuisine labels, and FAQs; only API-backed listings are shown.
+- **Contact:** Existing customer header with one call-to-action for the current customer-care phone; no unsupported contact details or hours.
 - **Restaurant Dashboard:** Sidebar + content area with real-time order cards
 - **Admin Dashboard:** Wide table-focused layout with KPI cards
 
@@ -149,6 +150,7 @@ Status: Current (describes implemented design)
 | Customer Register page | IMPLEMENTED | Multi-step form with Google pre-fill |
 | Customer Home | IMPLEMENTED | Sticky header, restaurant grid, search hero |
 | Public Sakoli Discovery | IMPLEMENTED | Responsive local landing page; listings and cuisine labels come from the live restaurant API |
+| Contact | IMPLEMENTED | Uses the customer-care phone already present in the public header |
 | Customer Restaurant Detail | IMPLEMENTED | Full menu with categories, cart |
 | Customer Checkout | IMPLEMENTED | Address select, coupon, Razorpay |
 | Customer Orders | IMPLEMENTED | Order history list |

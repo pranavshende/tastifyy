@@ -106,6 +106,7 @@ Single Backend API (tastifyy.onrender.com)
 - Public brand and local discovery pages are crawlable without exposing account, checkout, or dashboard data.
 - Restaurant detail pages are available to guests and use current approved, active restaurant and menu data.
 - Sakoli landing page lists only current Sakoli restaurant records and remains non-indexable when listings are empty or unavailable.
+- Public contact page reuses the customer-care phone already shown in the website header; no unverified address or email is published.
 - Search metadata, structured data, robots rules, and a live sitemap must reflect verified public data only.
 
 ---

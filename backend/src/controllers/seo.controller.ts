@@ -22,7 +22,7 @@ export const getSitemap = async (_req: Request, res: Response): Promise<void> =>
       },
       select: { id: true, name: true, city: true, updated_at: true },
       orderBy: { updated_at: 'desc' },
-      take: 49996,
+      take: 49995,
     });
 
     res

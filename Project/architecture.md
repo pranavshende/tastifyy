@@ -119,6 +119,7 @@ req.user = dbUser
 ### Tech Stack
 - React 19, Vite 8, TypeScript
 - React Router v7 (BrowserRouter)
+- Non-core pages are lazy-loaded with a shared branded fallback; core public discovery pages stay in the app shell
 - Zustand for auth state
 - Axios with Bearer token interceptor
 - `@react-oauth/google` for Google One-Tap login
@@ -133,6 +134,7 @@ req.user = dbUser
 /customer/home        — Public restaurant discovery (customer operations require authentication)
 /food-delivery-in-sakoli — Public local discovery page
 /restaurant/:seoSlug  — Public restaurant menu and detail page
+/contact              — Public customer-care contact page
 /customer/search      — Protected [customer]
 /customer/restaurants — Protected [customer]
 /customer/restaurants/:id — Public legacy restaurant detail URL (canonical points to /restaurant/:seoSlug)
@@ -167,6 +169,7 @@ req.user = dbUser
 - Vercel rewrites `/sitemap.xml` to the Express `/api/seo/sitemap.xml` endpoint; `/robots.txt` is a static public asset.
 - Private routed pages set `noindex`; robots rules also exclude account, checkout, dashboard, and legacy detail paths.
 - This remains a client-rendered SPA; page-specific metadata is applied after JavaScript executes.
+- Code splitting defers non-core page bundles until navigation; the homepage, local landing, and restaurant pages remain in the app shell for the service-worker fallback.
 
 ### Auth State Persistence
 - Token stored in `localStorage` under key `token`

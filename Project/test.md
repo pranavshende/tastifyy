@@ -180,14 +180,16 @@ Legend: [x] Verified | [ ] Not tested | [!] Failing | [-] Not applicable
 | Test Case | Status | Notes |
 |---|---|---|
 | Website build includes brand metadata, canonical URL, and JSON-LD | [x] Verified | Website build passed; JSON-LD parses |
+| Public contact page uses the existing customer-care number | [x] Verified | Page and phone link reuse the header's current customer-care constant |
 | Private route guard emits `noindex` metadata | [ ] Not runtime-tested | Implementation builds; private-route browser test not performed |
 | Sakoli page renders only real Sakoli restaurant listings | [!] Live data unavailable | Local route rendered; live API is unavailable because Render reports the backend service as suspended (HTTP 503) |
 | Restaurant page metadata and schema use live restaurant/menu data | [ ] Not verified | Build passed; Render backend is suspended |
 | `/robots.txt` allows public routes and disallows private routes | [x] Verified | Source asset and built asset checked |
 | Vercel `/sitemap.xml` rewrite targets the live backend sitemap endpoint | [x] Verified | Vercel config parses and rewrite path checked |
-| Sitemap only includes active, visible restaurants with available menu items | [x] Verified | Focused endpoint test checks database eligibility filters |
+| Sitemap only includes active, visible restaurants with available menu items | [x] Verified | Focused endpoint test checks database eligibility filters and preserves the 50,000-URL maximum |
 | Sitemap XML helper escapes URLs and formats last-modified dates | [x] Verified | Focused helper tests pass |
 | Local Sakoli route handles unavailable restaurant API | [x] Verified | Browser smoke test displayed the explicit temporary-unavailable state |
+| Route-level code splitting builds separate page chunks | [x] Verified | Initial JS entry is 261.37 KB (76.91 KB gzip), down from 795.60 KB (200.36 KB gzip); core public pages remain in the app shell for offline fallback |
 
 SEO validation: website and backend builds passed; focused backend SEO tests passed (5/5); targeted lint passed. Modified-page lint still reports four pre-existing `no-explicit-any` errors in `Landing.tsx`, `Home.tsx`, and `RestaurantDetails.tsx`. Vercel serves the updated `robots.txt`; live `/sitemap.xml` returns HTTP 503 with Render's `X-Render-Routing: suspend` response, so production API and restaurant data verification remain blocked until the backend service resumes.
 

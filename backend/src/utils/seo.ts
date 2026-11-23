@@ -36,7 +36,7 @@ export function buildSitemapXml(restaurants: readonly SitemapRestaurant[]): stri
   const eligibleRestaurants = restaurants.filter(
     (restaurant) => restaurant.name.trim() && restaurant.city.trim()
   );
-  const staticPaths = ['/', '/landing', '/customer/about'];
+  const staticPaths = ['/', '/landing', '/customer/about', '/contact'];
   if (eligibleRestaurants.some((restaurant) => /^sakoli(?:\s*,|$)/i.test(restaurant.city.trim()))) {
     staticPaths.push('/food-delivery-in-sakoli');
   }

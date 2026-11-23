@@ -200,7 +200,9 @@ Known Issues:
 | Website and Organization structured data | IMPLEMENTED — JSON-LD parse and build passed |
 | Public Sakoli restaurant discovery page | IMPLEMENTED — route and unavailable-data state smoke-tested; Render backend is suspended |
 | Guest-accessible restaurant details and dynamic metadata | IMPLEMENTED — build passed; Render backend is suspended |
+| Verified customer-care contact page | IMPLEMENTED — reuses the phone already shown in the website header |
 | Private-page noindex and robots.txt rules | IMPLEMENTED — robots asset checked; private-route behavior not runtime-tested |
 | Database-backed sitemap proxied through Vercel | IMPLEMENTED — 5 focused tests passed; live endpoint returns 503 while Render is suspended |
+| Route-level code splitting for mobile first-load performance | IMPLEMENTED — entry bundle reduced from 795.60 KB to 261.37 KB |
 | Search Console ownership and sitemap submission | NOT CONFIGURED — verification access required |
 | Server-rendered page metadata | NOT IMPLEMENTED — current site remains a client-rendered SPA |

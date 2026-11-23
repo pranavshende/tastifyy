@@ -11,7 +11,7 @@ import CustomerBottomCards from './CustomerBottomCards';
 import NotificationBell from '../NotificationBell';
 import FoodieBot from './FoodieBot';
 
-const CUSTOMER_CARE_PHONE = '+91 98815 36081';
+export const CUSTOMER_CARE_PHONE = '+91 98815 36081';
 
 interface HeaderProps {
   showSearch?: boolean;

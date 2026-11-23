@@ -23,6 +23,7 @@ describe('SEO sitemap helpers', () => {
     ]);
 
     expect(xml).toContain('<loc>https://tastifyy.in/food-delivery-in-sakoli</loc>');
+    expect(xml).toContain('<loc>https://tastifyy.in/contact</loc>');
     expect(xml).toContain('<loc>https://tastifyy.in/restaurant/sakoli-kitchen--restaurant-id</loc>');
     expect(xml).toContain('<lastmod>2026-11-20</lastmod>');
     expect(xml).toContain('</urlset>');
@@ -39,6 +40,7 @@ describe('SEO sitemap helpers', () => {
   it('omits the Sakoli landing page when there are no eligible Sakoli listings', () => {
     const xml = buildSitemapXml([]);
 
+    expect(xml).toContain('<loc>https://tastifyy.in/contact</loc>');
     expect(xml).not.toContain('/food-delivery-in-sakoli');
     expect(xml).not.toContain('/restaurant/');
   });
@@ -72,6 +74,7 @@ describe('SEO sitemap helpers', () => {
           }),
         }),
       }),
+      take: 49995,
     }));
   });
 });

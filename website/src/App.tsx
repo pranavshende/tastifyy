@@ -1,48 +1,58 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import ProtectedRoute from './components/ProtectedRoute';
 
-// Pages
 import Landing from './pages/Landing';
-import AdminLogin from './pages/admin/Login';
-import AdminDashboard from './pages/admin/Dashboard';
-import CustomerLogin from './pages/customer/Login';
-import CustomerRegister from './pages/customer/Register';
 import CustomerHome from './pages/customer/Home';
-import RestaurantRegister from './pages/restaurant/Register';
-import RestaurantLogin from './pages/restaurant/Login';
-import DashboardLayout from './pages/restaurant/DashboardLayout';
-import RestaurantDashboard from './pages/restaurant/Dashboard';
-import MenuManager from './pages/restaurant/MenuManager';
-import RestaurantProfile from './pages/restaurant/Profile';
-import RestaurantTransactions from './pages/restaurant/Transactions';
-import DeliveryLogin from './pages/delivery/Login';
-import DeliveryDashboard from './pages/delivery/Dashboard';
-import CustomerOnboarding from './pages/onboarding/CustomerOnboarding';
-import RestaurantOnboarding from './pages/onboarding/RestaurantOnboarding';
-import DeliveryOnboarding from './pages/onboarding/DeliveryOnboarding';
-import StatusScreen from './pages/onboarding/Status';
-
-// New MVP Pages
-import Restaurants from './pages/customer/Restaurants';
-import Cuisines from './pages/customer/Cuisines';
-import Offers from './pages/customer/Offers';
 import About from './pages/customer/About';
 import RestaurantDetails from './pages/customer/RestaurantDetails';
 import SakoliLanding from './pages/customer/SakoliLanding';
-import Search from './pages/customer/Search';
-import Checkout from './pages/customer/Checkout';
-import Orders from './pages/customer/Orders';
-import OrderDetails from './pages/customer/OrderDetails';
-import CustomerProfile from './pages/customer/Profile';
 
-import DeliveryDashboardLayout from './pages/delivery/DashboardLayout';
-import DeliveryProfile from './pages/delivery/Profile';
-import DeliveryEarnings from './pages/delivery/Earnings';
-import RestaurantAnalytics from './pages/restaurant/Analytics';
-import RestaurantReviews from './pages/restaurant/Reviews';
-import RestaurantCoupons from './pages/restaurant/Coupons';
+const AdminLogin = lazy(() => import('./pages/admin/Login'));
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
+const CustomerLogin = lazy(() => import('./pages/customer/Login'));
+const CustomerRegister = lazy(() => import('./pages/customer/Register'));
+const Contact = lazy(() => import('./pages/customer/Contact'));
+const RestaurantRegister = lazy(() => import('./pages/restaurant/Register'));
+const RestaurantLogin = lazy(() => import('./pages/restaurant/Login'));
+const DashboardLayout = lazy(() => import('./pages/restaurant/DashboardLayout'));
+const RestaurantDashboard = lazy(() => import('./pages/restaurant/Dashboard'));
+const MenuManager = lazy(() => import('./pages/restaurant/MenuManager'));
+const RestaurantProfile = lazy(() => import('./pages/restaurant/Profile'));
+const RestaurantTransactions = lazy(() => import('./pages/restaurant/Transactions'));
+const DeliveryLogin = lazy(() => import('./pages/delivery/Login'));
+const DeliveryDashboard = lazy(() => import('./pages/delivery/Dashboard'));
+const CustomerOnboarding = lazy(() => import('./pages/onboarding/CustomerOnboarding'));
+const RestaurantOnboarding = lazy(() => import('./pages/onboarding/RestaurantOnboarding'));
+const DeliveryOnboarding = lazy(() => import('./pages/onboarding/DeliveryOnboarding'));
+const StatusScreen = lazy(() => import('./pages/onboarding/Status'));
+const Restaurants = lazy(() => import('./pages/customer/Restaurants'));
+const Cuisines = lazy(() => import('./pages/customer/Cuisines'));
+const Offers = lazy(() => import('./pages/customer/Offers'));
+const Search = lazy(() => import('./pages/customer/Search'));
+const Checkout = lazy(() => import('./pages/customer/Checkout'));
+const Orders = lazy(() => import('./pages/customer/Orders'));
+const OrderDetails = lazy(() => import('./pages/customer/OrderDetails'));
+const CustomerProfile = lazy(() => import('./pages/customer/Profile'));
+const DeliveryDashboardLayout = lazy(() => import('./pages/delivery/DashboardLayout'));
+const DeliveryProfile = lazy(() => import('./pages/delivery/Profile'));
+const DeliveryEarnings = lazy(() => import('./pages/delivery/Earnings'));
+const RestaurantAnalytics = lazy(() => import('./pages/restaurant/Analytics'));
+const RestaurantReviews = lazy(() => import('./pages/restaurant/Reviews'));
+const RestaurantCoupons = lazy(() => import('./pages/restaurant/Coupons'));
+
+function RouteLoadingFallback() {
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center bg-brand-light"
+      role="status"
+      aria-label="Loading page"
+    >
+      <div className="w-10 h-10 rounded-full border-4 border-brand-primary border-t-transparent animate-spin" />
+    </div>
+  );
+}
 
 function AppRoutes() {
   const { user } = useAuthStore();
@@ -83,6 +93,7 @@ function AppRoutes() {
       <Route path="/customer/home" element={<CustomerHome />} />
       <Route path="/food-delivery-in-sakoli" element={<SakoliLanding />} />
       <Route path="/restaurant/:seoSlug" element={<RestaurantDetails />} />
+      <Route path="/contact" element={<Contact />} />
       <Route
         path="/customer/search"
         element={
@@ -250,7 +261,9 @@ function App() {
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || 'dummy-client-id'}>
       <Router>
         <div className="min-h-screen bg-gray-50">
-          <AppRoutes />
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <AppRoutes />
+          </Suspense>
         </div>
       </Router>
     </GoogleOAuthProvider>
