@@ -29,7 +29,7 @@ export default function LocationModal({ isOpen, onClose }: LocationModalProps) {
   const CITIES: City[] = ['Sakoli'];
 
   const handleGPSLocation = async () => {
-    const success = await detectLiveLocation();
+    const success = await detectLiveLocation(true);
     if (success) {
       onClose();
     } else {

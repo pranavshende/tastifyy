@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useCartStore } from '../../store/cartStore';
 import api from '../../api/axios';
 import Header from '../../components/customer/Header';
+import { useLocationStore } from '../../store/locationStore';
 import { CreditCard, Banknote, MapPin, Receipt, CheckCircle, Tag, Wallet, Landmark, Plus, Check } from 'lucide-react';
 
 async function geocodeAddress(addressLine: string, city: string, state: string, pincode: string) {
@@ -73,6 +74,7 @@ export default function Checkout() {
       if (data.length > 0) {
         const defaultAddr = data.find((a: any) => a.is_default) || data[0];
         setSelectedAddressId(defaultAddr.id);
+        setIsAddressConfirmed(true);
       }
     } catch (err) {
       console.error('Failed to load addresses', err);
@@ -104,44 +106,49 @@ export default function Checkout() {
     }
   };
 
-  const handleUseCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setError('Location is not supported by this browser. Please enter your address manually.');
+  const handleUseCurrentLocation = async () => {
+    const savedCoords = useLocationStore.getState().coords;
+    setError(null);
+    setShowAddressModal(true);
+    setShowAddAddressForm(true);
+
+    if (!savedCoords) {
+      setNewAddress({
+        label: 'Home', address_line: '', city: '', state: '', pincode: '',
+        latitude: 0, longitude: 0, is_default: addresses.length === 0,
+      });
       return;
     }
 
     setIsLocating(true);
-    setError(null);
-    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${coords.latitude}&lon=${coords.longitude}`,
-          { headers: { 'Accept-Language': 'en' } }
-        );
-        if (!response.ok) throw new Error('Reverse geocoding failed');
-        const data = await response.json();
-        const address = data.address || {};
-        setNewAddress({
-          label: 'Home',
-          address_line: data.display_name || address.road || '',
-          city: address.city || address.town || address.village || address.county || '',
-          state: address.state || '',
-          pincode: address.postcode || '',
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-          is_default: addresses.length === 0
-        });
-        setShowAddressModal(true);
-        setShowAddAddressForm(true);
-      } catch {
-        setError('Could not determine the address from your location. Please enter it manually.');
-      } finally {
-        setIsLocating(false);
-      }
-    }, () => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${savedCoords.latitude}&lon=${savedCoords.longitude}`,
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      if (!response.ok) throw new Error('Reverse geocoding failed');
+      const data = await response.json();
+      const address = data.address || {};
+      setNewAddress({
+        label: 'Home',
+        address_line: data.display_name || address.road || '',
+        city: address.city || address.town || address.village || address.county || '',
+        state: address.state || '',
+        pincode: address.postcode || '',
+        latitude: savedCoords.latitude,
+        longitude: savedCoords.longitude,
+        is_default: addresses.length === 0
+      });
+    } catch {
+      setNewAddress({
+        label: 'Home', address_line: '', city: '', state: '', pincode: '',
+        latitude: savedCoords.latitude, longitude: savedCoords.longitude,
+        is_default: addresses.length === 0,
+      });
+      setError('Could not determine the address from your saved location. Please enter it manually.');
+    } finally {
       setIsLocating(false);
-      setError('Location permission was denied. Please enter your delivery address manually.');
-    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+    }
   };
 
   const handleApplyCoupon = async () => {
@@ -620,7 +627,7 @@ export default function Checkout() {
                   key={address.id} 
                   onClick={() => { 
                     setSelectedAddressId(address.id); 
-                    setIsAddressConfirmed(false); 
+                    setIsAddressConfirmed(true);
                     setShowAddressModal(false); 
                   }}
                   className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${selectedAddressId === address.id ? 'border-brand-primary bg-orange-50/30' : 'border-gray-100 bg-white hover:border-brand-primary/30'}`}

@@ -53,6 +53,7 @@ interface LocationState {
   shortName: string | null;
   coords: Coordinates | null;
   isLocating: boolean;
+  locationRequestAttempted: boolean;
   locationError: string | null;
   setCity: (city: City) => void;
   setZone: (zone: LocationZone) => void;
@@ -150,6 +151,11 @@ function getBrowserPosition(): Promise<GeolocationPosition> {
     navigator.geolocation.getCurrentPosition(
       resolve,
       (_err) => {
+        if (_err.code === _err.PERMISSION_DENIED) {
+          reject(new Error('Location permission was denied. Please allow location access in your browser.'));
+          return;
+        }
+
         // Retry with relaxed constraints if high accuracy fails/times out
         navigator.geolocation.getCurrentPosition(
           resolve,
@@ -177,6 +183,7 @@ export const useLocationStore = create<LocationState>()(
       shortName: null,
       coords: null,
       isLocating: false,
+      locationRequestAttempted: false,
       locationError: null,
 
       setCity: (city: City) => set({ city }),
@@ -207,11 +214,15 @@ export const useLocationStore = create<LocationState>()(
         });
       },
 
-      detectLiveLocation: async (_force = false) => {
-        // Prevent concurrent requests
-        if (get().isLocating) return false;
+      detectLiveLocation: async (force = false) => {
+        const current = get();
 
-        set({ isLocating: true, locationError: null });
+        // Prevent concurrent requests
+        if (current.isLocating) return false;
+        if (!force && (current.coords || current.fullAddress || current.selectedZone)) return true;
+        if (!force && current.locationRequestAttempted) return false;
+
+        set({ isLocating: true, locationRequestAttempted: true, locationError: null });
 
         try {
           const position = await getBrowserPosition();
@@ -257,6 +268,7 @@ export const useLocationStore = create<LocationState>()(
         fullAddress: state.fullAddress,
         shortName: state.shortName,
         coords: state.coords,
+        locationRequestAttempted: state.locationRequestAttempted,
       }),
     }
   )
