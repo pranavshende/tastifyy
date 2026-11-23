@@ -146,13 +146,16 @@ export default function CustomerHome() {
   const { coords, selectedZone, fullAddress, shortName, isLocating, detectLiveLocation } = useLocationStore();
   const navigate = useNavigate();
 
-  // Load customer default address if logged in, and always detect live GPS location on home mount
+  // Reuse a saved delivery address before requesting GPS on a first visit.
   useEffect(() => {
-    if (user) {
-      api.get('/customer/addresses')
-        .then((res) => {
+    let cancelled = false;
+
+    const loadLocation = async () => {
+      if (user) {
+        try {
+          const res = await api.get('/customer/addresses');
           const list = res.data?.data;
-          if (Array.isArray(list) && list.length > 0) {
+          if (!cancelled && Array.isArray(list) && list.length > 0) {
             const defaultAddr = list.find((a: any) => a.is_default) || list[0];
             if (defaultAddr && !useLocationStore.getState().coords) {
               const full = `${defaultAddr.address_line}, ${defaultAddr.city}, ${defaultAddr.state} - ${defaultAddr.pincode}`;
@@ -166,13 +169,22 @@ export default function CustomerHome() {
                 longitude: defaultAddr.longitude || 79.9833,
               });
             }
+            return;
           }
-        })
-        .catch(() => {});
-    }
+        } catch {
+          // Fall back to the one-time GPS attempt when no saved address is available.
+        }
+      }
 
-    // Always fetch live GPS location on customer home mount
-    detectLiveLocation();
+      if (!cancelled) {
+        void detectLiveLocation();
+      }
+    };
+
+    void loadLocation();
+    return () => {
+      cancelled = true;
+    };
   }, [user, detectLiveLocation]);
 
   // Auto-scroll promotional window carousel
