@@ -198,9 +198,9 @@ Known Issues:
 |---|---|
 | Brand metadata, canonical URLs, and social metadata | IMPLEMENTED — build and local route smoke test passed |
 | Website and Organization structured data | IMPLEMENTED — JSON-LD parse and build passed |
-| Public Sakoli restaurant discovery page | IMPLEMENTED — route and unavailable-data state smoke-tested; live API unavailable |
-| Guest-accessible restaurant details and dynamic metadata | IMPLEMENTED — build passed; production data unavailable for verification |
+| Public Sakoli restaurant discovery page | IMPLEMENTED — route and unavailable-data state smoke-tested; Render backend is suspended |
+| Guest-accessible restaurant details and dynamic metadata | IMPLEMENTED — build passed; Render backend is suspended |
 | Private-page noindex and robots.txt rules | IMPLEMENTED — robots asset checked; private-route behavior not runtime-tested |
-| Database-backed sitemap proxied through Vercel | IMPLEMENTED — 5 focused tests passed; production endpoint unavailable |
+| Database-backed sitemap proxied through Vercel | IMPLEMENTED — 5 focused tests passed; live endpoint returns 503 while Render is suspended |
 | Search Console ownership and sitemap submission | NOT CONFIGURED — verification access required |
 | Server-rendered page metadata | NOT IMPLEMENTED — current site remains a client-rendered SPA |
