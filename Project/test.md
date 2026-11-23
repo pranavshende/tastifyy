@@ -1,7 +1,7 @@
 ﻿# Test Plan — Tastifyy
 
 ```
-Last Updated: 2026-09-12
+Last Updated: 2026-11-23
 Source of Truth: backend/tests/, manual testing, production observations
 Status: Partially Current
 ```
@@ -172,6 +172,24 @@ Legend: [x] Verified | [ ] Not tested | [!] Failing | [-] Not applicable
 | Environment variables set correctly on Render | [x] Verified (most) | FIREBASE_SERVICE_ACCOUNT_KEY missing |
 | HTTPS enforced | [x] Verified (Render + Vercel) | |
 | dist/ compiled and committed before deploy | [x] Verified process | |
+
+---
+
+## SEO & Indexing Tests
+
+| Test Case | Status | Notes |
+|---|---|---|
+| Website build includes brand metadata, canonical URL, and JSON-LD | [x] Verified | Website build passed; JSON-LD parses |
+| Private route guard emits `noindex` metadata | [ ] Not runtime-tested | Implementation builds; private-route browser test not performed |
+| Sakoli page renders only real Sakoli restaurant listings | [!] Live data unavailable | Local route rendered; API request failed due production API CORS/network failure |
+| Restaurant page metadata and schema use live restaurant/menu data | [ ] Not verified | Build passed; live restaurant API unavailable |
+| `/robots.txt` allows public routes and disallows private routes | [x] Verified | Source asset and built asset checked |
+| Vercel `/sitemap.xml` rewrite targets the live backend sitemap endpoint | [x] Verified | Vercel config parses and rewrite path checked |
+| Sitemap only includes active, visible restaurants with available menu items | [x] Verified | Focused endpoint test checks database eligibility filters |
+| Sitemap XML helper escapes URLs and formats last-modified dates | [x] Verified | Focused helper tests pass |
+| Local Sakoli route handles unavailable restaurant API | [x] Verified | Browser smoke test displayed the explicit temporary-unavailable state |
+
+SEO validation: website and backend builds passed; focused backend SEO tests passed (5/5); targeted lint passed. Modified-page lint still reports four pre-existing `no-explicit-any` errors in `Landing.tsx`, `Home.tsx`, and `RestaurantDetails.tsx`. Production restaurant API requests could not be verified because the API response lacked the required CORS header.
 
 ---
 

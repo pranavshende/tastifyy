@@ -1,7 +1,7 @@
 ﻿# Architecture — Tastifyy
 
 ```
-Last Updated: 2026-09-12
+Last Updated: 2026-11-23
 Source of Truth: Current codebase
 Status: Current
 ```
@@ -126,20 +126,23 @@ req.user = dbUser
 
 ### Route Structure
 ```
-/ (Landing)
+/                 — Public redirect to /customer/home
+/landing          — Public marketing landing page
 /customer/login       — Public (redirects to /customer/home if logged in)
 /customer/register    — Public (Google signup flow redirects here)
-/customer/home        — Protected [customer]
+/customer/home        — Public restaurant discovery (customer operations require authentication)
+/food-delivery-in-sakoli — Public local discovery page
+/restaurant/:seoSlug  — Public restaurant menu and detail page
 /customer/search      — Protected [customer]
 /customer/restaurants — Protected [customer]
-/customer/restaurants/:id — Protected [customer]
+/customer/restaurants/:id — Public legacy restaurant detail URL (canonical points to /restaurant/:seoSlug)
 /customer/checkout    — Protected [customer]
 /customer/orders      — Protected [customer]
 /customer/orders/:id  — Protected [customer]
 /customer/profile     — Protected [customer]
 /customer/cuisines    — Protected [customer]
 /customer/offers      — Protected [customer]
-/customer/about       — Protected [customer]
+/customer/about       — Public
 /restaurant           — Public (Restaurant registration landing)
 /restaurant/login     — Public
 /restaurant/dashboard — Protected [restaurant_partner]
@@ -156,6 +159,14 @@ req.user = dbUser
 /onboarding/delivery  — Protected [delivery_partner]
 /onboarding/status    — Protected [restaurant_partner, delivery_partner]
 ```
+
+### Public SEO Delivery
+- Vite serves static title, description, canonical, Open Graph, WebSite, and Organization metadata from `index.html`.
+- Public React pages update title, description, canonical, social metadata, robots directives, and page JSON-LD after route data loads.
+- Public restaurant pages use the existing optional-auth customer menu API; only approved, active, visible listings with an available menu are included in the live sitemap.
+- Vercel rewrites `/sitemap.xml` to the Express `/api/seo/sitemap.xml` endpoint; `/robots.txt` is a static public asset.
+- Private routed pages set `noindex`; robots rules also exclude account, checkout, dashboard, and legacy detail paths.
+- This remains a client-rendered SPA; page-specific metadata is applied after JavaScript executes.
 
 ### Auth State Persistence
 - Token stored in `localStorage` under key `token`

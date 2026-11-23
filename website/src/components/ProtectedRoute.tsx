@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore, type UserRole } from '../store/authStore';
+import SeoMetadata from './SeoMetadata';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -13,24 +14,40 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { user, initialized, loading } = useAuthStore();
   const location = useLocation();
+  const privatePageMetadata = (
+    <SeoMetadata
+      title="Tastifyy account"
+      description="Private Tastifyy account page."
+      canonicalPath={location.pathname}
+      noindex
+    />
+  );
 
   // While session is being validated, show a blank screen (prevents flash)
   if (!initialized || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-brand-light">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-brand-primary text-white flex items-center justify-center font-black text-xl shadow-lg animate-pulse">
-            T
+      <>
+        {privatePageMetadata}
+        <div className="min-h-screen flex items-center justify-center bg-brand-light">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-brand-primary text-white flex items-center justify-center font-black text-xl shadow-lg animate-pulse">
+              T
+            </div>
+            <p className="text-sm font-semibold text-gray-400 animate-pulse">Loading Tastifyy...</p>
           </div>
-          <p className="text-sm font-semibold text-gray-400 animate-pulse">Loading Tastifyy...</p>
         </div>
-      </div>
+      </>
     );
   }
 
   // Not authenticated — send to login, preserve intended destination
   if (!user) {
-    return <Navigate to="/customer/login" state={{ from: location }} replace />;
+    return (
+      <>
+        {privatePageMetadata}
+        <Navigate to="/customer/login" state={{ from: location }} replace />
+      </>
+    );
   }
 
   // Role check
@@ -42,8 +59,13 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
       delivery_partner: '/delivery/dashboard',
       admin: '/admin/dashboard',
     };
-    return <Navigate to={dashboardMap[user.role]} replace />;
+    return (
+      <>
+        {privatePageMetadata}
+        <Navigate to={dashboardMap[user.role]} replace />
+      </>
+    );
   }
 
-  return <>{children}</>;
+  return <>{privatePageMetadata}{children}</>;
 }

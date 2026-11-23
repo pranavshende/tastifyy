@@ -2,10 +2,16 @@
 import Header from '../../components/customer/Header';
 import { Logo } from '../../components/ui/Logo';
 import CompanyAttribution from '../../components/ui/CompanyAttribution';
+import SeoMetadata from '../../components/SeoMetadata';
 
 export default function About() {
   return (
     <div className="min-h-screen bg-[#FAFAFA] flex flex-col pb-24">
+      <SeoMetadata
+        title="About Tastifyy | Local Food. Real Flavours."
+        description="Learn about Tastifyy, a local food discovery and ordering platform helping people explore restaurant menus and local food businesses in Sakoli."
+        canonicalPath="/customer/about"
+      />
       <Header />
       
       <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 lg:px-8 mt-12">

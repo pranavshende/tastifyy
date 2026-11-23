@@ -1,7 +1,7 @@
 ﻿# Phases — Tastifyy Development Roadmap
 
 ```
-Last Updated: 2026-09-12
+Last Updated: 2026-11-23
 Source of Truth: Current codebase + implementation audit
 Status: Current
 ```
@@ -191,3 +191,16 @@ Known Issues:
 - Advanced restaurant analytics
 - Multi-language support
 - Tastifyy Pay (wallet)
+
+## Phase K — SEO & Local Discovery (IN PROGRESS)
+
+| Feature | Status |
+|---|---|
+| Brand metadata, canonical URLs, and social metadata | IMPLEMENTED — build and local route smoke test passed |
+| Website and Organization structured data | IMPLEMENTED — JSON-LD parse and build passed |
+| Public Sakoli restaurant discovery page | IMPLEMENTED — route and unavailable-data state smoke-tested; live API unavailable |
+| Guest-accessible restaurant details and dynamic metadata | IMPLEMENTED — build passed; production data unavailable for verification |
+| Private-page noindex and robots.txt rules | IMPLEMENTED — robots asset checked; private-route behavior not runtime-tested |
+| Database-backed sitemap proxied through Vercel | IMPLEMENTED — 5 focused tests passed; production endpoint unavailable |
+| Search Console ownership and sitemap submission | NOT CONFIGURED — verification access required |
+| Server-rendered page metadata | NOT IMPLEMENTED — current site remains a client-rendered SPA |

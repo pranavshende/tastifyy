@@ -14,6 +14,7 @@ import adminRoutes from './routes/admin.routes.js';
 import deliveryRoutes from './routes/delivery.routes.js';
 import onboardingRoutes from './routes/onboarding.routes.js';
 import customerRoutes from './routes/customer.routes.js';
+import seoRoutes from './routes/seo.routes.js';
 
 import passport from './config/passport.js';
 
@@ -100,6 +101,7 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/customer', customerRoutes);
+app.use('/api/seo', seoRoutes);
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/orders', orderRoutes);

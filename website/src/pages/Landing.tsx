@@ -9,6 +9,7 @@ import MobileBottomNav from '../components/customer/MobileBottomNav';
 import LoadingSkeleton from '../components/ui/LoadingSkeleton';
 import { useAuthStore } from '../store/authStore';
 import { useUserLocation } from '../hooks/useUserLocation';
+import SeoMetadata from '../components/SeoMetadata';
 
 interface Restaurant {
   id: string;
@@ -103,6 +104,11 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-[#FFFCF8] font-sans text-brand-dark selection:bg-brand-primary selection:text-white flex flex-col pb-16 md:pb-0">
+      <SeoMetadata
+        title="Discover Tastifyy | Local Food. Real Flavours."
+        description="Discover restaurants, explore menus, and find local food ordering options in Sakoli with Tastifyy."
+        canonicalPath="/landing"
+      />
       
       {/* 1. Header */}
       <header className="fixed w-full z-50 top-0 transition-all duration-300 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">

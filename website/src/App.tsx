@@ -30,6 +30,7 @@ import Cuisines from './pages/customer/Cuisines';
 import Offers from './pages/customer/Offers';
 import About from './pages/customer/About';
 import RestaurantDetails from './pages/customer/RestaurantDetails';
+import SakoliLanding from './pages/customer/SakoliLanding';
 import Search from './pages/customer/Search';
 import Checkout from './pages/customer/Checkout';
 import Orders from './pages/customer/Orders';
@@ -80,6 +81,8 @@ function AppRoutes() {
 
       {/* Protected Customer Routes */}
       <Route path="/customer/home" element={<CustomerHome />} />
+      <Route path="/food-delivery-in-sakoli" element={<SakoliLanding />} />
+      <Route path="/restaurant/:seoSlug" element={<RestaurantDetails />} />
       <Route
         path="/customer/search"
         element={
@@ -122,19 +125,11 @@ function AppRoutes() {
       />
       <Route
         path="/customer/about"
-        element={
-          <ProtectedRoute allowedRoles={['customer']}>
-            <About />
-          </ProtectedRoute>
-        }
+        element={<About />}
       />
       <Route
         path="/customer/restaurants/:id"
-        element={
-          <ProtectedRoute allowedRoles={['customer']}>
-            <RestaurantDetails />
-          </ProtectedRoute>
-        }
+        element={<RestaurantDetails />}
       />
       <Route
         path="/customer/checkout"

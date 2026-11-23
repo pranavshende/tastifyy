@@ -8,6 +8,8 @@ import CustomizationModal from '../../components/customer/CustomizationModal';
 import LoadingSkeleton from '../../components/ui/LoadingSkeleton';
 import EmptyState from '../../components/ui/EmptyState';
 import ImageWithFallback from '../../components/ui/ImageWithFallback';
+import SeoMetadata from '../../components/SeoMetadata';
+import { canonicalUrl, publicImageUrl, restaurantSeoPath } from '../../lib/seo';
 import { Clock, Star } from 'lucide-react';
 
 interface CustomizationOption {
@@ -45,6 +47,7 @@ interface MenuCategory {
 interface Restaurant {
   id: string;
   name: string;
+  type?: string;
   city: string;
   is_pure_veg: boolean;
   cuisine_tags: string[];
@@ -57,7 +60,8 @@ interface Restaurant {
 }
 
 export default function RestaurantDetails() {
-  const { id } = useParams();
+  const { id, seoSlug } = useParams();
+  const restaurantId = id || seoSlug?.match(/([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$/i)?.[1];
   const cart = useCartStore();
   
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
@@ -71,7 +75,7 @@ export default function RestaurantDetails() {
   useEffect(() => {
     const fetchMenu = async () => {
       try {
-        const { data } = await api.get(`/customer/restaurants/${id}/menu`);
+        const { data } = await api.get(`/customer/restaurants/${restaurantId}/menu`);
         if (data.success) {
           setRestaurant(data.data.restaurant);
           setMenu(data.data.menu);
@@ -84,11 +88,13 @@ export default function RestaurantDetails() {
         setLoading(false);
       }
     };
-    if (id) fetchMenu();
-  }, [id]);
+    if (restaurantId) {
+      void fetchMenu();
+    }
+  }, [restaurantId]);
 
   const handleAddToCart = (item: MenuItem) => {
-    if (cart.restaurantId && cart.restaurantId !== id) {
+    if (cart.restaurantId && cart.restaurantId !== restaurantId) {
       const confirm = window.confirm("Your cart contains items from another restaurant. Do you want to clear it and add this item?");
       if (!confirm) return;
     }
@@ -106,7 +112,7 @@ export default function RestaurantDetails() {
       price: item.price,
       quantity: 1,
       image_url: item.image_url
-    }, id!);
+    }, restaurantId!);
   };
 
   const handleCustomizedAddToCart = (itemId: string, selectedOptions: Record<string, string[]>, finalPrice: number) => {
@@ -119,7 +125,7 @@ export default function RestaurantDetails() {
       quantity: 1,
       image_url: selectedItem.image_url,
       customizations: selectedOptions // Pass the selected options
-    }, id!);
+    }, restaurantId!);
     
     setSelectedItem(null);
   };
@@ -144,9 +150,15 @@ export default function RestaurantDetails() {
     );
   }
 
-  if (error || !restaurant) {
+  if (!restaurantId || error || !restaurant) {
     return (
       <div className="min-h-screen bg-brand-light flex flex-col">
+        <SeoMetadata
+          title="Restaurant not available | Tastifyy"
+          description="This restaurant listing is currently unavailable."
+          canonicalPath={seoSlug ? `/restaurant/${seoSlug}` : `/customer/restaurants/${id || ''}`}
+          noindex
+        />
         <Header showSearch={false} />
         <main className="max-w-3xl mx-auto w-full p-4 sm:p-6 flex items-center justify-center min-h-[60vh]">
           <EmptyState 
@@ -163,15 +175,77 @@ export default function RestaurantDetails() {
     );
   }
   const isOpen = restaurant.is_open !== false; // Default true if missing
+  const canonicalPath = restaurantSeoPath(restaurant.name, restaurant.id);
+  const cuisines = restaurant.cuisine_tags || [];
+  const cityDescription = restaurant.city ? ` in ${restaurant.city}` : '';
+  const restaurantDescription = cuisines.length > 0
+    ? `Explore the ${cuisines.join(', ')} menu at ${restaurant.name}${cityDescription}. Check available dishes and ordering options on Tastifyy.`
+    : `Explore the menu at ${restaurant.name}${cityDescription}. Check available dishes and ordering options on Tastifyy.`;
+  const restaurantSchema: Record<string, unknown> = {
+    '@type': 'Restaurant',
+    '@id': `${canonicalUrl(canonicalPath)}#restaurant`,
+    name: restaurant.name,
+    url: canonicalUrl(canonicalPath),
+    ...(cuisines.length > 0 && { servesCuisine: cuisines }),
+    ...(restaurant.city && {
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: restaurant.city,
+        addressCountry: 'IN',
+      },
+    }),
+    ...((publicImageUrl(restaurant.cover_image_url) || publicImageUrl(restaurant.logo_url)) && {
+      image: [publicImageUrl(restaurant.cover_image_url), publicImageUrl(restaurant.logo_url)]
+        .filter((image): image is string => Boolean(image)),
+    }),
+    ...(menu.length > 0 && {
+      hasMenu: {
+        '@type': 'Menu',
+        hasMenuSection: menu.map((category) => ({
+          '@type': 'MenuSection',
+          name: category.name,
+          hasMenuItem: category.menu_items.map((item) => ({
+            '@type': 'MenuItem',
+            name: item.name,
+            ...(item.description && { description: item.description }),
+            offers: {
+              '@type': 'Offer',
+              priceCurrency: 'INR',
+              price: Number(item.price),
+            },
+          })),
+        })),
+      },
+    }),
+  };
+  const breadcrumbSchema: Record<string, unknown> = {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: canonicalUrl('/') },
+      { '@type': 'ListItem', position: 2, name: restaurant.name, item: canonicalUrl(canonicalPath) },
+    ],
+  };
+  const pageSchema: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@graph': [restaurantSchema, breadcrumbSchema],
+  };
 
   return (
     <div className="min-h-screen bg-brand-light font-sans text-brand-dark flex flex-col pb-32">
+      <SeoMetadata
+        title={`${restaurant.name} Menu${cityDescription} | Tastifyy`}
+        description={restaurantDescription}
+        canonicalPath={canonicalPath}
+        image={publicImageUrl(restaurant.cover_image_url)}
+        noindex={menu.length === 0}
+        structuredData={menu.length > 0 ? pageSchema : undefined}
+      />
       <Header showSearch={false} />
       
       {/* Back nav */}
       <div className="bg-white border-b border-gray-100 sticky top-16 z-30">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 flex items-center py-2.5">
-          <Link to="/customer/restaurants" className="flex items-center text-sm font-bold text-gray-500 hover:text-brand-primary transition-colors">
+          <Link to="/customer/home" className="flex items-center text-sm font-bold text-gray-500 hover:text-brand-primary transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><path d="m15 18-6-6 6-6"/></svg>
             Back to Restaurants
           </Link>

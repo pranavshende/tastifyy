@@ -7,6 +7,8 @@ import RestaurantCard from '../../components/customer/RestaurantCard';
 import { Search, ArrowRight, ChevronLeft, ChevronRight, Sparkles, MapPin } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useLocationStore } from '../../store/locationStore';
+import SeoMetadata from '../../components/SeoMetadata';
+import { DEFAULT_DESCRIPTION } from '../../lib/seo';
 
 interface Restaurant {
   id: string;
@@ -260,6 +262,11 @@ export default function CustomerHome() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] font-sans text-gray-900 flex flex-col pb-28 md:pb-16">
+      <SeoMetadata
+        title="Tastifyy | Discover Restaurants & Order Food in Sakoli"
+        description={DEFAULT_DESCRIPTION}
+        canonicalPath="/"
+      />
       <Header showSearch={false} />
 
       <main className="max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-6">

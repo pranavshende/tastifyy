@@ -1,7 +1,7 @@
 # Design System — Tastifyy
 
 ```
-Last Updated: 2026-09-12
+Last Updated: 2026-11-23
 Source of Truth: website/src/index.css, website/src/pages/**, tastifyyApp/app/**
 Status: Current (describes implemented design)
 ```
@@ -85,6 +85,7 @@ Status: Current (describes implemented design)
   - Left: Brand gradient panel with quote
   - Right: Form panel
 - **Customer Home:** Header + hero search + restaurant grid
+- **Public Sakoli Discovery:** Existing customer header, responsive local-food introduction, live restaurant cards, current cuisine labels, and FAQs; only API-backed listings are shown.
 - **Restaurant Dashboard:** Sidebar + content area with real-time order cards
 - **Admin Dashboard:** Wide table-focused layout with KPI cards
 
@@ -147,6 +148,7 @@ Status: Current (describes implemented design)
 | Customer Login page | IMPLEMENTED | Premium 2-column layout, Google button |
 | Customer Register page | IMPLEMENTED | Multi-step form with Google pre-fill |
 | Customer Home | IMPLEMENTED | Sticky header, restaurant grid, search hero |
+| Public Sakoli Discovery | IMPLEMENTED | Responsive local landing page; listings and cuisine labels come from the live restaurant API |
 | Customer Restaurant Detail | IMPLEMENTED | Full menu with categories, cart |
 | Customer Checkout | IMPLEMENTED | Address select, coupon, Razorpay |
 | Customer Orders | IMPLEMENTED | Order history list |

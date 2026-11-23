@@ -1,7 +1,7 @@
 ﻿# Product Requirements Document — Tastifyy
 
 ```
-Last Updated: 2026-09-12
+Last Updated: 2026-11-23
 Source of Truth: Current codebase + original PRD v2.1
 Status: Current (reflects what is actually built)
 ```
@@ -101,6 +101,12 @@ Single Backend API (tastifyy.onrender.com)
 - Platform fee configuration
 - Support ticket resolution
 - Immutable audit logs for all admin actions
+
+### Public Website Discovery
+- Public brand and local discovery pages are crawlable without exposing account, checkout, or dashboard data.
+- Restaurant detail pages are available to guests and use current approved, active restaurant and menu data.
+- Sakoli landing page lists only current Sakoli restaurant records and remains non-indexable when listings are empty or unavailable.
+- Search metadata, structured data, robots rules, and a live sitemap must reflect verified public data only.
 
 ---
 

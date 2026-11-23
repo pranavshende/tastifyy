@@ -1,7 +1,7 @@
 ﻿# API Reference — Tastifyy
 
 ```
-Last Updated: 2026-09-12
+Last Updated: 2026-11-23
 Source of Truth: Current codebase (backend/src/routes/, backend/src/controllers/)
 Status: Current
 ```
@@ -67,7 +67,7 @@ Status: Current
 
 ## Customer Routes (`/api/customer`)
 
-All require `Authorization: Bearer <JWT>` + `role: customer`.
+Profile, address, and order operations require `Authorization: Bearer <JWT>` + `role: customer`. Public restaurant discovery and menu reads use optional authentication.
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -79,8 +79,14 @@ All require `Authorization: Bearer <JWT>` + `role: customer`.
 | POST | `/customer/addresses` | Create new address |
 | DELETE | `/customer/addresses/:id` | Soft-delete address |
 | PATCH | `/customer/addresses/:id/default` | Set as default address |
-| GET | `/customer/restaurants` | List all active restaurants |
-| GET | `/customer/restaurants/:id/menu` | Get restaurant + categorized menu |
+| GET | `/customer/restaurants` | Optional auth: list active, approved, visible restaurants |
+| GET | `/customer/restaurants/:id/menu` | Optional auth: get active restaurant + categorized available menu |
+
+## SEO Routes (`/api/seo`)
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/seo/sitemap.xml` | Public: live XML sitemap of public pages and eligible active restaurant menus |
 
 ---
 

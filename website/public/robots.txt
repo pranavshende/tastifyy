@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /customer/login
+Disallow: /customer/register
+Disallow: /customer/profile
+Disallow: /customer/checkout
+Disallow: /customer/orders
+Disallow: /customer/search
+Disallow: /customer/restaurants/
+Disallow: /onboarding
+Disallow: /restaurant/login
+Disallow: /restaurant/dashboard
+Disallow: /restaurant/menu
+Disallow: /restaurant/profile
+Disallow: /restaurant/transactions
+Disallow: /restaurant/analytics
+Disallow: /restaurant/reviews
+Disallow: /restaurant/coupons
+Disallow: /delivery
+
+Sitemap: https://tastifyy.in/sitemap.xml
