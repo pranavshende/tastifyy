@@ -133,6 +133,7 @@ Website (on Vercel):
 
 | Date | Change |
 |---|---|
+| 2026-11-24 | Implemented seamless Google Sign-In phone completion (Option A): CustomerLogin smoothly transitions to a phone-prompt step on `GOOGLE_USER_NOT_REGISTERED` without redirect loops, and backend `googleLogin` creates user with phone + Google info. Recompiled backend dist and website production bundle; all 21 test suites passed. |
 | 2026-11-24 | Updated backend API to `https://tastifyyps.onrender.com/api` and socket URL to `https://tastifyyps.onrender.com` across `website/.env`, `website/.env.example`, `axios.ts`, `socket.ts`, `vercel.json` sitemap proxy, and `tastifyyApp/constants/config.ts`. Increased Axios request timeout from 15s to 45s and added idempotent GET retry interceptor with exponential backoff to handle Render free-tier cold starts. Configured `Cross-Origin-Opener-Policy: same-origin-allow-popups` in `vercel.json` and `vite.config.ts` for Google OAuth popups. |
 | 2026-11-23 | Added a public Contact page using only the existing customer-care number, linked it from About, included a ContactPoint on its ContactPage schema, and added Contact to the sitemap while preserving the 50,000-URL limit. |
 | 2026-11-23 | Added the internal SEO intent map and Search Console setup steps; split non-core page routes into lazy-loaded chunks with a shared loading fallback while retaining core public pages in the app shell, reducing the entry bundle from 795.60 KB to 261.37 KB (200.36 KB to 76.91 KB gzip). |

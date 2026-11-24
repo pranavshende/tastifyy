@@ -385,14 +385,82 @@ export const googleLogin = async (req, res) => {
         // Check if user exists in our DB
         let dbUser = await prisma.user.findUnique({ where: { email } });
         if (!dbUser) {
-            // User is not registered in Prisma. Do NOT automatically create a dummy profile.
-            // Return a structured response so the frontend can redirect them to the Signup flow.
-            res.status(404).json({
-                success: false,
-                error: { code: 'GOOGLE_USER_NOT_REGISTERED', message: 'User not registered. Please complete signup.' },
-                data: { email, name, picture }
-            });
-            return;
+            if (req.body.phone) {
+                const rawPhone = String(req.body.phone).trim();
+                const formattedPhone = rawPhone.startsWith('+') ? rawPhone : `+91${rawPhone}`;
+                // Role Isolation & uniqueness check on phone number
+                const existingPhone = await prisma.user.findFirst({ where: { phone: formattedPhone } });
+                if (existingPhone) {
+                    res.status(409).json({
+                        success: false,
+                        error: {
+                            code: 'PHONE_ALREADY_REGISTERED',
+                            message: 'This phone number is already registered to another account. Please sign in with that number.'
+                        }
+                    });
+                    return;
+                }
+                // Create user in Supabase auth (with fallback if orphaned user exists)
+                let supabaseUserId;
+                const dummyPassword = Math.random().toString(36).slice(-10) + 'A1!';
+                const { data: adminData, error: adminError } = await supabase.auth.admin.createUser({
+                    email,
+                    phone: formattedPhone,
+                    password: dummyPassword,
+                    email_confirm: true,
+                    phone_confirm: true
+                });
+                if (adminError) {
+                    if (adminError.code === 'email_exists' || adminError.message?.includes('already been registered')) {
+                        let foundUser = null;
+                        let page = 1;
+                        while (true) {
+                            const { data: usersData } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+                            if (!usersData?.users || usersData.users.length === 0)
+                                break;
+                            foundUser = usersData.users.find(u => u.email === email);
+                            if (foundUser)
+                                break;
+                            page++;
+                        }
+                        if (foundUser) {
+                            supabaseUserId = foundUser.id;
+                        }
+                        else {
+                            res.status(400).json({ success: false, error: { code: 'AUTH_ERROR', message: 'Email already registered in identity provider' } });
+                            return;
+                        }
+                    }
+                    else {
+                        res.status(400).json({ success: false, error: { code: 'AUTH_ERROR', message: adminError.message } });
+                        return;
+                    }
+                }
+                else {
+                    supabaseUserId = adminData.user.id;
+                }
+                // Create in Prisma
+                dbUser = await prisma.user.create({
+                    data: {
+                        id: supabaseUserId,
+                        email,
+                        name: name || 'Tastifyy User',
+                        phone: formattedPhone,
+                        role: 'customer',
+                        profile_photo_url: picture || null
+                    }
+                });
+            }
+            else {
+                // User is not registered in Prisma and phone was not yet provided.
+                // Return 404 with profile details so frontend can prompt for phone number.
+                res.status(404).json({
+                    success: false,
+                    error: { code: 'GOOGLE_USER_NOT_REGISTERED', message: 'User not registered. Please complete signup.' },
+                    data: { email, name, picture }
+                });
+                return;
+            }
         }
         if (!dbUser.is_active) {
             res.status(403).json({ success: false, error: { code: 'ACCOUNT_SUSPENDED', message: 'Account suspended' } });

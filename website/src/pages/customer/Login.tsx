@@ -7,7 +7,14 @@ import { Logo } from '../../components/ui/Logo';
 import CompanyAttribution from '../../components/ui/CompanyAttribution';
 import { GoogleLogin } from '@react-oauth/google';
 
-type Mode = 'phone' | 'otp' | 'email';
+type Mode = 'phone' | 'otp' | 'email' | 'google_phone';
+
+interface GooglePendingUser {
+  credential?: string;
+  email: string;
+  name?: string;
+  picture?: string;
+}
 
 export default function CustomerLogin() {
   const [mode, setMode] = useState<Mode>('phone');
@@ -21,6 +28,10 @@ export default function CustomerLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Google first-time user state
+  const [googleUser, setGoogleUser] = useState<GooglePendingUser | null>(null);
+  const [googlePhone, setGooglePhone] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -119,11 +130,62 @@ export default function CustomerLogin() {
       handleRedirect(res.data.user.role);
     } catch (err: any) {
       if (err.response?.data?.error?.code === 'GOOGLE_USER_NOT_REGISTERED') {
-        const { email: googleEmail, name: googleName } = err.response.data.data;
-        navigate('/customer/register', { state: { googleEmail, googleName } });
+        const { email: googleEmail, name: googleName, picture: googlePicture } = err.response.data?.data || {};
+        setGoogleUser({
+          credential: credentialResponse.credential,
+          email: googleEmail,
+          name: googleName,
+          picture: googlePicture,
+        });
+        setMode('google_phone');
+        setError('');
       } else {
         setError(err.response?.data?.error?.message || 'Google Authentication failed');
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGooglePhoneSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!googleUser) return;
+    if (googlePhone.length !== 10) {
+      setError('Please enter a valid 10-digit phone number');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      let res;
+      try {
+        res = await api.post('/auth/google', {
+          credential: googleUser.credential,
+          phone: `+91${googlePhone}`,
+        });
+      } catch (err: any) {
+        // Fallback to /auth/register if endpoint hasn't redeployed on remote server yet
+        if (err.response?.status === 404 || err.response?.data?.error?.code === 'GOOGLE_USER_NOT_REGISTERED') {
+          const formData = new FormData();
+          formData.append('email', googleUser.email);
+          formData.append('name', googleUser.name || 'Tastifyy User');
+          formData.append('phone', `+91${googlePhone}`);
+          formData.append('role', 'customer');
+          formData.append('password', `Ggl!_${Math.random().toString(36).slice(-8)}`);
+          res = await api.post('/auth/register', formData);
+        } else {
+          throw err;
+        }
+      }
+
+      const token = res.data.session?.access_token;
+      if (!token || !res.data.user) throw new Error('Invalid response from server');
+      setAuth(res.data.user, token);
+      handleRedirect(res.data.user.role);
+    } catch (err: any) {
+      setError(err.response?.data?.error?.message || 'Failed to complete registration. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -153,9 +215,9 @@ export default function CustomerLogin() {
 
         {/* Right Side - Form */}
         <div className="md:w-1/2 p-8 md:p-12 relative">
-          {(mode === 'otp' || mode === 'email') && (
+          {(mode === 'otp' || mode === 'email' || mode === 'google_phone') && (
             <button 
-              onClick={() => { setMode('phone'); setError(''); setOtp(''); }}
+              onClick={() => { setMode('phone'); setError(''); setOtp(''); setGoogleUser(null); setGooglePhone(''); }}
               className="absolute top-6 left-6 text-gray-500 hover:text-gray-800 transition-colors flex items-center gap-1 text-sm font-bold"
             >
               <ChevronLeft className="w-4 h-4" /> Back
@@ -164,10 +226,22 @@ export default function CustomerLogin() {
 
           <div className="max-w-sm mx-auto mt-6">
             <h2 className="text-3xl font-bold text-brand-dark mb-2">
-              {mode === 'email' ? 'Welcome back' : mode === 'otp' ? 'Verify OTP' : 'Login or Sign up'}
+              {mode === 'google_phone'
+                ? `Welcome, ${googleUser?.name?.split(' ')[0] || 'there'}!`
+                : mode === 'email'
+                ? 'Welcome back'
+                : mode === 'otp'
+                ? 'Verify OTP'
+                : 'Login or Sign up'}
             </h2>
             <p className="text-gray-500 mb-8">
-              {mode === 'email' ? 'Log in to your account using email' : mode === 'otp' ? `We've sent a 6-digit code to +91 ${phone}` : 'Enter your phone number to continue'}
+              {mode === 'google_phone'
+                ? 'Almost there! Enter your mobile number to complete your profile.'
+                : mode === 'email'
+                ? 'Log in to your account using email'
+                : mode === 'otp'
+                ? `We've sent a 6-digit code to +91 ${phone}`
+                : 'Enter your phone number to continue'}
             </p>
 
             {error && (
@@ -320,6 +394,70 @@ export default function CustomerLogin() {
                     Sign up
                   </Link>
                 </div>
+              </form>
+            )}
+
+            {mode === 'google_phone' && (
+              <form onSubmit={handleGooglePhoneSubmit} className="space-y-5">
+                {googleUser && (
+                  <div className="flex items-center gap-3 p-3.5 bg-orange-50/70 rounded-2xl border border-orange-100/80">
+                    {googleUser.picture ? (
+                      <img
+                        src={googleUser.picture}
+                        alt={googleUser.name || 'User'}
+                        className="w-11 h-11 rounded-full object-cover border-2 border-brand-primary/80 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-11 h-11 rounded-full bg-brand-primary text-white font-bold flex items-center justify-center shrink-0">
+                        {(googleUser.name || googleUser.email || 'U')[0].toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-gray-900 truncate">
+                        {googleUser.name || 'Google User'}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {googleUser.email}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mobile Number
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <span className="text-gray-500 font-medium">+91</span>
+                    </div>
+                    <input
+                      type="tel"
+                      required
+                      autoFocus
+                      value={googlePhone}
+                      onChange={(e) =>
+                        setGooglePhone(e.target.value.replace(/\D/g, '').slice(0, 10))
+                      }
+                      className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all font-medium text-lg tracking-wide"
+                      placeholder="9876543210"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1.5 font-medium">
+                    Required for live order tracking and delivery OTP.
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || googlePhone.length < 10}
+                  className="w-full bg-brand-primary hover:bg-brand-secondary text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-brand-primary/30 hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {loading && (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  )}
+                  {loading ? 'Completing Profile...' : 'Complete & Continue'}
+                </button>
               </form>
             )}
 

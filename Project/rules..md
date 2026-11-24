@@ -1,4 +1,4 @@
-﻿# Rules — Tastifyy
+# Rules — Tastifyy
 
 ```
 Last Updated: 2026-09-12
@@ -26,9 +26,9 @@ Status: Current
 ### Google Login
 - Google ID token is verified server-side using `google-auth-library`
 - **If email already exists in Tastifyy DB:** Sign in the user, return JWT
-- **If email does not exist:** Return 404 with code `GOOGLE_USER_NOT_REGISTERED` + user info (name, email, picture)
-  - Frontend must redirect to `/customer/register` with pre-filled state
-  - Do NOT call `createUser()` inside the Google login handler — this caused `email_exists 422` from Supabase
+- **If email does not exist:**
+  - If `phone` is provided in request: Create user in Supabase auth + Prisma, link Google profile, and return custom JWT session
+  - If `phone` is not provided: Return 404 with code `GOOGLE_USER_NOT_REGISTERED` + user info (name, email, picture) so frontend can seamlessly prompt for the mandatory phone number
 - **Never create a duplicate user** — check DB before creating
 
 ### OTP
