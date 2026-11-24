@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiBaseUrl =
-  import.meta.env.VITE_API_URL || 'https://tastifyy-ivyy.onrender.com/api';
+  import.meta.env.VITE_API_URL || 'https://tastifyyps.onrender.com/api';
 
 const api = axios.create({
   baseURL: apiBaseUrl,
