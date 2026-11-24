@@ -49,8 +49,8 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Public */}
-      <Route path="/" element={<Navigate to="/customer/home" replace />} />
-      <Route path="/landing" element={<Landing />} />
+      <Route path="/" element={<Landing />} />
+      <Route path="/landing" element={<Navigate to="/" replace />} />
 
       {/* Auth Routes — redirect to dashboard if already logged in */}
       <Route

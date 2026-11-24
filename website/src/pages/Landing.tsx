@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, MapPin, Star, Clock, ArrowRight, Bike, CheckCircle, ChefHat, Zap, ShieldCheck, Download, X } from 'lucide-react';
+import { Search, MapPin, Clock, ArrowRight, Bike, CheckCircle, ChefHat, ShieldCheck, Download, X } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
 import CompanyAttribution from '../components/ui/CompanyAttribution';
 import api from '../api/axios';
@@ -24,11 +24,17 @@ interface Restaurant {
   rating?: number;
 }
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
+
 export default function Landing() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [restaurantLoadError, setRestaurantLoadError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const { user } = useAuthStore();
   const navigate = useNavigate();
@@ -37,7 +43,7 @@ export default function Landing() {
   useEffect(() => {
     const handleInstallPrompt = (event: Event) => {
       event.preventDefault();
-      setInstallPrompt(event);
+      setInstallPrompt(event as BeforeInstallPromptEvent);
     };
     window.addEventListener('beforeinstallprompt', handleInstallPrompt);
     return () => window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
@@ -72,10 +78,13 @@ export default function Landing() {
     const fetchRestaurants = async () => {
       try {
         const response = await api.get('/restaurants');
-        // Grab top 4 for the landing page
-        setRestaurants(response.data.slice(0, 4));
+        const sakoliRestaurants = response.data.filter(
+          (restaurant: Restaurant) => restaurant.city?.trim().toLowerCase() === 'sakoli'
+        );
+        setRestaurants(sakoliRestaurants.slice(0, 4));
       } catch (err) {
         console.error('Failed to load restaurants', err);
+        setRestaurantLoadError(true);
       } finally {
         setLoading(false);
       }
@@ -158,16 +167,16 @@ export default function Landing() {
             {/* Left Content */}
             <div className="z-10 text-center lg:text-left pt-8 md:pt-0">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-50 text-brand-primary text-xs font-bold tracking-wide uppercase mb-6 border border-orange-100">
-                <Bike className="w-3.5 h-3.5" /> Fast delivery in Sakoli
+                <MapPin className="w-3.5 h-3.5" /> Food ordering in Sakoli
               </div>
               
               <h1 className="text-4xl md:text-5xl lg:text-[4rem] font-black tracking-tight leading-[1.1] mb-6 text-gray-900">
-                Your favorite food, <br className="hidden lg:block" />
-                <span className="text-brand-primary">delivered</span> to your door.
+                Order food online <br className="hidden lg:block" />
+                <span className="text-brand-primary">in Sakoli.</span>
               </h1>
               
               <p className="text-lg text-gray-500 mb-8 max-w-lg mx-auto lg:mx-0 font-medium">
-                Discover local restaurants, explore delicious dishes, and get your favorite meals delivered quickly and securely.
+                Discover restaurants in Sakoli, Bhandara, Maharashtra. Browse menus and check the available ordering and delivery options for your address.
               </p>
 
               <form onSubmit={handleSearch} className="relative max-w-xl mx-auto lg:mx-0 flex items-center shadow-lg shadow-gray-200/50 rounded-2xl bg-white border border-gray-100 p-2 focus-within:ring-2 ring-brand-primary/20 transition-all">
@@ -208,24 +217,6 @@ export default function Landing() {
                   className="w-full h-[500px] object-cover"
                 />
                 
-                {/* Floating Cards */}
-                <div className="absolute top-6 right-6 bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl shadow-lg border border-white/20 flex items-center gap-2 animate-bounce-slow">
-                  <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                  <div>
-                    <div className="text-sm font-black text-gray-900">4.8 Rating</div>
-                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Top Rated</div>
-                  </div>
-                </div>
-
-                <div className="absolute bottom-6 left-6 bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl shadow-lg border border-white/20 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-black text-gray-900">30 Min</div>
-                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Avg Delivery</div>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -260,7 +251,7 @@ export default function Landing() {
         {/* 4. Trending Restaurants */}
         <section className="py-16 bg-[#FFFCF8]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <h2 className="text-2xl md:text-3xl font-black text-gray-900 mb-8">Trending Near You</h2>
+            <h2 className="text-2xl md:text-3xl font-black text-gray-900 mb-8">Restaurants in Sakoli</h2>
             
             {loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -294,44 +285,41 @@ export default function Landing() {
               <div className="bg-white rounded-2xl p-10 text-center border border-gray-100 shadow-sm">
                 <ChefHat className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-bold text-gray-900 mb-2">No restaurants found</h3>
-                <p className="text-gray-500 mb-6">We are currently expanding to your area. Check back soon!</p>
+                <p className="text-gray-500 mb-6">
+                  {restaurantLoadError
+                    ? 'Restaurant listings could not be loaded. Please try again later.'
+                    : 'No Sakoli restaurant listings are available to show right now. Please check again later.'}
+                </p>
               </div>
             )}
           </div>
         </section>
 
-        {/* 5. Offers Section */}
-        <section className="py-12 bg-white border-y border-gray-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <h2 className="text-2xl md:text-3xl font-black text-gray-900 mb-8">Offers Just For You</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-gradient-to-br from-brand-primary to-orange-600 rounded-3xl p-6 md:p-8 text-white relative overflow-hidden flex flex-col justify-between h-48 md:h-56 shadow-lg shadow-orange-500/20 group cursor-pointer">
-                <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700"></div>
-                <div className="relative z-10">
-                  <div className="text-sm font-bold uppercase tracking-wider mb-1 opacity-90">First Order</div>
-                  <div className="text-4xl md:text-5xl font-black mb-2">50% OFF</div>
-                  <div className="text-sm font-medium bg-white/20 inline-block px-3 py-1 rounded-lg backdrop-blur-sm border border-white/20">Use code <span className="font-bold">WELCOME50</span></div>
-                </div>
-                <div className="relative z-10 self-start">
-                  <Link to="/customer/restaurants" className="text-sm font-bold bg-white text-brand-primary px-5 py-2.5 rounded-xl hover:bg-gray-50 transition-colors inline-flex items-center">
-                    Order Now <ArrowRight className="w-4 h-4 ml-1" />
-                  </Link>
-                </div>
+        {/* 5. Sakoli ordering information */}
+        <section className="py-16 bg-white border-y border-gray-100">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6">
+            <h2 className="text-2xl md:text-3xl font-black text-gray-900 mb-5">
+              Food ordering in Sakoli, Bhandara
+            </h2>
+            <p className="text-gray-600 leading-relaxed mb-8">
+              Tastifyy helps people in Sakoli, Maharashtra discover participating restaurants and browse their menus online.
+              Choose a restaurant, review its menu, and check whether ordering and delivery are available for your address
+              before placing an order.
+            </p>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <h3 className="font-bold text-gray-900 mb-2">How do I order food online in Sakoli?</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Browse the Sakoli restaurant listings, select a restaurant to view its menu, then follow the order
+                  steps in Tastifyy.
+                </p>
               </div>
-
-              <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-6 md:p-8 text-white relative overflow-hidden flex flex-col justify-between h-48 md:h-56 shadow-lg shadow-gray-900/20 group cursor-pointer">
-                <div className="absolute right-0 bottom-0 w-40 h-40 bg-brand-primary/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
-                <div className="relative z-10">
-                  <div className="text-sm font-bold uppercase tracking-wider mb-1 text-gray-400">Above ₹299</div>
-                  <div className="text-3xl md:text-4xl font-black mb-2 text-brand-primary">FREE DELIVERY</div>
-                  <div className="text-sm font-medium bg-white/10 inline-block px-3 py-1 rounded-lg backdrop-blur-sm border border-white/10">Auto-applied at checkout</div>
-                </div>
-                <div className="relative z-10 self-start">
-                  <Link to="/customer/restaurants" className="text-sm font-bold bg-brand-primary text-white px-5 py-2.5 rounded-xl hover:bg-brand-secondary transition-colors inline-flex items-center">
-                    Explore <ArrowRight className="w-4 h-4 ml-1" />
-                  </Link>
-                </div>
+              <div>
+                <h3 className="font-bold text-gray-900 mb-2">Is delivery available for my address?</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Availability and delivery charges can depend on your address and restaurant. Check the options shown
+                  in Tastifyy before confirming your order.
+                </p>
               </div>
             </div>
           </div>
@@ -375,10 +363,10 @@ export default function Landing() {
             <h2 className="text-3xl font-black text-gray-900 mb-12 text-center">Why Choose Tastifyy</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { title: 'Fast Delivery', desc: 'Get your food delivered quickly while it is still hot.', icon: <Zap className="w-8 h-8 text-orange-500" /> },
-                { title: 'Verified Restaurants', desc: 'Discover trusted and highly-rated restaurants.', icon: <ShieldCheck className="w-8 h-8 text-blue-500" /> },
-                { title: 'Easy Ordering', desc: 'A seamless experience from discovery to checkout.', icon: <CheckCircle className="w-8 h-8 text-green-500" /> },
-                { title: 'Secure Payments', desc: 'Safe, reliable, and lightning-fast payment methods.', icon: <ShieldCheck className="w-8 h-8 text-purple-500" /> }
+                { title: 'Restaurant menus', desc: 'Browse menus from participating restaurants in Sakoli.', icon: <ChefHat className="w-8 h-8 text-orange-500" /> },
+                { title: 'Online ordering', desc: 'Choose dishes and review your order before checkout.', icon: <CheckCircle className="w-8 h-8 text-green-500" /> },
+                { title: 'Availability details', desc: 'Check ordering and delivery options for your address.', icon: <MapPin className="w-8 h-8 text-blue-500" /> },
+                { title: 'Order updates', desc: 'View your order details through your Tastifyy account.', icon: <ShieldCheck className="w-8 h-8 text-purple-500" /> }
               ].map((feature, i) => (
                 <div key={i} className="bg-[#FFFCF8] p-8 rounded-3xl border border-orange-50 hover:border-orange-100 hover:shadow-sm transition-all text-center flex flex-col items-center">
                   <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-6">
