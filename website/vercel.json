@@ -1,8 +1,19 @@
 {
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/sitemap.xml",
-      "destination": "https://tastifyy.onrender.com/api/seo/sitemap.xml"
+      "destination": "https://tastifyy-ivyy.onrender.com/api/seo/sitemap.xml"
     },
     {
       "source": "/(.*)",
