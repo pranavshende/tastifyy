@@ -1,4 +1,4 @@
-﻿# Architecture — Tastifyy
+# Architecture — Tastifyy
 
 ```
 Last Updated: 2026-11-23
