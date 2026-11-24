@@ -271,7 +271,7 @@ update_location           — Delivery partner sends GPS coordinates
 
 ```
 tastifyy.in / www.tastifyy.in  → Vercel (website/)
-tastifyy.onrender.com          → Render (backend/dist/index.js)
+tastifyyps.onrender.com        → Render (backend/dist/index.js)
 Supabase                       → PostgreSQL + Auth + Storage
 ```
 
