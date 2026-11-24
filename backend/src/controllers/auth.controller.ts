@@ -2,9 +2,9 @@ import type { Request, Response } from 'express';
 import { prisma } from '../utils/prisma.js';
 import { supabase } from '../utils/supabase.js';
 import { smsQueue } from '../jobs/queues.js';
-import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import { getPublicUrl, uploadFile, validateFile, generateFilename } from '../services/storage.service.js';
+import { createAuthSession, isTrustedCookieRequest, revokeAuthSession, rotateAuthSession } from '../services/auth-session.service.js';
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -157,29 +157,12 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
     // The passport strategy checks the Supabase JWT. 
     // Since we verified the OTP manually, we can generate a session using supabase admin
     // Or we can generate a custom JWT using the Supabase JWT secret so it passes the middleware
-    const jwtSecret = process.env.JWT_SECRET || 'fallback_development_secret';
-
-    const token = jwt.sign(
-      { 
-        sub: dbUser.id,
-        aud: "authenticated",
-        role: "authenticated",
-        email: dbUser.email,
-        phone: dbUser.phone
-      }, 
-      jwtSecret, 
-      { expiresIn: '7d' }
-    );
+    const session = await createAuthSession(res, dbUser);
 
     res.json({ 
       success: true, 
       user: { ...dbUser, profile_photo_url: getPublicUrl(dbUser.profile_photo_url) }, 
-      session: { 
-        access_token: token, 
-        token_type: 'bearer',
-        expires_in: 7 * 24 * 60 * 60,
-        user: { id: dbUser.id, phone: dbUser.phone, email: dbUser.email }
-      } 
+      session,
     });
   } catch (error) {
     console.error('Verify OTP Error:', error);
@@ -297,28 +280,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       });
     }
 
-    const jwtSecret = process.env.JWT_SECRET || 'fallback_development_secret';
-    const token = jwt.sign(
-      { 
-        sub: user.id,
-        aud: "authenticated",
-        role: "authenticated",
-        email: user.email,
-        phone: user.phone
-      }, 
-      jwtSecret, 
-      { expiresIn: '7d' }
-    );
+    const session = await createAuthSession(res, user);
 
     res.status(201).json({ 
       success: true, 
       user: { ...user, profile_photo_url: getPublicUrl(user.profile_photo_url) }, 
-      session: {
-        access_token: token,
-        token_type: 'bearer',
-        expires_in: 7 * 24 * 60 * 60,
-        user: { id: user.id, phone: user.phone, email: user.email }
-      }
+      session
     });
   } catch (error: any) {
     console.error('Registration Error:', error);
@@ -369,28 +336,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const jwtSecret = process.env.JWT_SECRET || 'fallback_development_secret';
-    const token = jwt.sign(
-      { 
-        sub: user.id,
-        aud: "authenticated",
-        role: "authenticated",
-        email: user.email,
-        phone: user.phone
-      }, 
-      jwtSecret, 
-      { expiresIn: '7d' }
-    );
+    const session = await createAuthSession(res, user);
 
     res.json({ 
       success: true, 
       user: { ...user, profile_photo_url: getPublicUrl(user.profile_photo_url) }, 
-      session: {
-        access_token: token,
-        token_type: 'bearer',
-        expires_in: 7 * 24 * 60 * 60,
-        user: { id: user.id, phone: user.phone, email: user.email }
-      }
+      session
     });
   } catch (error) {
     console.error('Login Error:', error);
@@ -410,6 +361,11 @@ export const me = async (req: Request, res: Response): Promise<void> => {
 
 // POST /auth/logout
 export const logout = async (req: Request, res: Response): Promise<void> => {
+  if (req.headers.cookie && !isTrustedCookieRequest(req)) {
+    res.status(403).json({ success: false, error: { code: 'UNTRUSTED_ORIGIN', message: 'Logout request origin is not allowed' } });
+    return;
+  }
+
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1];
@@ -418,7 +374,38 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
       try { await supabase.auth.admin.signOut(token); } catch (_) {}
     }
   }
-  res.json({ success: true, message: 'Logged out successfully' });
+
+  try {
+    await revokeAuthSession(req, res);
+    res.json({ success: true, message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout Error:', error);
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to revoke login session' } });
+  }
+};
+
+export const refresh = async (req: Request, res: Response): Promise<void> => {
+  if (!isTrustedCookieRequest(req)) {
+    res.status(403).json({ success: false, error: { code: 'UNTRUSTED_ORIGIN', message: 'Refresh request origin is not allowed' } });
+    return;
+  }
+
+  try {
+    const result = await rotateAuthSession(req, res);
+    if (!result) {
+      res.status(401).json({ success: false, error: { code: 'SESSION_EXPIRED', message: 'Login session expired' } });
+      return;
+    }
+
+    res.json({
+      success: true,
+      user: { ...result.user, profile_photo_url: getPublicUrl(result.user.profile_photo_url) },
+      session: result.session,
+    });
+  } catch (error) {
+    console.error('Session refresh error:', error);
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to restore login session' } });
+  }
 };
 
 // POST /auth/google
@@ -469,29 +456,12 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const jwtSecret = process.env.JWT_SECRET || 'fallback_development_secret';
-
-    const token = jwt.sign(
-      { 
-        sub: dbUser.id,
-        aud: "authenticated",
-        role: "authenticated",
-        email: dbUser.email,
-        phone: dbUser.phone
-      }, 
-      jwtSecret, 
-      { expiresIn: '7d' }
-    );
+    const session = await createAuthSession(res, dbUser);
 
     res.json({ 
       success: true, 
       user: { ...dbUser, profile_photo_url: getPublicUrl(dbUser.profile_photo_url) }, 
-      session: { 
-        access_token: token, 
-        token_type: 'bearer',
-        expires_in: 7 * 24 * 60 * 60,
-        user: { id: dbUser.id, phone: dbUser.phone, email: dbUser.email }
-      } 
+      session
     });
 
   } catch (error: any) {

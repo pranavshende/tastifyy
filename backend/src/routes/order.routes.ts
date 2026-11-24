@@ -9,6 +9,7 @@ import Razorpay from 'razorpay';
 import { scheduleOrderTimeout, cancelOrderTimeout, payoutQueue, smsQueue, assignmentQueue, notificationQueue, refundQueue } from '../jobs/queues.js';
 import { getLaunchDaySettings } from '../utils/launchDay.js';
 import { enqueueWhatsAppAlerts } from '../services/whatsapp.service.js';
+import { notifyOrderCreated, notifyOrderStatusChanged } from '../services/order-notification.service.js';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
@@ -432,19 +433,9 @@ router.post('/', authorizeRole(['customer']), async (req: Request, res: Response
     io.to(`restaurant_${restaurant_id}`).emit('order:created', orderCreatedPayload);
     io.to('admin').emit('order:created', orderCreatedPayload);
 
-    const restaurantUser = await findRestaurantUserByRestaurantId(restaurant_id);
-    if (restaurantUser) {
-      await notificationQueue.add('notify', {
-        type: 'both', userId: restaurantUser.id, userRole: 'restaurant_partner',
-        title: 'New Order Received!',
-        body: `Order #${order.id.slice(0, 8).toUpperCase()} has been placed for ₹${Number(order.total_amount).toFixed(2)}.`,
-        data: { type: 'order_created', orderId: order.id }
-      });
-    }
-    await notificationQueue.add('notify', {
-      type: 'both', userId: user.id, userRole: 'customer',
-      title: 'Order Placed', body: 'Your order has been sent to the restaurant.',
-      data: { type: 'order_placed', orderId: order.id }
+    await notifyOrderCreated({
+      ...order,
+      customer: { name: user.name },
     });
 
     // External WhatsApp calls happen in a worker and can never fail order creation.
@@ -500,7 +491,7 @@ router.post('/verify-payment', authorizeRole(['customer']), async (req: Request,
         return;
       }
 
-      await prisma.order.update({
+      const updatedOrder = await prisma.order.update({
         where: { id: order.id },
         data: { 
           payment_status: 'success', 
@@ -513,9 +504,14 @@ router.post('/verify-payment', authorizeRole(['customer']), async (req: Request,
       const io = getIO();
       const payload = {
         orderId: order.id,
-        status: 'restaurant_confirmed'
+        status: updatedOrder.status,
+        payment_status: 'success'
       };
       
+      if (order.status !== updatedOrder.status) {
+        io.to(`customer_${order.customer_id}`).emit('order:restaurant_confirmed', payload);
+        await notifyOrderStatusChanged(order, updatedOrder.status);
+      }
       io.to(`restaurant_${order.restaurant_id}`).emit('order:restaurant_confirmed', payload);
       io.to('admin').emit('order:restaurant_confirmed', payload);
 
@@ -797,34 +793,7 @@ router.put('/:id/status', authorizeRole(['restaurant_partner', 'delivery_partner
       }
     });
 
-    const statusMessages: Record<string, { title: string; body: string }> = {
-      restaurant_confirmed: { title: 'Restaurant Accepted', body: 'The restaurant accepted your order.' },
-      preparing: { title: 'Food Preparing', body: 'Your food is being prepared.' },
-      ready: { title: 'Order Ready', body: 'Your order is ready for pickup.' },
-      rider_assigned: { title: 'Rider Assigned', body: 'A delivery partner has been assigned to your order.' },
-      picked_up: { title: 'Order Picked Up', body: 'Your delivery partner picked up the order.' },
-      out_for_delivery: { title: 'Out for Delivery', body: 'Your order is on the way.' },
-      delivered: { title: 'Order Delivered', body: 'Your order has been delivered. Enjoy your meal!' },
-      cancelled: { title: 'Order Cancelled', body: 'Your order was cancelled.' },
-      rejected: { title: 'Order Rejected', body: 'The restaurant could not accept your order.' },
-    };
-    const message = statusMessages[status];
-    if (message) {
-      await notificationQueue.add('notify', {
-        type: 'both', userId: order.customer_id, userRole: 'customer',
-        title: message.title, body: message.body,
-        data: { type: 'order_status', orderId: order.id, status }
-      });
-      const restaurantUser = await findRestaurantUserByRestaurantId(order.restaurant_id);
-      if (restaurantUser) {
-        await notificationQueue.add('notify', {
-          type: 'both', userId: restaurantUser.id, userRole: 'restaurant_partner',
-          title: `Order ${status.replaceAll('_', ' ')}`,
-          body: `Order #${order.id.slice(0, 8).toUpperCase()} status changed to ${status.replaceAll('_', ' ')}.`,
-          data: { type: 'order_status', orderId: order.id, status }
-        });
-      }
-    }
+    await notifyOrderStatusChanged(order, status);
 
     if (['restaurant_confirmed', 'cancelled', 'rejected'].includes(status)) {
       await cancelOrderTimeout(order.id);

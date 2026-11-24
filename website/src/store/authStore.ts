@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import api from '../api/axios';
+import api, { setAccessToken } from '../api/axios';
 
 import socketService from '../api/socket';
 
@@ -29,48 +29,56 @@ interface AuthState {
   logout: () => Promise<void>;
 }
 
+let initializationPromise: Promise<void> | null = null;
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  token: localStorage.getItem('token'),
+  token: null,
   loading: false,
   initialized: false,
 
   setAuth: (user, token) => {
-    localStorage.setItem('token', token);
+    localStorage.removeItem('token');
+    setAccessToken(token);
+    socketService.connect(user.role, user.id, token);
     set({ user, token, initialized: true });
-    socketService.connect(user.role, user.id);
   },
 
   clearAuth: () => {
     localStorage.removeItem('token');
+    setAccessToken(null);
     set({ user: null, token: null, initialized: true });
     socketService.disconnect();
   },
 
-  // Called on every app mount — validates session with backend
+  // Restore a short-lived access token using the HttpOnly refresh cookie.
   initAuth: async () => {
-    const token = get().token;
-    if (!token) {
-      set({ initialized: true, loading: false });
-      return;
-    }
+    if (get().initialized) return;
+    if (initializationPromise) return initializationPromise;
 
-    set({ loading: true });
+    initializationPromise = (async () => {
+      set({ loading: true });
+      try {
+        const response = await api.post('/auth/refresh');
+        const token = response.data?.session?.access_token;
+        const user = response.data?.user as AuthUser | undefined;
+        if (typeof token !== 'string' || !user?.id || !user.role) {
+          throw new Error('Refresh response did not contain a valid user session');
+        }
+
+        setAccessToken(token);
+        socketService.connect(user.role, user.id, token);
+        set({ user, token, loading: false, initialized: true });
+      } catch {
+        get().clearAuth();
+        set({ loading: false, initialized: true });
+      }
+    })();
+
     try {
-      const response = await api.get('/auth/me');
-      if (response.data.success) {
-        set({ user: response.data.user, loading: false, initialized: true });
-        socketService.connect(response.data.user.role, response.data.user.id);
-      } else {
-        get().clearAuth();
-        set({ loading: false });
-      }
-    } catch (err: any) {
-      // 401/403 = expired/invalid token
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        get().clearAuth();
-      }
-      set({ loading: false, initialized: true });
+      await initializationPromise;
+    } finally {
+      initializationPromise = null;
     }
   },
 
@@ -83,3 +91,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     get().clearAuth();
   },
 }));
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('tastifyy:session-expired', () => {
+    useAuthStore.getState().clearAuth();
+  });
+}

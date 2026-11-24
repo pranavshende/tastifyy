@@ -65,17 +65,26 @@ export async function createNotification(
   type: string,
   title: string,
   body: string,
-  data?: any
+  data?: any,
+  options?: { notificationType?: string; dedupeKey?: string }
 ) {
   try {
+    if (options?.dedupeKey) {
+      const existing = await prisma.notification.findUnique({
+        where: { dedupe_key: options.dedupeKey },
+      });
+      if (existing) return existing;
+    }
+
     const notification = await prisma.notification.create({
       data: {
         recipient_id: recipientId,
         recipient_type: recipientType,
-        type,
+        type: options?.notificationType || type,
         title,
         body,
         data: data || null,
+        dedupe_key: options?.dedupeKey,
         is_read: false
       }
     });
@@ -87,8 +96,21 @@ export async function createNotification(
     }
 
     return notification;
-  } catch (e) {
-    console.error('[Notification] Failed to create DB notification', e);
+  } catch (error) {
+    if (
+      options?.dedupeKey &&
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'P2002'
+    ) {
+      const existing = await prisma.notification.findUnique({
+        where: { dedupe_key: options.dedupeKey },
+      });
+      if (existing) return existing;
+    }
+
+    console.error('[Notification] Failed to create DB notification', error);
     return null;
   }
 }

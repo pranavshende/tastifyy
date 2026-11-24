@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { ImageUploadButton } from '../../components/ui/ImageUploadButton';
 import CompanyAttribution from '../../components/ui/CompanyAttribution';
+import NotificationBell from '../../components/NotificationBell';
 
 type Tab = 'overview' | 'restaurants' | 'orders' | 'delivery' | 'users' | 'payouts' | 'support' | 'audit' | 'config' | 'profile';
 
@@ -20,6 +21,9 @@ export default function AdminDashboard() {
 
       <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 pb-20 lg:pb-8 h-screen overflow-y-auto">
         <div className="max-w-7xl mx-auto">
+          <div className="flex justify-end mb-3">
+            <NotificationBell />
+          </div>
           {activeTab === 'overview' && <OverviewTab />}
           {activeTab === 'orders' && <OrdersTab />}
           {activeTab === 'restaurants' && <RestaurantsTab />}
@@ -651,17 +655,33 @@ function OrdersTab() {
             total_amount: payload.totalAmount,
             customer: payload.customer,
             restaurant: payload.restaurant,
+            order_items: payload.order_items,
           };
           return [newOrder, ...prev];
         });
       };
 
       const handleStatusUpdate = (payload: any) => {
-        setOrders(prev => prev.map(o => o.id === payload.orderId ? { ...o, status: payload.status } : o));
+        setOrders(prev => {
+          if (statusFilter !== 'all' && statusFilter !== payload.status) {
+            return prev.filter(order => order.id !== payload.orderId);
+          }
+          return prev.map(order => order.id === payload.orderId ? { ...order, status: payload.status } : order);
+        });
       };
 
       socket.on('order:created', handleNewOrder);
-      const events = ['order:accepted', 'order:rejected', 'order:preparing', 'order:ready_for_pickup', 'order:delivered', 'order:cancelled'];
+      const events = [
+        'order:restaurant_confirmed',
+        'order:preparing',
+        'order:ready',
+        'order:rider_assigned',
+        'order:picked_up',
+        'order:out_for_delivery',
+        'order:delivered',
+        'order:cancelled',
+        'order:rejected',
+      ];
       events.forEach(event => socket.on(event, handleStatusUpdate));
 
       return () => {
@@ -676,11 +696,13 @@ function OrdersTab() {
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-      accepted: 'bg-blue-50 text-blue-700 border-blue-200',
+      restaurant_confirmed: 'bg-blue-50 text-blue-700 border-blue-200',
       preparing: 'bg-purple-50 text-purple-700 border-purple-200',
-      ready_for_pickup: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      ready: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      out_for_delivery: 'bg-indigo-50 text-indigo-700 border-indigo-200',
       delivered: 'bg-green-50 text-green-700 border-green-200',
       cancelled: 'bg-red-50 text-red-700 border-red-200',
+      rejected: 'bg-red-50 text-red-700 border-red-200',
     };
     return colors[status?.toLowerCase()] || 'bg-gray-50 text-gray-700 border-gray-200';
   };
@@ -702,11 +724,13 @@ function OrdersTab() {
         >
           <option value="all">All Orders</option>
           <option value="pending">Pending</option>
-          <option value="accepted">Accepted</option>
+          <option value="restaurant_confirmed">Confirmed</option>
           <option value="preparing">Preparing</option>
-          <option value="ready_for_pickup">Ready for Pickup</option>
+          <option value="ready">Ready for Pickup</option>
+          <option value="out_for_delivery">Out for Delivery</option>
           <option value="delivered">Delivered</option>
           <option value="cancelled">Cancelled</option>
+          <option value="rejected">Rejected</option>
         </select>
       </div>
 

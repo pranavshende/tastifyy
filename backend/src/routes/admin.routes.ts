@@ -7,6 +7,8 @@ import type { Request, Response } from 'express';
 import Razorpay from 'razorpay';
 import { refundQueue } from '../jobs/queues.js';
 import { getLaunchDaySettings } from '../utils/launchDay.js';
+import { getIO } from '../socket.js';
+import { notifyOrderStatusChanged } from '../services/order-notification.service.js';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
@@ -599,10 +601,14 @@ router.patch('/support/:id/resolve', async (req: Request, res: Response) => {
       if (ticket.order?.payment_status === 'success' && ticket.order?.razorpay_payment_id) {
         
         // Mark order as cancelled and queue the refund
-        await prisma.order.update({
+        const updatedOrder = await prisma.order.update({
           where: { id: ticket.order_id },
           data: { status: 'cancelled', cancelled_by: 'admin', cancellation_reason: resolution_notes || 'Admin support refund' }
         });
+        const payload = { orderId: updatedOrder.id, status: updatedOrder.status, cancellation_reason: updatedOrder.cancellation_reason };
+        getIO().to(`customer_${updatedOrder.customer_id}`).emit('order:cancelled', payload);
+        getIO().to('admin').emit('order:cancelled', payload);
+        await notifyOrderStatusChanged(updatedOrder, updatedOrder.status);
 
         await refundQueue.add('refund-order', { orderId: ticket.order_id, reason: resolution_notes || 'Admin support refund' });
 
@@ -618,10 +624,14 @@ router.patch('/support/:id/resolve', async (req: Request, res: Response) => {
         
       } else {
         // Just cancel if not paid online
-        await prisma.order.update({
+        const updatedOrder = await prisma.order.update({
           where: { id: ticket.order_id },
           data: { status: 'cancelled' }
         });
+        const payload = { orderId: updatedOrder.id, status: updatedOrder.status };
+        getIO().to(`customer_${updatedOrder.customer_id}`).emit('order:cancelled', payload);
+        getIO().to('admin').emit('order:cancelled', payload);
+        await notifyOrderStatusChanged(updatedOrder, updatedOrder.status);
 
         await prisma.adminAuditLog.create({
           data: {

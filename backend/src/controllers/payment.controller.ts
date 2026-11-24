@@ -4,6 +4,7 @@ import { findRestaurantPartner } from '../utils/restaurantPartner.js';
 import Razorpay from 'razorpay';
 import { randomUUID, createHmac } from 'crypto';
 import axios from 'axios';
+import { notifyOrderStatusChanged } from '../services/order-notification.service.js';
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
@@ -359,14 +360,17 @@ export const handleRazorpayWebhook = async (req: Request, res: Response): Promis
       }
 
       if (order.payment_status !== 'success') {
-        await prisma.order.update({
+        const updatedOrder = await prisma.order.update({
           where: { id: order.id },
           data: { payment_status: 'success', razorpay_payment_id: paymentEntity.id, status: 'restaurant_confirmed' }
         });
         const { getIO } = await import('../socket.js');
-        getIO().to(`restaurant_${order.restaurant_id}`).emit('order:status_update', {
-          orderId: order.id, status: 'restaurant_confirmed', payment_status: 'success'
-        });
+        const io = getIO();
+        const statusPayload = { orderId: order.id, status: updatedOrder.status, payment_status: 'success' };
+        io.to(`customer_${order.customer_id}`).emit('order:restaurant_confirmed', statusPayload);
+        io.to(`restaurant_${order.restaurant_id}`).emit('order:restaurant_confirmed', statusPayload);
+        io.to('admin').emit('order:restaurant_confirmed', statusPayload);
+        await notifyOrderStatusChanged(order, updatedOrder.status);
       }
     }
 
@@ -381,7 +385,7 @@ export const handleRazorpayWebhook = async (req: Request, res: Response): Promis
       if (!order) { res.status(200).send('OK'); return; }
 
       if (order.payment_status !== 'success' && order.status !== 'cancelled') {
-        await prisma.order.update({
+        const updatedOrder = await prisma.order.update({
           where: { id: order.id },
           data: { payment_status: 'failed', status: 'cancelled', cancellation_reason: 'Payment failed' }
         });
@@ -391,6 +395,17 @@ export const handleRazorpayWebhook = async (req: Request, res: Response): Promis
             data: { stock_quantity: { increment: item.quantity } }
           });
         }
+
+        const { getIO } = await import('../socket.js');
+        const io = getIO();
+        const statusPayload = {
+          orderId: order.id,
+          status: updatedOrder.status,
+          cancellation_reason: updatedOrder.cancellation_reason,
+        };
+        io.to(`customer_${order.customer_id}`).emit('order:cancelled', statusPayload);
+        io.to('admin').emit('order:cancelled', statusPayload);
+        await notifyOrderStatusChanged(order, updatedOrder.status);
       }
     }
 

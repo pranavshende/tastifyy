@@ -3,6 +3,7 @@ import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import jwksRsa from 'jwks-rsa';
 import { prisma } from '../utils/prisma.js';
 import dotenv from 'dotenv';
+import { getJwtSecret } from '../utils/jwt.js';
 
 dotenv.config();
 
@@ -27,7 +28,7 @@ const customSecretProvider = (request: any, rawJwtToken: any, done: any) => {
     }
     
     if (decoded.header.alg === 'HS256') {
-      const secret = process.env.JWT_SECRET || 'fallback_development_secret';
+      const secret = getJwtSecret();
       return done(null, secret);
     } else if (decoded.header.alg === 'RS256') {
       if (!jwksProvider) {

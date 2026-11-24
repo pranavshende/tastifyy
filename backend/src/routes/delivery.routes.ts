@@ -5,6 +5,7 @@ import type { Request, Response } from 'express';
 import { getIO } from '../socket.js';
 import { assignmentQueue } from '../jobs/queues.js';
 import { getPublicUrl, uploadFile, deleteFile, validateFile, generateFilename } from '../services/storage.service.js';
+import { notifyOrderStatusChanged } from '../services/order-notification.service.js';
 import multer from 'multer';
 
 const upload = multer({
@@ -260,6 +261,12 @@ router.post('/orders/:id/accept', async (req: Request, res: Response) => {
       })
     ]);
 
+    const payload = { orderId: updatedOrder.id, status: updatedOrder.status };
+    const io = getIO();
+    io.to(`customer_${updatedOrder.customer_id}`).emit('order:out_for_delivery', payload);
+    io.to('admin').emit('order:out_for_delivery', payload);
+    await notifyOrderStatusChanged(updatedOrder, updatedOrder.status);
+
     res.json({ success: true, data: updatedOrder });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to accept order' } });
@@ -271,6 +278,10 @@ router.patch('/orders/:id/status', async (req: Request, res: Response) => {
   try {
     const { status, otp } = req.body;
     const id = req.params.id as string;
+    if (!['picked_up', 'out_for_delivery', 'delivered'].includes(status)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_STATUS', message: 'Unsupported delivery order status' } });
+    }
+
     const partner = await getPartner((req.user as any).id);
     
     if (!partner) return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not a delivery partner' } });
@@ -282,6 +293,17 @@ router.patch('/orders/:id/status', async (req: Request, res: Response) => {
 
     if (!order) {
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found or not assigned to you' } });
+    }
+
+    const allowedTransitions: Record<string, string[]> = {
+      restaurant_confirmed: ['out_for_delivery', 'picked_up'],
+      preparing: ['out_for_delivery', 'picked_up'],
+      ready: ['out_for_delivery', 'picked_up'],
+      out_for_delivery: ['picked_up', 'delivered'],
+      picked_up: ['out_for_delivery', 'delivered'],
+    };
+    if (!allowedTransitions[order.status]?.includes(status)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_TRANSITION', message: `Cannot transition order from ${order.status} to ${status}` } });
     }
 
     if (status === 'delivered') {
@@ -302,6 +324,12 @@ router.patch('/orders/:id/status', async (req: Request, res: Response) => {
         data: { status: 'delivered' }
       });
     }
+
+    const payload = { orderId: updatedOrder.id, status: updatedOrder.status };
+    const io = getIO();
+    io.to(`customer_${updatedOrder.customer_id}`).emit(`order:${updatedOrder.status}`, payload);
+    io.to('admin').emit(`order:${updatedOrder.status}`, payload);
+    await notifyOrderStatusChanged(updatedOrder, updatedOrder.status);
 
     res.json({ success: true, data: updatedOrder });
   } catch (error) {

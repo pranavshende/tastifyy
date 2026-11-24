@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Bell, Volume2, VolumeX } from 'lucide-react';
 import api from '../api/axios';
 import { useAuthStore } from '../store/authStore';
-import { io } from 'socket.io-client';
+import socketService from '../api/socket';
 
 interface Notification {
   id: string;
@@ -18,40 +18,51 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem('tastifyy-notification-sound') !== 'off');
+  const [browserPermission, setBrowserPermission] = useState<NotificationPermission | 'unsupported'>(() =>
+    typeof window !== 'undefined' && 'Notification' in window
+      ? window.Notification.permission
+      : 'unsupported'
+  );
   const dropdownRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const seenNotificationIdsRef = useRef(new Set<string>());
 
-  const unlockNotificationSound = () => {
+  const unlockNotificationSound = useCallback(() => {
     try {
-      const context = audioContextRef.current || new AudioContext();
+      const context = audioContextRef.current || new window.AudioContext();
       audioContextRef.current = context;
       if (context.state === 'suspended') {
-        void context.resume();
+        void context.resume().catch((error) => console.warn('Notification audio could not be enabled', error));
       }
-    } catch {
-      // Browsers without Web Audio keep visual notifications available.
+    } catch (error) {
+      console.warn('Notification audio is unavailable', error);
     }
-  };
+  }, []);
 
-  const playNotificationSound = () => {
+  const playNotificationSound = useCallback((type: string) => {
     if (!soundEnabled) return;
     try {
-      const context = audioContextRef.current || new AudioContext();
+      const context = audioContextRef.current;
+      if (!context) return;
       audioContextRef.current = context;
       if (context.state === 'suspended') return;
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-      oscillator.frequency.value = 880;
-      gain.gain.setValueAtTime(0.08, context.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.18);
-      oscillator.connect(gain);
-      gain.connect(context.destination);
-      oscillator.start();
-      oscillator.stop(context.currentTime + 0.18);
-    } catch {
-      // Visual notifications remain available when audio is blocked.
+      const notes = type === 'order_created' ? [740, 988] : [880, 660];
+      notes.forEach((frequency, index) => {
+        const startAt = context.currentTime + index * 0.16;
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.frequency.value = frequency;
+        gain.gain.setValueAtTime(0.06, startAt);
+        gain.gain.exponentialRampToValueAtTime(0.001, startAt + 0.14);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start(startAt);
+        oscillator.stop(startAt + 0.14);
+      });
+    } catch (error) {
+      console.warn('Notification sound could not be played', error);
     }
-  };
+  }, [soundEnabled]);
 
   useEffect(() => {
     if (!user || !token) return;
@@ -61,7 +72,14 @@ export default function NotificationBell() {
       try {
         const response = await api.get('/notifications');
         if (response.data.success) {
-          setNotifications(response.data.data);
+          const fetched: Notification[] = Array.isArray(response.data.data) ? response.data.data : [];
+          fetched.forEach((notification) => seenNotificationIdsRef.current.add(notification.id));
+          setNotifications((current) => {
+            const merged = new Map([...fetched, ...current].map((notification) => [notification.id, notification]));
+            return [...merged.values()]
+              .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
+              .slice(0, 50);
+          });
         }
       } catch (err) {
         console.error('Failed to fetch notifications', err);
@@ -72,27 +90,55 @@ export default function NotificationBell() {
     const unlockOnInteraction = () => unlockNotificationSound();
     document.addEventListener('pointerdown', unlockOnInteraction, { once: true });
 
-    // Socket.io for real-time updates
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://tastifyy.onrender.com';
-    const socket = io(socketUrl, {
-      auth: { token },
-      transports: ['websocket'],
-    });
+    const socket = socketService.getSocket();
+    if (!socket) {
+      document.removeEventListener('pointerdown', unlockOnInteraction);
+      return;
+    }
 
-    socket.on('connect', () => {
-      socket.emit('join', { role: user.role, id: user.id });
-    });
+    const handleNotification = (notification: Notification) => {
+      if (!notification?.id || seenNotificationIdsRef.current.has(notification.id)) return;
+      seenNotificationIdsRef.current.add(notification.id);
+      setNotifications((current) => [notification, ...current].slice(0, 50));
+      playNotificationSound(notification.type);
 
-    socket.on('notification:new', (notification: Notification) => {
-      setNotifications((prev) => [notification, ...prev]);
-      playNotificationSound();
-    });
+      if (document.visibilityState === 'hidden' && browserPermission === 'granted') {
+        const isNewOrder = user.role === 'admin' && notification.type === 'order_created';
+        const title = isNewOrder ? 'New Tastifyy order' : 'Tastifyy order update';
+        const body = isNewOrder
+          ? 'A new order is ready to review.'
+          : user.role === 'customer'
+            ? 'Your order status has changed. Open Tastifyy for details.'
+            : 'There is a new order update. Open Tastifyy to review it.';
+        try {
+          new window.Notification(title, { body, tag: notification.id });
+        } catch (error) {
+          console.error('Browser notification could not be displayed', error);
+        }
+      }
+    };
+
+    socket.on('notification:new', handleNotification);
 
     return () => {
-      socket.disconnect();
+      socket.off('notification:new', handleNotification);
       document.removeEventListener('pointerdown', unlockOnInteraction);
     };
-  }, [user, token]);
+  }, [user, token, browserPermission, soundEnabled, unlockNotificationSound, playNotificationSound]);
+
+  const requestBrowserNotifications = async () => {
+    if (!('Notification' in window)) {
+      setBrowserPermission('unsupported');
+      return;
+    }
+
+    try {
+      const permission = await window.Notification.requestPermission();
+      setBrowserPermission(permission);
+    } catch (error) {
+      console.error('Could not request browser notification permission', error);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -167,6 +213,19 @@ export default function NotificationBell() {
             <button onClick={markAllAsRead} className="text-xs font-bold text-brand-primary hover:text-brand-secondary transition-colors">Mark all as read</button>
           )}
         </div>
+        {browserPermission === 'default' && (
+          <button
+            onClick={requestBrowserNotifications}
+            className="w-full px-4 py-2 text-left text-xs font-bold text-brand-primary border-b border-gray-100 hover:bg-orange-50"
+          >
+            Enable browser notifications
+          </button>
+        )}
+        {browserPermission === 'denied' && (
+          <p className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
+            Browser alerts are blocked. Allow them in your browser settings.
+          </p>
+        )}
         <div className="max-h-[320px] overflow-y-auto">
           {notifications.length === 0 ? (
             <div className="px-4 py-8 text-center">

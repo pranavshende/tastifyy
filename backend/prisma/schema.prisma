@@ -216,8 +216,24 @@ model User {
   admin_configs      AdminConfig[]
   admin_audit_logs   AdminAuditLog[]
   favorites          UserFavorite[]
+  auth_sessions      AuthSession[]
 
   @@map("users")
+}
+
+model AuthSession {
+  id                 String    @id @default(uuid()) @db.Uuid
+  user_id            String    @db.Uuid
+  refresh_token_hash String    @unique @db.VarChar(64)
+  expires_at         DateTime  @db.Timestamptz
+  revoked_at         DateTime? @db.Timestamptz
+  created_at         DateTime  @default(now()) @db.Timestamptz
+  last_used_at       DateTime? @db.Timestamptz
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, revoked_at])
+  @@map("auth_sessions")
 }
 
 model Address {
@@ -605,6 +621,7 @@ model Notification {
   title          String        @db.VarChar(255)
   body           String
   data           Json?
+  dedupe_key     String?       @unique @db.VarChar(255)
   is_read        Boolean       @default(false)
   created_at     DateTime      @default(now()) @db.Timestamptz
 

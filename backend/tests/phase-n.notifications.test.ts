@@ -44,6 +44,49 @@ describe('Phase N — Notifications & Realtime (FCM)', () => {
     });
   });
 
+  describe('createNotification deduplication', () => {
+    it('returns an existing notification without creating a duplicate', async () => {
+      const existing = { id: 'notification-1', dedupe_key: 'order-status:order-1:ready' };
+      prismaMock.notification.findUnique.mockResolvedValue(existing as any);
+
+      const { createNotification } = await import('../src/services/notification.service.js');
+      const result = await createNotification(
+        'user-1',
+        'customer',
+        'order_status',
+        'Ready for Pickup',
+        'Your order is ready.',
+        { orderId: 'order-1' },
+        { dedupeKey: 'order-status:order-1:ready' },
+      );
+
+      expect(result).toBe(existing);
+      expect(prismaMock.notification.create).not.toHaveBeenCalled();
+    });
+
+    it('recovers from concurrent duplicate inserts using the unique dedupe key', async () => {
+      const existing = { id: 'notification-1', dedupe_key: 'order-status:order-1:ready' };
+      prismaMock.notification.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(existing as any);
+      prismaMock.notification.create.mockRejectedValue({ code: 'P2002' } as any);
+
+      const { createNotification } = await import('../src/services/notification.service.js');
+      const result = await createNotification(
+        'user-1',
+        'customer',
+        'order_status',
+        'Ready for Pickup',
+        'Your order is ready.',
+        { orderId: 'order-1' },
+        { dedupeKey: 'order-status:order-1:ready' },
+      );
+
+      expect(result).toBe(existing);
+      expect(prismaMock.notification.findUnique).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('Socket event names contract', () => {
     it('validates expected Socket events are defined correctly', () => {
       // These are the event names our platform emits — ensuring they match client expectations

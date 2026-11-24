@@ -76,7 +76,19 @@ export default function OrderDetails() {
         }
       };
 
-      const events = ['order:restaurant_confirmed', 'order:accepted', 'order:rejected', 'order:preparing', 'order:ready', 'order:ready_for_pickup', 'order:delivered', 'order:cancelled'];
+      const events = [
+        'order:restaurant_confirmed',
+        'order:accepted',
+        'order:rejected',
+        'order:preparing',
+        'order:ready',
+        'order:ready_for_pickup',
+        'order:rider_assigned',
+        'order:picked_up',
+        'order:out_for_delivery',
+        'order:delivered',
+        'order:cancelled',
+      ];
       events.forEach(event => socket.on(event, handleStatusUpdate));
 
       socketService.setReconnectCallback(fetchOrder);
@@ -121,10 +133,12 @@ export default function OrderDetails() {
     { key: 'restaurant_confirmed', label: 'Restaurant Confirmed' },
     { key: 'preparing', label: 'Preparing Food' },
     { key: 'ready', label: 'Ready' },
+    { key: 'out_for_delivery', label: 'Out for Delivery' },
     { key: 'delivered', label: 'Delivered' }
   ];
 
-  const currentStageIndex = timelineStages.findIndex(s => s.key === order.status);
+  const timelineStatus = ['rider_assigned', 'picked_up'].includes(order.status) ? 'out_for_delivery' : order.status;
+  const currentStageIndex = timelineStages.findIndex(s => s.key === timelineStatus);
   const isCancelled = order.status === 'cancelled' || order.status === 'rejected';
 
   const handleSupportSubmit = (e: React.FormEvent) => {

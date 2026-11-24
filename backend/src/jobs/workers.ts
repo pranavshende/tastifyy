@@ -8,6 +8,7 @@ import { sendOTP, sendDeliveryOTP } from '../services/sms.service.js';
 import { sendPushNotification, createNotification } from '../services/notification.service.js';
 import { assignDeliveryPartner } from '../services/assignment.service.js';
 import { processWhatsAppAlert } from '../services/whatsapp.service.js';
+import { notifyOrderStatusChanged } from '../services/order-notification.service.js';
 import type { Request, Response } from 'express'; // Mock req/res for triggerPayout if needed
 
 // Order Timeout Worker
@@ -86,6 +87,7 @@ export const orderTimeoutWorker = new Worker('order-timeout', async (job) => {
     };
     io.to(`customer_${order.customer_id}`).emit('order:cancelled', payload);
     io.to('admin').emit('order:cancelled', payload);
+    await notifyOrderStatusChanged(order, 'cancelled');
   } catch (e) {
     // getIO might throw if not initialized yet in some test contexts, but usually fine here
     console.error('[Order Timeout] Socket emit failed', e);
@@ -146,14 +148,17 @@ export const smsWorker = new Worker('sms', async (job) => {
 
 // Notification Worker
 export const notificationWorker = new Worker('notification', async (job) => {
-  const { type, userId, userRole, title, body, data } = job.data;
+  const { type, userId, userRole, title, body, data, notificationType, dedupeKey } = job.data;
   console.log(`[Notification Worker] Sending ${type} to ${userId}`);
   
   if (type === 'push_only' || type === 'both') {
     await sendPushNotification(userId, title, body, data);
   }
   if (type === 'db_only' || type === 'both') {
-    await createNotification(userId, userRole, 'system', title, body, data);
+    await createNotification(userId, userRole, 'system', title, body, data, {
+      notificationType: notificationType || 'system',
+      dedupeKey,
+    });
   }
 });
 
