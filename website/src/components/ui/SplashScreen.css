@@ -9,13 +9,11 @@
     #071426;
   pointer-events: none;
   opacity: 1;
-  visibility: visible;
-  transition: opacity 360ms ease, visibility 360ms ease;
+  transition: opacity 360ms ease;
 }
 
 .site-splash--exiting {
   opacity: 0;
-  visibility: hidden;
 }
 
 .site-splash__content {
