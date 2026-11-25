@@ -184,7 +184,7 @@ export default function OrderDetails() {
 
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed bottom-6 right-6 bg-brand-dark text-white px-6 py-4 rounded-xl shadow-2xl z-[100] animate-fade-in-up flex items-center gap-3">
+        <div className="fixed bottom-6 right-6 bg-brand-secondary text-white px-6 py-4 rounded-xl shadow-2xl z-[100] animate-fade-in-up flex items-center gap-3">
           <div className="w-2 h-2 bg-brand-primary rounded-full animate-pulse"></div>
           <span className="font-bold">{toast}</span>
         </div>

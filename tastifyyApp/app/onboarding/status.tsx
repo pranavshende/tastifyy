@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'rea
 import { router } from 'expo-router';
 import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
+import { BrandColors } from '../../constants/theme';
 
 export default function StatusScreen() {
   const { user, logout } = useAuthStore();
@@ -39,8 +40,8 @@ export default function StatusScreen() {
   if (status === 'loading') {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#E86A22" />
-        <Text style={{ marginTop: 16, color: '#E86A22', fontWeight: 'bold' }}>Checking application status...</Text>
+        <ActivityIndicator size="large" color={BrandColors.primary} />
+        <Text style={{ marginTop: 16, color: BrandColors.primary, fontWeight: 'bold' }}>Checking application status...</Text>
       </View>
     );
   }
@@ -50,7 +51,7 @@ export default function StatusScreen() {
       <View style={styles.card}>
         {status === 'pending' && (
           <>
-            <View style={[styles.iconWrap, { backgroundColor: '#FFF5E6' }]}><Text style={styles.icon}>⏳</Text></View>
+            <View style={[styles.iconWrap, { backgroundColor: BrandColors.background }]}><Text style={styles.icon}>⏳</Text></View>
             <Text style={styles.title}>Application Under Review</Text>
             <Text style={styles.desc}>Your application has been submitted successfully and is currently being reviewed by our team.</Text>
           </>
@@ -88,12 +89,12 @@ export default function StatusScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F5', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  card: { width: '100%', backgroundColor: '#fff', padding: 32, borderRadius: 24, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 12, elevation: 5 },
+  container: { flex: 1, backgroundColor: BrandColors.background, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  card: { width: '100%', backgroundColor: BrandColors.surface, padding: 32, borderRadius: 24, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 12, elevation: 5 },
   iconWrap: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
   icon: { fontSize: 40 },
-  title: { fontSize: 24, fontWeight: '900', color: '#171717', marginBottom: 12, textAlign: 'center' },
-  desc: { fontSize: 15, color: '#888', textAlign: 'center', marginBottom: 32, lineHeight: 22 },
-  logoutBtn: { width: '100%', backgroundColor: '#F5F5F5', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-  logoutText: { color: '#555', fontSize: 16, fontWeight: '700' },
+  title: { fontSize: 24, fontWeight: '900', color: BrandColors.text, marginBottom: 12, textAlign: 'center' },
+  desc: { fontSize: 15, color: BrandColors.textMuted, textAlign: 'center', marginBottom: 32, lineHeight: 22 },
+  logoutBtn: { width: '100%', backgroundColor: BrandColors.background, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  logoutText: { color: BrandColors.textSecondary, fontSize: 16, fontWeight: '700' },
 });

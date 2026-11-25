@@ -18,6 +18,7 @@ import { useAuthStore } from '../../store/authStore';
 import api from '../../api/axios';
 import { router } from 'expo-router';
 import { useCartStore } from '../../store/cartStore';
+import { BrandColors } from '../../constants/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -48,13 +49,13 @@ interface RestaurantItem {
 }
 
 const CUISINE_CATEGORIES = [
-  { id: 'All', label: 'All', icon: 'silverware-fork-knife', bg: '#FFF0E6', activeBg: '#E86A22' },
-  { id: 'Burgers', label: 'Burgers', icon: 'hamburger', bg: '#FEF3C7', activeBg: '#E86A22' },
-  { id: 'Pizza', label: 'Pizza', icon: 'pizza', bg: '#FEE2E2', activeBg: '#E86A22' },
-  { id: 'Indian', label: 'Indian', icon: 'pot-steam', bg: '#DCFCE7', activeBg: '#E86A22' },
-  { id: 'Biryani', label: 'Biryani', icon: 'rice', bg: '#EDE9FE', activeBg: '#E86A22' },
-  { id: 'Desserts', label: 'Desserts', icon: 'cake-variant', bg: '#FCE7F3', activeBg: '#E86A22' },
-  { id: 'Beverages', label: 'Beverages', icon: 'cup', bg: '#E0F2FE', activeBg: '#E86A22' },
+  { id: 'All', label: 'All', icon: 'silverware-fork-knife', bg: BrandColors.primaryLight, activeBg: BrandColors.primary },
+  { id: 'Burgers', label: 'Burgers', icon: 'hamburger', bg: BrandColors.primaryLight, activeBg: BrandColors.primary },
+  { id: 'Pizza', label: 'Pizza', icon: 'pizza', bg: BrandColors.primaryLight, activeBg: BrandColors.primary },
+  { id: 'Indian', label: 'Indian', icon: 'pot-steam', bg: BrandColors.secondaryLight, activeBg: BrandColors.primary },
+  { id: 'Biryani', label: 'Biryani', icon: 'rice', bg: BrandColors.secondaryLight, activeBg: BrandColors.primary },
+  { id: 'Desserts', label: 'Desserts', icon: 'cake-variant', bg: BrandColors.primaryLight, activeBg: BrandColors.primary },
+  { id: 'Beverages', label: 'Beverages', icon: 'cup', bg: BrandColors.secondaryLight, activeBg: BrandColors.primary },
 ];
 
 export default function CustomerHome() {
@@ -140,7 +141,7 @@ export default function CustomerHome() {
           onPress={() => router.push('/(customer)/search')}
           accessibilityLabel="Search"
         >
-          <Ionicons name="search-outline" size={20} color="#171717" />
+          <Ionicons name="search-outline" size={20} color={BrandColors.text} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -148,7 +149,7 @@ export default function CustomerHome() {
           onPress={() => router.push('/(customer)/cart')}
           accessibilityLabel="View Cart"
         >
-          <Ionicons name="cart-outline" size={20} color="#171717" />
+          <Ionicons name="cart-outline" size={20} color={BrandColors.text} />
           {cartCount > 0 && (
             <View style={styles.cartBadge}>
               <Text style={styles.cartBadgeText}>{cartCount}</Text>
@@ -161,7 +162,7 @@ export default function CustomerHome() {
           onPress={() => router.push('/(customer)/profile')}
           accessibilityLabel="Profile"
         >
-          <Ionicons name="person-outline" size={20} color="#171717" />
+          <Ionicons name="person-outline" size={20} color={BrandColors.text} />
         </TouchableOpacity>
       </View>
     </View>
@@ -195,18 +196,18 @@ export default function CustomerHome() {
             activeOpacity={0.9}
             onPress={() => router.push('/(customer)/search')}
           >
-            <Ionicons name="search" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+            <Ionicons name="search" size={18} color={BrandColors.textMuted} style={{ marginRight: 8 }} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search for restaurants or cuisines..."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={BrandColors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
               returnKeyType="search"
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={16} color="#9CA3AF" />
+                <Ionicons name="close-circle" size={16} color={BrandColors.textMuted} />
               </TouchableOpacity>
             )}
           </TouchableOpacity>
@@ -241,7 +242,7 @@ export default function CustomerHome() {
                 <MaterialCommunityIcons
                   name={cat.icon as any}
                   size={24}
-                  color={isActive ? '#ffffff' : '#4B5563'}
+                  color={isActive ? BrandColors.surface : BrandColors.textSecondary}
                 />
               </View>
               <Text style={[styles.categoryLabel, isActive && styles.categoryLabelActive]}>
@@ -269,7 +270,7 @@ export default function CustomerHome() {
         }}
       >
         <Text style={styles.viewAllText}>View All</Text>
-        <Ionicons name="arrow-forward" size={14} color="#E86A22" />
+        <Ionicons name="arrow-forward" size={14} color={BrandColors.primary} />
       </TouchableOpacity>
     </View>
   );
@@ -293,8 +294,8 @@ export default function CustomerHome() {
             {item.logo_url ? (
               <Image source={{ uri: item.logo_url }} style={styles.avatarImg} />
             ) : (
-              <View style={[styles.avatarPlaceholder, { backgroundColor: '#800000' }]}>
-                <Ionicons name="restaurant" size={18} color="#fff" />
+              <View style={[styles.avatarPlaceholder, { backgroundColor: BrandColors.primary }]}>
+                <Ionicons name="restaurant" size={18} color={BrandColors.surface} />
               </View>
             )}
           </View>
@@ -303,22 +304,22 @@ export default function CustomerHome() {
             <Text style={styles.restaurantName} numberOfLines={1}>{item.name}</Text>
             <Text style={styles.restaurantCuisines} numberOfLines={1}>{cuisinesList}</Text>
             <View style={styles.metaRow}>
-              <Ionicons name="star" size={14} color="#F59E0B" />
+              <Ionicons name="star" size={14} color={BrandColors.primary} />
               <Text style={styles.ratingText}> {ratingValue} </Text>
               <Text style={styles.reviewsText}>({reviewsText})</Text>
               <Text style={styles.metaDot}>•</Text>
-              <MaterialCommunityIcons name="moped" size={16} color="#4B5563" />
+              <MaterialCommunityIcons name="moped" size={16} color={BrandColors.textSecondary} />
               <Text style={styles.deliveryTimeText}> {prepTime}</Text>
             </View>
           </View>
 
           <View style={styles.statusCol}>
-            <View style={[styles.statusBadge, { backgroundColor: item.is_open ? '#DCFCE7' : '#FEE2E2' }]}>
-              <Text style={[styles.statusText, { color: item.is_open ? '#15803D' : '#B91C1C' }]}>
+            <View style={[styles.statusBadge, { backgroundColor: item.is_open ? BrandColors.secondaryLight : BrandColors.dangerLight }]}>
+              <Text style={[styles.statusText, { color: item.is_open ? BrandColors.secondaryDark : BrandColors.danger }]}>
                 {item.is_open ? 'Open' : 'Closed'}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" style={{ marginTop: 6 }} />
+            <Ionicons name="chevron-forward" size={18} color={BrandColors.textMuted} style={{ marginTop: 6 }} />
           </View>
         </TouchableOpacity>
 
@@ -344,8 +345,8 @@ export default function CustomerHome() {
                     }}
                     style={styles.dishImage}
                   />
-                  <View style={[styles.vegIndicatorBadge, { borderColor: dish.is_veg ? '#10B981' : '#EF4444' }]}>
-                    <View style={[styles.vegIndicatorDot, { backgroundColor: dish.is_veg ? '#10B981' : '#EF4444' }]} />
+                  <View style={[styles.vegIndicatorBadge, { borderColor: dish.is_veg ? BrandColors.secondary : '#EF4444' }]}>
+                    <View style={[styles.vegIndicatorDot, { backgroundColor: dish.is_veg ? BrandColors.secondary : '#EF4444' }]} />
                   </View>
                 </View>
 
@@ -357,7 +358,7 @@ export default function CustomerHome() {
                       style={styles.addMiniBtn}
                       onPress={(e) => handleQuickAdd(item.id, dish, e)}
                     >
-                      <Ionicons name="add" size={14} color="#E86A22" />
+                      <Ionicons name="add" size={14} color={BrandColors.primary} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -371,12 +372,12 @@ export default function CustomerHome() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor={BrandColors.surface} />
       {renderHeader()}
 
       {loading && !refreshing ? (
         <View style={styles.centerLoading}>
-          <ActivityIndicator size="large" color="#E86A22" />
+          <ActivityIndicator size="large" color={BrandColors.primary} />
           <Text style={styles.loadingText}>Fetching delicious restaurants...</Text>
         </View>
       ) : (
@@ -387,7 +388,7 @@ export default function CustomerHome() {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#E86A22']} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[BrandColors.primary]} />
           }
           ListHeaderComponent={
             <>
@@ -398,7 +399,7 @@ export default function CustomerHome() {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="fast-food-outline" size={56} color="#D1D5DB" />
+              <Ionicons name="fast-food-outline" size={56} color={BrandColors.border} />
               <Text style={styles.emptyTitle}>No Restaurants Found</Text>
               <Text style={styles.emptySubtitle}>
                 {searchQuery
@@ -416,7 +417,7 @@ export default function CustomerHome() {
         activeOpacity={0.9}
         onPress={() => router.push('/(customer)/Assistant')}
       >
-        <Ionicons name="sparkles" size={18} color="#ffffff" style={{ marginRight: 6 }} />
+        <Ionicons name="sparkles" size={18} color={BrandColors.surface} style={{ marginRight: 6 }} />
         <Text style={styles.aiFloatingText}>Ask AI</Text>
       </TouchableOpacity>
     </View>
@@ -426,7 +427,7 @@ export default function CustomerHome() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: BrandColors.background,
   },
   centerLoading: {
     flex: 1,
@@ -437,7 +438,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#6B7280',
+    color: BrandColors.textMuted,
     fontWeight: '500',
   },
 
@@ -449,9 +450,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 52,
     paddingBottom: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: BrandColors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: BrandColors.backgroundMuted,
   },
   brandRow: {
     alignItems: 'flex-start',
@@ -463,7 +464,7 @@ const styles = StyleSheet.create({
   brandTagline: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#6B7280',
+    color: BrandColors.textMuted,
     marginTop: -3,
   },
   topActions: {
@@ -475,7 +476,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: BrandColors.backgroundMuted,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -484,7 +485,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -2,
     right: -2,
-    backgroundColor: '#E86A22',
+    backgroundColor: BrandColors.primary,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
@@ -493,7 +494,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   cartBadgeText: {
-    color: '#ffffff',
+    color: BrandColors.surface,
     fontSize: 10,
     fontWeight: '800',
   },
@@ -538,24 +539,24 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   moodText: {
-    color: '#E5E7EB',
+    color: BrandColors.border,
     fontSize: 11,
     fontWeight: '700',
   },
   heroHeadline: {
     fontSize: 26,
     fontWeight: '900',
-    color: '#ffffff',
+    color: BrandColors.surface,
     lineHeight: 32,
     letterSpacing: -0.5,
     marginBottom: 6,
   },
   heroHighlight: {
-    color: '#E86A22',
+    color: BrandColors.primary,
   },
   heroSubtext: {
     fontSize: 13,
-    color: '#D1D5DB',
+    color: BrandColors.border,
     fontWeight: '500',
     lineHeight: 18,
     marginBottom: 16,
@@ -564,7 +565,7 @@ const styles = StyleSheet.create({
   searchPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: BrandColors.surface,
     borderRadius: 99,
     paddingHorizontal: 16,
     height: 46,
@@ -577,7 +578,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#111827',
+    color: BrandColors.text,
     fontWeight: '500',
     paddingVertical: 0,
   },
@@ -603,7 +604,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   categoryIconCircleActive: {
-    shadowColor: '#E86A22',
+    shadowColor: BrandColors.primary,
     shadowOpacity: 0.35,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -612,18 +613,18 @@ const styles = StyleSheet.create({
   categoryLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6B7280',
+    color: BrandColors.textMuted,
     textAlign: 'center',
   },
   categoryLabelActive: {
-    color: '#E86A22',
+    color: BrandColors.primary,
     fontWeight: '900',
   },
   activeBar: {
     width: 20,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#E86A22',
+    backgroundColor: BrandColors.primary,
     marginTop: 4,
   },
 
@@ -643,12 +644,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#111827',
+    color: BrandColors.text,
     letterSpacing: -0.4,
   },
   sectionSubtitle: {
     fontSize: 12,
-    color: '#6B7280',
+    color: BrandColors.textMuted,
     fontWeight: '500',
     marginTop: 2,
   },
@@ -660,7 +661,7 @@ const styles = StyleSheet.create({
   viewAllText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#E86A22',
+    color: BrandColors.primary,
   },
 
   // Restaurant Card
@@ -668,13 +669,13 @@ const styles = StyleSheet.create({
     paddingBottom: 90,
   },
   restaurantCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: BrandColors.surface,
     borderRadius: 20,
     marginHorizontal: 16,
     marginBottom: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: BrandColors.backgroundMuted,
     shadowColor: '#000',
     shadowOpacity: 0.04,
     shadowRadius: 10,
@@ -690,7 +691,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: BrandColors.backgroundMuted,
     marginRight: 12,
   },
   avatarImg: {
@@ -710,11 +711,11 @@ const styles = StyleSheet.create({
   restaurantName: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#111827',
+    color: BrandColors.text,
   },
   restaurantCuisines: {
     fontSize: 12,
-    color: '#6B7280',
+    color: BrandColors.textMuted,
     fontWeight: '500',
     marginTop: 2,
   },
@@ -726,21 +727,21 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#111827',
+    color: BrandColors.text,
   },
   reviewsText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: BrandColors.textMuted,
     fontWeight: '500',
   },
   metaDot: {
     marginHorizontal: 6,
-    color: '#D1D5DB',
+    color: BrandColors.border,
   },
   deliveryTimeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4B5563',
+    color: BrandColors.textSecondary,
   },
   statusCol: {
     alignItems: 'flex-end',
@@ -763,16 +764,16 @@ const styles = StyleSheet.create({
   },
   dishCard: {
     width: 120,
-    backgroundColor: '#ffffff',
+    backgroundColor: BrandColors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: BrandColors.backgroundMuted,
     overflow: 'hidden',
   },
   dishImageWrap: {
     width: '100%',
     height: 80,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: BrandColors.background,
     position: 'relative',
   },
   dishImage: {
@@ -803,7 +804,7 @@ const styles = StyleSheet.create({
   dishName: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#1F2937',
+    color: BrandColors.text,
   },
   dishPriceRow: {
     flexDirection: 'row',
@@ -814,13 +815,13 @@ const styles = StyleSheet.create({
   dishPrice: {
     fontSize: 13,
     fontWeight: '900',
-    color: '#E86A22',
+    color: BrandColors.primary,
   },
   addMiniBtn: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#FFF0E6',
+    backgroundColor: BrandColors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -835,12 +836,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#374151',
+    color: BrandColors.textSecondary,
     marginTop: 12,
   },
   emptySubtitle: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: BrandColors.textMuted,
     textAlign: 'center',
     marginTop: 4,
     lineHeight: 18,
@@ -853,7 +854,7 @@ const styles = StyleSheet.create({
     right: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111827',
+    backgroundColor: BrandColors.text,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 99,
@@ -865,7 +866,7 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   aiFloatingText: {
-    color: '#ffffff',
+    color: BrandColors.surface,
     fontSize: 13,
     fontWeight: '800',
   },

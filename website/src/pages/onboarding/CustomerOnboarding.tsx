@@ -138,7 +138,7 @@ export default function CustomerOnboarding() {
             <div className="flex justify-end">
               <button 
                 onClick={() => setStep(2)}
-                className="bg-brand-dark hover:bg-black text-white px-8 py-4 rounded-xl font-bold transition-all shadow-md flex items-center gap-2"
+                className="bg-brand-primary hover:bg-brand-secondary text-white px-8 py-4 rounded-xl font-bold transition-all shadow-md flex items-center gap-2"
               >
                 Next <ArrowRight className="w-5 h-5" />
               </button>
@@ -228,7 +228,7 @@ export default function CustomerOnboarding() {
             
             <button 
               onClick={() => navigate('/customer/home')}
-              className="bg-brand-dark hover:bg-black text-white px-10 py-4 rounded-xl font-bold transition-all shadow-md inline-flex items-center gap-2"
+              className="bg-brand-primary hover:bg-brand-secondary text-white px-10 py-4 rounded-xl font-bold transition-all shadow-md inline-flex items-center gap-2"
             >
               Start Exploring <ArrowRight className="w-5 h-5" />
             </button>

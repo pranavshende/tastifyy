@@ -104,24 +104,24 @@ function getCuisineTheme(tags: string[] = [], name: string = '') {
   const text = `${name} ${tags.join(' ')}`.toLowerCase();
   if (text.includes('burger') || text.includes('fast food') || text.includes('sandwich')) {
     return {
-      bg: 'bg-amber-950',
+      bg: 'bg-orange-700',
       icon: '🍔',
     };
   }
   if (text.includes('pizza') || text.includes('italian') || text.includes('pasta')) {
     return {
-      bg: 'bg-red-800',
+      bg: 'bg-orange-600',
       icon: '🍕',
     };
   }
   if (text.includes('cake') || text.includes('bakery') || text.includes('dessert')) {
     return {
-      bg: 'bg-pink-900',
+      bg: 'bg-green-700',
       icon: '🎂',
     };
   }
   return {
-    bg: 'bg-[#6D1B1B]',
+    bg: 'bg-brand-primary',
     icon: '🍛',
   };
 }

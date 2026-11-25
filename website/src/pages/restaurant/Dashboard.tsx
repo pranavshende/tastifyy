@@ -303,7 +303,7 @@ export default function RestaurantDashboard() {
             </div>
 
             {/* Column 3: Ready */}
-            <div className="bg-[#F8F9FA] rounded-2xl p-4 flex flex-col min-w-[320px] max-w-[340px] snap-start border border-gray-200 shadow-sm">
+            <div className="bg-brand-light rounded-2xl p-4 flex flex-col min-w-[320px] max-w-[340px] snap-start border border-gray-200 shadow-sm">
               <div className="flex items-center justify-between mb-4 px-1">
                 <h2 className="text-xs font-black text-gray-900 flex items-center">
                   <div className="w-2.5 h-2.5 bg-green-500 rounded-full mr-2"></div>

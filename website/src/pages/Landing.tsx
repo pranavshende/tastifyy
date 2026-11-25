@@ -103,7 +103,7 @@ export default function Landing() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FFFCF8] font-sans text-brand-dark selection:bg-brand-primary selection:text-white flex flex-col pb-16 md:pb-0">
+    <div className="min-h-screen bg-brand-light font-sans text-brand-dark selection:bg-brand-primary selection:text-white flex flex-col pb-16 md:pb-0">
       <SeoMetadata
         title="Discover Tastifyy | Local Food. Real Flavours."
         description="Discover restaurants, explore menus, and find local food ordering options in Sakoli with Tastifyy."
@@ -192,7 +192,7 @@ export default function Landing() {
                 </button>
               </form>
                           <div className="flex flex-wrap justify-center lg:justify-start gap-3 mt-5">
-                            <Link to="/customer/home" className="inline-flex items-center px-4 py-2.5 rounded-xl bg-gray-900 text-white font-bold text-sm hover:bg-black transition-colors">
+                            <Link to="/customer/home" className="inline-flex items-center px-4 py-2.5 rounded-xl bg-brand-primary text-white font-bold text-sm hover:bg-brand-secondary transition-colors">
                               Use Web App
                             </Link>
                             <button onClick={handleAppDownload} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-gray-800 border border-gray-200 font-bold text-sm hover:border-brand-primary hover:text-brand-primary transition-colors">
@@ -264,7 +264,7 @@ export default function Landing() {
         </section>
 
         {/* 4. Trending Restaurants */}
-        <section className="py-16 bg-[#FFFCF8]">
+        <section className="py-16 bg-brand-light">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <h2 className="text-2xl md:text-3xl font-black text-gray-900 mb-8">Trending Near You</h2>
             
@@ -344,7 +344,7 @@ export default function Landing() {
         </section>
 
         {/* 6. How It Works */}
-        <section className="py-20 bg-[#FFFCF8]" id="how-it-works">
+        <section className="py-20 bg-brand-light" id="how-it-works">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4">How Tastifyy Works</h2>
@@ -386,7 +386,7 @@ export default function Landing() {
                 { title: 'Easy Ordering', desc: 'A seamless experience from discovery to checkout.', icon: <CheckCircle className="w-8 h-8 text-green-500" /> },
                 { title: 'Secure Payments', desc: 'Safe, reliable, and lightning-fast payment methods.', icon: <ShieldCheck className="w-8 h-8 text-purple-500" /> }
               ].map((feature, i) => (
-                <div key={i} className="bg-[#FFFCF8] p-8 rounded-3xl border border-orange-50 hover:border-orange-100 hover:shadow-sm transition-all text-center flex flex-col items-center">
+                <div key={i} className="bg-brand-light p-8 rounded-3xl border border-orange-50 hover:border-orange-100 hover:shadow-sm transition-all text-center flex flex-col items-center">
                   <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-6">
                     {feature.icon}
                   </div>
@@ -399,21 +399,21 @@ export default function Landing() {
         </section>
 
         {/* 8. Partner CTA */}
-        <section className="py-16 bg-[#FFFCF8]">
+        <section className="py-16 bg-brand-light">
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
-            <div className="bg-gray-900 rounded-[2rem] p-8 md:p-14 text-center relative overflow-hidden shadow-2xl">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-brand-primary/20 rounded-full blur-[100px] pointer-events-none"></div>
+            <div className="bg-brand-secondary rounded-[2rem] p-8 md:p-14 text-center relative overflow-hidden shadow-2xl">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-white/10 rounded-full blur-[100px] pointer-events-none"></div>
               
               <h2 className="relative z-10 text-3xl md:text-5xl font-black text-white mb-6 leading-tight">
                 Good food is just a <br className="hidden sm:block" />
-                <span className="text-brand-primary">few clicks away.</span>
+                <span className="text-orange-100">few clicks away.</span>
               </h2>
-              <p className="relative z-10 text-gray-400 text-lg mb-10 max-w-xl mx-auto">
+              <p className="relative z-10 text-white/85 text-lg mb-10 max-w-xl mx-auto">
                 Discover something delicious and order from your favorite restaurants today.
               </p>
               
               <div className="relative z-10 flex flex-col sm:flex-row justify-center gap-4">
-                <Link to="/customer/restaurants" className="px-8 py-4 bg-brand-primary hover:bg-brand-secondary text-white font-bold rounded-xl shadow-lg shadow-brand-primary/30 transition-all transform hover:-translate-y-1">
+                <Link to="/customer/restaurants" className="px-8 py-4 bg-brand-primary hover:bg-orange-600 text-white font-bold rounded-xl shadow-lg shadow-black/10 transition-all transform hover:-translate-y-1">
                   Explore Restaurants
                 </Link>
                 <Link to="/onboarding/delivery" className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold rounded-xl backdrop-blur-md transition-all">

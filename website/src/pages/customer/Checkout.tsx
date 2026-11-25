@@ -243,7 +243,7 @@ export default function Checkout() {
                 setLoading(false);
               }
             },
-            theme: { color: '#E86A22' },
+            theme: { color: '#FF7900' },
             modal: {
               ondismiss: function() {
                 setLoading(false);
@@ -409,7 +409,7 @@ export default function Checkout() {
                   })() : (
                     <div className="mt-3">
                       <p className="text-red-500 font-medium text-sm mb-3">No delivery address found.</p>
-                      <button onClick={() => { setShowAddressModal(true); setShowAddAddressForm(true); }} className="inline-flex items-center gap-2 text-sm font-bold text-white bg-gray-900 px-4 py-2 rounded-lg hover:bg-black transition-colors">
+                      <button onClick={() => { setShowAddressModal(true); setShowAddAddressForm(true); }} className="inline-flex items-center gap-2 text-sm font-bold text-white bg-brand-primary px-4 py-2 rounded-lg hover:bg-brand-secondary transition-colors">
                         <Plus className="w-4 h-4" /> Add Address
                       </button>
                     </div>
@@ -488,7 +488,7 @@ export default function Checkout() {
                   />
                   <button 
                     onClick={handleApplyCoupon}
-                    className="bg-gray-900 text-white font-bold px-6 py-3 rounded-xl hover:bg-black transition-colors"
+                    className="bg-brand-primary text-white font-bold px-6 py-3 rounded-xl hover:bg-brand-secondary transition-colors"
                   >
                     Apply
                   </button>

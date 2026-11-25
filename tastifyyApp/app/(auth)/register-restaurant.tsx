@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import api from '../../api/axios';
+import { BrandColors } from '../../constants/theme';
 
 export default function RegisterRestaurantScreen() {
   const [email, setEmail] = useState('');
@@ -72,7 +73,7 @@ export default function RegisterRestaurantScreen() {
           <TextInput
             style={styles.input}
             placeholder="Tastifyy Pizzeria"
-            placeholderTextColor="#aaa"
+            placeholderTextColor={BrandColors.textMuted}
             value={restaurantName}
             onChangeText={setRestaurantName}
             autoCapitalize="words"
@@ -82,7 +83,7 @@ export default function RegisterRestaurantScreen() {
           <TextInput
             style={styles.input}
             placeholder="+91 98765 43210"
-            placeholderTextColor="#aaa"
+            placeholderTextColor={BrandColors.textMuted}
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
@@ -92,7 +93,7 @@ export default function RegisterRestaurantScreen() {
           <TextInput
             style={styles.input}
             placeholder="admin@restaurant.com"
-            placeholderTextColor="#aaa"
+            placeholderTextColor={BrandColors.textMuted}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -103,7 +104,7 @@ export default function RegisterRestaurantScreen() {
           <TextInput
             style={styles.input}
             placeholder="••••••••"
-            placeholderTextColor="#aaa"
+            placeholderTextColor={BrandColors.textMuted}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -115,7 +116,7 @@ export default function RegisterRestaurantScreen() {
             disabled={loading}
           >
             {loading
-              ? <ActivityIndicator color="#fff" />
+              ? <ActivityIndicator color={BrandColors.surface} />
               : <Text style={styles.primaryBtnText}>Create Partner Account</Text>
             }
           </TouchableOpacity>
@@ -137,35 +138,35 @@ export default function RegisterRestaurantScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F5' },
+  container: { flex: 1, backgroundColor: BrandColors.background },
   scroll: { flexGrow: 1, padding: 24, paddingTop: 60 },
   header: { alignItems: 'center', marginBottom: 36, marginTop: 20 },
-  brand: { fontSize: 26, fontWeight: '900', color: '#171717', letterSpacing: -0.5, marginBottom: 6, textAlign: 'center' },
-  tagline: { fontSize: 15, color: '#888', fontWeight: '500', textAlign: 'center' },
+  brand: { fontSize: 26, fontWeight: '900', color: BrandColors.text, letterSpacing: -0.5, marginBottom: 6, textAlign: 'center' },
+  tagline: { fontSize: 15, color: BrandColors.textMuted, fontWeight: '500', textAlign: 'center' },
 
   form: { gap: 4 },
-  label: { fontSize: 13, fontWeight: '600', color: '#444', marginBottom: 6, marginTop: 12 },
+  label: { fontSize: 13, fontWeight: '600', color: BrandColors.text, marginBottom: 6, marginTop: 12 },
   input: {
-    backgroundColor: '#fff', borderRadius: 12,
+    backgroundColor: BrandColors.surface, borderRadius: 12,
     paddingHorizontal: 16, paddingVertical: 14,
-    fontSize: 15, color: '#171717',
-    borderWidth: 1.5, borderColor: '#EEE',
+    fontSize: 15, color: BrandColors.text,
+    borderWidth: 1.5, borderColor: BrandColors.border,
   },
 
   primaryBtn: {
-    backgroundColor: '#E86A22', borderRadius: 14,
+    backgroundColor: BrandColors.primary, borderRadius: 14,
     paddingVertical: 16, alignItems: 'center', marginTop: 32,
-    shadowColor: '#E86A22', shadowOpacity: 0.3,
+    shadowColor: BrandColors.primary, shadowOpacity: 0.3,
     shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8,
   },
   primaryBtnDisabled: { opacity: 0.6 },
-  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
+  primaryBtnText: { color: BrandColors.surface, fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
 
   ghostBtn: {
     marginTop: 16,
     paddingVertical: 14, alignItems: 'center',
   },
-  ghostBtnText: { color: '#888', fontSize: 15, fontWeight: '600' },
+  ghostBtnText: { color: BrandColors.textMuted, fontSize: 15, fontWeight: '600' },
 
-  footer: { marginTop: 40, textAlign: 'center', fontSize: 11, color: '#BBB', lineHeight: 16 },
+  footer: { marginTop: 40, textAlign: 'center', fontSize: 11, color: BrandColors.textMuted, lineHeight: 16 },
 });

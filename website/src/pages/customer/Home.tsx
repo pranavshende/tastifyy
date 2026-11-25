@@ -29,13 +29,13 @@ interface Restaurant {
 }
 
 const CUISINE_CATEGORIES = [
-  { id: 'all', name: 'All', icon: '🍽️', bg: 'bg-[#FF5B33]', text: 'text-white' },
+  { id: 'all', name: 'All', icon: '🍽️', bg: 'bg-brand-primary', text: 'text-white' },
   { id: 'burger', name: 'Burgers', icon: '🍔', bg: 'bg-orange-100', text: 'text-orange-700' },
-  { id: 'pizza', name: 'Pizza', icon: '🍕', bg: 'bg-rose-100', text: 'text-rose-700' },
-  { id: 'indian', name: 'Indian', icon: '🍛', bg: 'bg-emerald-100', text: 'text-emerald-700' },
-  { id: 'sushi', name: 'Sushi', icon: '🍣', bg: 'bg-indigo-100', text: 'text-indigo-700' },
-  { id: 'desserts', name: 'Desserts', icon: '🍰', bg: 'bg-pink-100', text: 'text-pink-700' },
-  { id: 'beverages', name: 'Beverages', icon: '🥤', bg: 'bg-cyan-100', text: 'text-cyan-700' },
+  { id: 'pizza', name: 'Pizza', icon: '🍕', bg: 'bg-orange-100', text: 'text-orange-800' },
+  { id: 'indian', name: 'Indian', icon: '🍛', bg: 'bg-green-100', text: 'text-green-800' },
+  { id: 'sushi', name: 'Sushi', icon: '🍣', bg: 'bg-orange-100', text: 'text-orange-800' },
+  { id: 'desserts', name: 'Desserts', icon: '🍰', bg: 'bg-green-100', text: 'text-green-800' },
+  { id: 'beverages', name: 'Beverages', icon: '🥤', bg: 'bg-orange-100', text: 'text-orange-800' },
 ];
 
 const OFFER_SLIDES = [
@@ -46,7 +46,7 @@ const OFFER_SLIDES = [
     subtitle: 'Up to ₹200 off on your first delicious order',
     cta: 'Order Now',
     link: '/customer/restaurants',
-    gradient: 'from-[#FF4112] via-[#FF5B33] to-[#FF7B33]',
+    gradient: 'from-orange-600 via-orange-500 to-orange-400',
     image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600&auto=format&fit=crop',
   },
   {
@@ -56,7 +56,7 @@ const OFFER_SLIDES = [
     subtitle: 'Enjoy lightning-fast delivery on orders above ₹199',
     cta: 'Explore Deals',
     link: '/customer/restaurants',
-    gradient: 'from-[#171717] via-[#242424] to-[#383838]',
+    gradient: 'from-green-700 via-green-600 to-green-500',
     image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=600&auto=format&fit=crop',
   },
   {
@@ -66,7 +66,7 @@ const OFFER_SLIDES = [
     subtitle: 'Fresh combos & authentic flavors from top local spots',
     cta: 'Discover More',
     link: '/customer/restaurants',
-    gradient: 'from-[#16A34A] via-[#15803D] to-[#14532D]',
+    gradient: 'from-green-500 via-green-600 to-green-800',
     image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?q=80&w=600&auto=format&fit=crop',
   },
 ];
@@ -261,7 +261,7 @@ export default function CustomerHome() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] font-sans text-gray-900 flex flex-col pb-28 md:pb-16">
+    <div className="min-h-screen bg-brand-light font-sans text-gray-900 flex flex-col pb-28 md:pb-16">
       <SeoMetadata
         title="Tastifyy | Discover Restaurants & Order Food in Sakoli"
         description={DEFAULT_DESCRIPTION}
@@ -290,7 +290,7 @@ export default function CustomerHome() {
               className="inline-flex items-center gap-1.5 bg-black/40 hover:bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold text-white/95 border border-white/15 mb-2.5 transition-colors shadow-sm text-left max-w-full"
               title={fullAddress || 'Click to detect or refresh live GPS location'}
             >
-              <MapPin className={`w-3.5 h-3.5 text-[#FF5B33] shrink-0 ${isLocating ? 'animate-bounce' : ''}`} />
+              <MapPin className={`w-3.5 h-3.5 text-brand-primary shrink-0 ${isLocating ? 'animate-bounce' : ''}`} />
               <span className="truncate max-w-[220px] sm:max-w-md">
                 {isLocating
                   ? 'Detecting live location...'
@@ -304,7 +304,7 @@ export default function CustomerHome() {
             </p>
             <h1 className="text-2xl sm:text-4xl lg:text-[42px] font-black tracking-tight leading-tight mb-1 sm:mb-2">
               Multiple Restaurants<br />
-              <span className="text-[#FF5B33]">One Platform</span>
+              <span className="text-brand-primary">One Platform</span>
             </h1>
             <p className="text-xs sm:text-sm text-gray-300 font-medium mb-4 sm:mb-6 max-w-sm">
               Explore a variety of cuisines from your favorite restaurants.
@@ -340,7 +340,7 @@ export default function CustomerHome() {
                   <div
                     className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-xl sm:text-2xl shadow-sm transition-all duration-200 ${
                       isActive
-                        ? 'bg-[#FF5B33] text-white shadow-[#FF5B33]/30 shadow-md ring-2 ring-[#FF5B33] ring-offset-2'
+                        ? 'bg-brand-primary text-white shadow-orange-500/30 shadow-md ring-2 ring-brand-primary ring-offset-2'
                         : `${cat.bg} group-hover:scale-105`
                     }`}
                   >
@@ -348,13 +348,13 @@ export default function CustomerHome() {
                   </div>
                   <span
                     className={`text-[11px] sm:text-xs font-bold mt-2 transition-colors ${
-                      isActive ? 'text-[#FF5B33]' : 'text-gray-600 group-hover:text-gray-900'
+                      isActive ? 'text-brand-primary' : 'text-gray-600 group-hover:text-gray-900'
                     }`}
                   >
                     {cat.name}
                   </span>
                   {isActive && (
-                    <div className="w-5 h-0.5 bg-[#FF5B33] rounded-full mt-1" />
+                    <div className="w-5 h-0.5 bg-brand-primary rounded-full mt-1" />
                   )}
                 </button>
               );

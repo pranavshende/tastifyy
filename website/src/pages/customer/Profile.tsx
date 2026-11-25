@@ -314,7 +314,7 @@ export default function CustomerProfile() {
                 <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
                   <h2 className="text-xl font-bold text-gray-900">Saved Addresses</h2>
                   {!showAddForm && (
-                    <button onClick={() => setShowAddForm(true)} className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-black transition-colors">
+                    <button onClick={() => setShowAddForm(true)} className="flex items-center gap-2 bg-brand-primary text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-brand-secondary transition-colors">
                       <Plus className="w-4 h-4" /> Add New
                     </button>
                   )}

@@ -10,7 +10,7 @@ export default function Offers() {
       title: '50% OFF up to ₹200', 
       subtitle: 'Valid on your first order. Use code TASTY50.', 
       code: 'TASTY50',
-      gradient: 'from-[#FF4112] to-[#FF7B33]',
+      gradient: 'from-orange-500 to-orange-600',
       icon: <Percent className="w-8 h-8 text-white/90" />
     },
     { 
@@ -18,7 +18,7 @@ export default function Offers() {
       title: 'FREE DELIVERY', 
       subtitle: 'On orders above ₹199. Auto-applied at checkout.', 
       code: null,
-      gradient: 'from-[#171717] to-[#2D2D2D]',
+      gradient: 'from-green-700 to-green-900',
       icon: <Clock className="w-8 h-8 text-white/90" />
     },
     { 
@@ -26,13 +26,13 @@ export default function Offers() {
       title: 'Flat 20% OFF', 
       subtitle: 'On select restaurants. Up to ₹100.', 
       code: 'FLAT20',
-      gradient: 'from-[#23C16B] to-[#148F4D]',
+      gradient: 'from-green-500 to-green-700',
       icon: <Tag className="w-8 h-8 text-white/90" />
     }
   ];
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] flex flex-col pb-24">
+    <div className="min-h-screen bg-brand-light flex flex-col pb-24">
       <Header />
       
       <main className="flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 mt-8">

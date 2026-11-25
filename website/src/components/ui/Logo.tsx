@@ -23,7 +23,7 @@ export const Logo: React.FC<LogoProps> = ({
   const dimensions = sizeMap[size];
 
   return (
-    <div className={`flex items-center gap-2 shrink-0 ${invert ? 'rounded-xl bg-[#FFF4E5] px-1 py-0.5' : ''} ${className}`}>
+    <div className={`flex items-center gap-2 shrink-0 ${invert ? 'rounded-xl bg-brand-light px-1 py-0.5' : ''} ${className}`}>
       <img
         src="/favicon.svg"
         alt="Tastifyy"

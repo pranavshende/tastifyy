@@ -50,10 +50,10 @@ export default function DashboardLayout() {
   return (
     <div className="min-h-screen bg-gray-50 flex font-sans text-gray-900">
       {/* Sidebar */}
-      <aside className="w-56 bg-[#161B22] border-r border-gray-800 hidden md:flex flex-col z-30 fixed h-screen top-0 left-0 text-white">
+      <aside className="w-56 bg-white border-r border-gray-200 hidden md:flex flex-col z-30 fixed h-screen top-0 left-0 text-brand-dark">
         
         {/* Top — Restaurant Identity */}
-        <Link to="/restaurant/dashboard" className="h-16 flex items-center px-4 border-b border-gray-800 shrink-0 hover:bg-gray-800 transition-colors">
+        <Link to="/restaurant/dashboard" className="h-16 flex items-center px-4 border-b border-gray-200 shrink-0 hover:bg-gray-50 transition-colors">
           <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-primary text-white flex items-center justify-center font-black mr-3 text-sm shadow-sm shrink-0">
             {logoUrl ? (
               <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
@@ -78,7 +78,7 @@ export default function DashboardLayout() {
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all font-bold text-sm ${
                   isActive
                     ? 'bg-brand-primary text-white shadow-sm'
-                    : 'text-gray-400 hover:bg-gray-800 hover:text-white border border-transparent'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent'
                 }`}
               >
                 {item.icon}
@@ -89,9 +89,9 @@ export default function DashboardLayout() {
         </nav>
 
         {/* Bottom — User + Logout */}
-        <div className="p-4 border-t border-gray-800 shrink-0">
-          <Link to="/restaurant/profile" className="flex items-center gap-3 mb-4 px-2 py-2 hover:bg-gray-800 rounded-lg transition-colors cursor-pointer">
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-brand-primary text-white flex items-center justify-center font-bold text-sm shrink-0 border border-gray-700">
+        <div className="p-4 border-t border-gray-200 shrink-0">
+          <Link to="/restaurant/profile" className="flex items-center gap-3 mb-4 px-2 py-2 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer">
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-brand-primary text-white flex items-center justify-center font-bold text-sm shrink-0 border border-gray-200">
               {user?.profile_photo_url ? (
                 <img src={user.profile_photo_url} alt={user.name} className="w-full h-full object-cover" />
               ) : (
@@ -99,13 +99,13 @@ export default function DashboardLayout() {
               )}
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-sm font-bold text-white truncate">{user?.name || 'Restaurant'}</span>
+              <span className="text-sm font-bold text-gray-900 truncate">{user?.name || 'Restaurant'}</span>
               <span className="text-[10px] text-gray-400 font-medium">Partner</span>
             </div>
           </Link>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 px-2 py-2 w-full text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all font-bold text-sm"
+            className="flex items-center gap-2 px-2 py-2 w-full text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-all font-bold text-sm"
           >
             <LogOut className="w-4 h-4" />
             Log Out
@@ -155,7 +155,7 @@ export default function DashboardLayout() {
       </div>
 
       {/* Mobile Bottom Navigation Bar for Restaurant Partner */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#161B22] border-t border-gray-800 z-40 grid grid-cols-5 items-center py-2 px-1 text-white shadow-2xl pb-safe">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-brand-light border-t border-gray-200 z-40 grid grid-cols-5 items-center py-2 px-1 text-brand-dark shadow-2xl pb-safe">
         {[
           { path: '/restaurant/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
           { path: '/restaurant/menu', label: 'Menu', icon: <UtensilsCrossed className="w-5 h-5" /> },
@@ -169,11 +169,11 @@ export default function DashboardLayout() {
               key={item.path}
               to={item.path}
               className={`flex flex-col items-center justify-center py-1 transition-colors ${
-                isActive ? 'text-brand-primary' : 'text-gray-400 hover:text-white'
+                isActive ? 'text-brand-primary' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               {item.icon}
-              <span className={`text-[10px] font-bold mt-1 tracking-tight ${isActive ? 'text-brand-primary font-black' : 'text-gray-400'}`}>
+              <span className={`text-[10px] font-bold mt-1 tracking-tight ${isActive ? 'text-brand-primary font-black' : 'text-gray-600'}`}>
                 {item.label}
               </span>
             </Link>

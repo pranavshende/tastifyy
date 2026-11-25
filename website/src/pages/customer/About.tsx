@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom';
 
 export default function About() {
   return (
-    <div className="min-h-screen bg-[#FAFAFA] flex flex-col pb-24">
+    <div className="min-h-screen bg-brand-light flex flex-col pb-24">
       <SeoMetadata
         title="About Tastifyy | Local Food. Real Flavours."
         description="Learn about Tastifyy, a local food discovery and ordering platform helping people explore restaurant menus and local food businesses in Sakoli."

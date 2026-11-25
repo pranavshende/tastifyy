@@ -24,7 +24,7 @@ export default function DeliveryDashboardLayout() {
       </main>
 
       {/* Mobile Bottom Navigation Bar for Delivery Partner */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#161B22] border-t border-gray-800 z-40 grid grid-cols-3 items-center py-2 px-3 text-white shadow-2xl pb-safe">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-brand-light border-t border-gray-200 z-40 grid grid-cols-3 items-center py-2 px-3 text-brand-dark shadow-2xl pb-safe">
         {navItems.map((item) => {
           const isActive = location.pathname.startsWith(item.path);
           return (
@@ -32,11 +32,11 @@ export default function DeliveryDashboardLayout() {
               key={item.path}
               to={item.path}
               className={`flex flex-col items-center justify-center py-1 transition-colors ${
-                isActive ? 'text-brand-primary' : 'text-gray-400 hover:text-white'
+                isActive ? 'text-brand-primary' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               {item.icon}
-              <span className={`text-[10px] font-bold mt-1 tracking-tight ${isActive ? 'text-brand-primary font-black' : 'text-gray-400'}`}>
+              <span className={`text-[10px] font-bold mt-1 tracking-tight ${isActive ? 'text-brand-primary font-black' : 'text-gray-600'}`}>
                 {item.label}
               </span>
             </Link>

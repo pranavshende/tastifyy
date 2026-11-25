@@ -524,9 +524,9 @@ export default function RestaurantProfile() {
         )}
 
         {/* Support Banner */}
-        <div className="mt-2 bg-[#FEF4E8] border border-orange-100 rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+        <div className="mt-2 bg-orange-50 border border-orange-100 rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
-            <div className="bg-[#FCD8BB] p-3 rounded-lg text-brand-primary shrink-0">
+            <div className="bg-orange-100 p-3 rounded-lg text-brand-primary shrink-0">
               <Award className="w-5 h-5" />
             </div>
             <div>

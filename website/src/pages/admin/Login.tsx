@@ -31,17 +31,17 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 selection:bg-brand-primary">
+    <div className="min-h-screen bg-brand-light flex items-center justify-center p-4 selection:bg-brand-primary">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <Logo size="xl" />
           </div>
-          <h2 className="text-3xl font-bold text-white tracking-tight">Admin Console</h2>
-          <p className="text-gray-400 mt-2">Sign in to manage the Tastifyy platform</p>
+          <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Admin Console</h2>
+          <p className="text-gray-600 mt-2">Sign in to manage the Tastifyy platform</p>
         </div>
 
-        <div className="bg-gray-800 rounded-3xl shadow-2xl p-8 border border-gray-700">
+        <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-200">
           {error && (
             <div className="bg-red-500/10 text-red-400 p-4 rounded-xl mb-6 text-sm font-medium border border-red-500/20">
               {typeof error === 'object' ? (error as any).message || JSON.stringify(error) : String(error)}
@@ -50,24 +50,24 @@ export default function AdminLogin() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Admin Email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Admin Email</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all placeholder-gray-600"
+                className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all placeholder-gray-400"
                 placeholder="admin@tastifyy.com"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Master Password</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Master Password</label>
               <input
                 type="password"
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-700 text-white focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all placeholder-gray-600"
+                className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none transition-all placeholder-gray-400"
                 placeholder="••••••••"
               />
             </div>

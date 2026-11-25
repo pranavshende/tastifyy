@@ -3,6 +3,7 @@ import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, Image, StyleSheet } from 'react-native';
 import { useAuthStore } from '../store/authStore';
+import { BrandColors } from '../constants/theme';
 
 export default function RootLayout() {
   const { initAuth, initialized, user, loading } = useAuthStore();
@@ -51,7 +52,7 @@ export default function RootLayout() {
           />
         </View>
         <View style={styles.accent} />
-        <ActivityIndicator color="#FF8A00" style={{ marginTop: 24 }} />
+        <ActivityIndicator color={BrandColors.primary} style={{ marginTop: 24 }} />
       </View>
     );
   }
@@ -75,7 +76,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   splash: {
     flex: 1,
-    backgroundColor: '#071426',
+    backgroundColor: BrandColors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -83,9 +84,9 @@ const styles = StyleSheet.create({
     width: 280,
     height: 100,
     borderRadius: 20,
-    backgroundColor: '#FFF4E5',
+    backgroundColor: BrandColors.background,
     overflow: 'hidden',
-    shadowColor: '#F5BE55',
+    shadowColor: BrandColors.primaryLight,
     shadowOpacity: 0.28,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 10 },
@@ -99,7 +100,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 3,
     borderRadius: 2,
-    backgroundColor: '#F5BE55',
+    backgroundColor: BrandColors.secondary,
     marginTop: 24,
   },
 });

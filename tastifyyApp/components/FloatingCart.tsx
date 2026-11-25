@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { useCartStore } from '../store/cartStore';
+import { BrandColors } from '../constants/theme';
 
 export default function FloatingCart({ onPress }: { onPress: () => void }) {
   const items = useCartStore(state => state.items);
@@ -50,22 +51,22 @@ export default function FloatingCart({ onPress }: { onPress: () => void }) {
 const styles = StyleSheet.create({
   container: { position: 'absolute', bottom: 24, left: 20, right: 20, zIndex: 999 },
   button: { 
-    backgroundColor: '#E86A22', 
+    backgroundColor: BrandColors.primary,
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center',
     padding: 16, 
     borderRadius: 16, 
-    shadowColor: '#E86A22', 
+    shadowColor: BrandColors.primary,
     shadowOffset: { width: 0, height: 6 }, 
     shadowOpacity: 0.35, 
     shadowRadius: 12, 
     elevation: 8 
   },
   leftCol: { flexDirection: 'column' },
-  itemCountText: { color: '#FFD8C4', fontSize: 12, fontWeight: '700', marginBottom: 2 },
-  priceText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  itemCountText: { color: BrandColors.primaryLight, fontSize: 12, fontWeight: '700', marginBottom: 2 },
+  priceText: { color: BrandColors.surface, fontSize: 16, fontWeight: '900' },
   rightCol: { flexDirection: 'row', alignItems: 'center' },
-  checkoutText: { color: '#fff', fontSize: 16, fontWeight: '800', marginRight: 8 },
-  arrowText: { color: '#fff', fontSize: 18, fontWeight: '900' }
+  checkoutText: { color: BrandColors.surface, fontSize: 16, fontWeight: '800', marginRight: 8 },
+  arrowText: { color: BrandColors.surface, fontSize: 18, fontWeight: '900' }
 });

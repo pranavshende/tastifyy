@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/authStore';
 import { io, Socket } from 'socket.io-client';
 import { router } from 'expo-router';
 import { SOCKET_URL } from '../../constants/config';
+import { BrandColors } from '../../constants/theme';
 
 export default function CustomerOrders() {
   const { user } = useAuthStore();
@@ -77,17 +78,17 @@ export default function CustomerOrders() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return '#F59E0B'; // Amber
+      case 'pending': return BrandColors.primary;
       case 'restaurant_confirmed':
-      case 'preparing': return '#3B82F6'; // Blue
+      case 'preparing': return BrandColors.secondary;
       case 'ready':
       case 'rider_assigned':
       case 'picked_up':
-      case 'out_for_delivery': return '#8B5CF6'; // Purple
-      case 'delivered': return '#10B981'; // Green
+      case 'out_for_delivery': return BrandColors.primaryDark;
+      case 'delivered': return BrandColors.secondary; // Green
       case 'cancelled':
       case 'rejected': return '#EF4444'; // Red
-      default: return '#6B7280'; // Gray
+      default: return BrandColors.textMuted; // Gray
     }
   };
 
@@ -162,7 +163,7 @@ export default function CustomerOrders() {
     );
   };
 
-  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#E86A22" /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={BrandColors.primary} /></View>;
 
   return (
     <View style={styles.container}>
@@ -177,7 +178,7 @@ export default function CustomerOrders() {
         renderItem={renderOrder}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#E86A22']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[BrandColors.primary]} />}
         ListEmptyComponent={
           <View style={styles.empty}>
             <View style={styles.emptyIconWrap}><Text style={styles.emptyIcon}>🧾</Text></View>
@@ -234,56 +235,56 @@ export default function CustomerOrders() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F5' },
+  container: { flex: 1, backgroundColor: BrandColors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { padding: 24, paddingTop: 60, paddingBottom: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-  title: { fontSize: 28, fontWeight: '900', color: '#171717' },
-  subtitle: { fontSize: 14, color: '#888', marginTop: 4 },
+  header: { padding: 24, paddingTop: 60, paddingBottom: 20, backgroundColor: BrandColors.surface, borderBottomWidth: 1, borderBottomColor: BrandColors.border },
+  title: { fontSize: 28, fontWeight: '900', color: BrandColors.text },
+  subtitle: { fontSize: 14, color: BrandColors.textMuted, marginTop: 4 },
   
   list: { padding: 16, paddingBottom: 40 },
   
-  card: { backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, elevation: 3 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: '#F5F5F5', paddingBottom: 12, marginBottom: 12 },
+  card: { backgroundColor: BrandColors.surface, borderRadius: 20, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, elevation: 3 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: BrandColors.background, paddingBottom: 12, marginBottom: 12 },
   restInfo: { flex: 1 },
-  restName: { fontSize: 16, fontWeight: '800', color: '#171717', marginBottom: 2 },
-  date: { fontSize: 12, color: '#888', fontWeight: '500' },
+  restName: { fontSize: 16, fontWeight: '800', color: BrandColors.text, marginBottom: 2 },
+  date: { fontSize: 12, color: BrandColors.textMuted, fontWeight: '500' },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, marginLeft: 8 },
   statusText: { fontSize: 10, fontWeight: '800' },
   
   itemsList: { marginBottom: 12 },
-  itemText: { fontSize: 14, color: '#555', marginBottom: 4 },
+  itemText: { fontSize: 14, color: BrandColors.textSecondary, marginBottom: 4 },
   
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F9F9F9', padding: 12, borderRadius: 12 },
-  totalText: { fontSize: 14, fontWeight: '600', color: '#666' },
-  totalValue: { fontSize: 16, fontWeight: '900', color: '#171717' },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: BrandColors.background, padding: 12, borderRadius: 12 },
+  totalText: { fontSize: 14, fontWeight: '600', color: BrandColors.textSecondary },
+  totalValue: { fontSize: 16, fontWeight: '900', color: BrandColors.text },
 
   actionRow: { flexDirection: 'row', marginTop: 12, justifyContent: 'space-between' },
-  helpBtn: { flex: 1, backgroundColor: '#F3F4F6', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginRight: 8 },
-  helpBtnText: { color: '#4B5563', fontWeight: '700' },
-  rateBtn: { flex: 1, backgroundColor: '#E86A22', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
-  rateBtnText: { color: '#fff', fontWeight: '700' },
+  helpBtn: { flex: 1, backgroundColor: BrandColors.backgroundMuted, borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginRight: 8 },
+  helpBtnText: { color: BrandColors.textSecondary, fontWeight: '700' },
+  rateBtn: { flex: 1, backgroundColor: BrandColors.primary, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  rateBtnText: { color: BrandColors.surface, fontWeight: '700' },
 
   empty: { padding: 40, alignItems: 'center', marginTop: 40 },
-  emptyIconWrap: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#FFEAE6', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+  emptyIconWrap: { width: 100, height: 100, borderRadius: 50, backgroundColor: BrandColors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
   emptyIcon: { fontSize: 50 },
-  emptyTitle: { fontSize: 20, fontWeight: '800', color: '#171717', marginBottom: 8 },
-  emptyText: { fontSize: 14, color: '#888', textAlign: 'center', lineHeight: 22 },
+  emptyTitle: { fontSize: 20, fontWeight: '800', color: BrandColors.text, marginBottom: 8 },
+  emptyText: { fontSize: 14, color: BrandColors.textMuted, textAlign: 'center', lineHeight: 22 },
 
-  trackingBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF5', padding: 12, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: '#10B981' },
-  pulse: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981', marginRight: 8 },
-  trackingText: { color: '#10B981', fontSize: 13, fontWeight: '800' },
+  trackingBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: BrandColors.secondaryLight, padding: 12, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: BrandColors.secondary },
+  pulse: { width: 8, height: 8, borderRadius: 4, backgroundColor: BrandColors.secondary, marginRight: 8 },
+  trackingText: { color: BrandColors.secondary, fontSize: 13, fontWeight: '800' },
 
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+  modalContent: { backgroundColor: BrandColors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
   modalTitle: { fontSize: 20, fontWeight: '900', marginBottom: 20 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  ratingLabel: { flex: 1, fontSize: 16, fontWeight: '600', color: '#444' },
-  ratingInput: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, width: 40, textAlign: 'center', fontSize: 16, fontWeight: 'bold' },
-  ratingMax: { marginLeft: 8, fontSize: 16, color: '#888' },
-  reviewInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 16, height: 100, marginTop: 12, textAlignVertical: 'top', backgroundColor: '#F9FAFB' },
+  ratingLabel: { flex: 1, fontSize: 16, fontWeight: '600', color: BrandColors.text },
+  ratingInput: { borderWidth: 1, borderColor: BrandColors.border, borderRadius: 8, padding: 8, width: 40, textAlign: 'center', fontSize: 16, fontWeight: 'bold' },
+  ratingMax: { marginLeft: 8, fontSize: 16, color: BrandColors.textMuted },
+  reviewInput: { borderWidth: 1, borderColor: BrandColors.border, borderRadius: 12, padding: 16, height: 100, marginTop: 12, textAlignVertical: 'top', backgroundColor: BrandColors.background },
   modalActionRow: { flexDirection: 'row', marginTop: 24 },
   modalCancel: { flex: 1, paddingVertical: 14, alignItems: 'center', marginRight: 12 },
-  modalCancelText: { color: '#666', fontWeight: '700', fontSize: 16 },
-  modalSubmit: { flex: 2, backgroundColor: '#E86A22', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  modalSubmitText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  modalCancelText: { color: BrandColors.textSecondary, fontWeight: '700', fontSize: 16 },
+  modalSubmit: { flex: 2, backgroundColor: BrandColors.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  modalSubmitText: { color: BrandColors.surface, fontWeight: '800', fontSize: 16 },
 });

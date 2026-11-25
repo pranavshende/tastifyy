@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert,
 import { router } from 'expo-router';
 import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
+import { BrandColors } from '../../constants/theme';
 
 export default function CustomerOnboarding() {
   const { user, initAuth } = useAuthStore();
@@ -110,30 +111,30 @@ export default function CustomerOnboarding() {
         onPress={handleSubmit}
         disabled={loading}
       >
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Complete Setup</Text>}
+        {loading ? <ActivityIndicator color={BrandColors.surface} /> : <Text style={styles.btnText}>Complete Setup</Text>}
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F5' },
+  container: { flex: 1, backgroundColor: BrandColors.background },
   content: { padding: 24, paddingTop: 60, paddingBottom: 40 },
-  title: { fontSize: 28, fontWeight: '900', color: '#171717', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#888', marginBottom: 32 },
-  section: { marginBottom: 24, backgroundColor: '#fff', padding: 20, borderRadius: 20, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#171717', marginBottom: 16 },
-  label: { fontSize: 13, fontWeight: '600', color: '#444', marginBottom: 6, marginTop: 12 },
+  title: { fontSize: 28, fontWeight: '900', color: BrandColors.text, marginBottom: 8 },
+  subtitle: { fontSize: 16, color: BrandColors.textMuted, marginBottom: 32 },
+  section: { marginBottom: 24, backgroundColor: BrandColors.surface, padding: 20, borderRadius: 20, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: BrandColors.text, marginBottom: 16 },
+  label: { fontSize: 13, fontWeight: '600', color: BrandColors.text, marginBottom: 6, marginTop: 12 },
   input: {
-    backgroundColor: '#F9F9F9', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-    fontSize: 15, color: '#171717', borderWidth: 1, borderColor: '#EEE',
+    backgroundColor: BrandColors.background, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
+    fontSize: 15, color: BrandColors.text, borderWidth: 1, borderColor: BrandColors.border,
   },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
   half: { width: '48%' },
   btn: {
-    backgroundColor: '#E86A22', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 12,
-    shadowColor: '#E86A22', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8,
+    backgroundColor: BrandColors.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 12,
+    shadowColor: BrandColors.primary, shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8,
   },
   btnDisabled: { opacity: 0.6 },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  btnText: { color: BrandColors.surface, fontSize: 16, fontWeight: '700' },
 });

@@ -5,8 +5,8 @@
   display: grid;
   place-items: center;
   background:
-    radial-gradient(ellipse at 50% 44%, rgba(244, 81, 30, 0.13), transparent 42%),
-    #071426;
+    radial-gradient(ellipse at 50% 44%, color-mix(in srgb, var(--tastifyy-primary) 12%, transparent), transparent 42%),
+    var(--tastifyy-cream);
   pointer-events: none;
   opacity: 1;
   transition: opacity 360ms ease;
@@ -28,10 +28,10 @@
   width: min(72vw, 340px);
   aspect-ratio: 2.8;
   overflow: hidden;
-  border: 1px solid rgba(255, 244, 229, 0.7);
+  border: 1px solid color-mix(in srgb, var(--tastifyy-primary) 18%, white);
   border-radius: 20px;
-  background: #fff4e5;
-  box-shadow: 0 16px 54px rgba(245, 190, 85, 0.16);
+  background: var(--tastifyy-surface);
+  box-shadow: 0 16px 54px color-mix(in srgb, var(--tastifyy-primary) 16%, transparent);
 }
 
 .site-splash__logo-frame img {
@@ -46,7 +46,7 @@
   width: 48px;
   height: 3px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #ff8a00, #f5be55);
+  background: linear-gradient(90deg, var(--tastifyy-primary), var(--tastifyy-secondary));
   animation: splash-accent-enter 500ms 120ms ease-out both;
 }
 

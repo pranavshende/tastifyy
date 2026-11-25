@@ -7,7 +7,7 @@ const contactPhone = CUSTOMER_CARE_PHONE.replace(/\s/g, '');
 
 export default function Contact() {
   return (
-    <div className="min-h-screen bg-[#FAFAFA] flex flex-col pb-24">
+    <div className="min-h-screen bg-brand-light flex flex-col pb-24">
       <SeoMetadata
         title="Contact Tastifyy | Customer Care"
         description="Contact Tastifyy customer care for help with local food discovery and ordering in Sakoli."

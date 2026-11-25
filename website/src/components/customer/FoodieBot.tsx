@@ -211,7 +211,7 @@ export default function FoodieBot() {
               <Link
                 to="/customer/checkout"
                 onClick={() => setOpen(false)}
-                className="flex items-center justify-center gap-2 rounded-xl bg-gray-900 py-2.5 text-xs font-bold text-white shadow-md hover:bg-black transition-colors"
+                className="flex items-center justify-center gap-2 rounded-xl bg-brand-primary py-2.5 text-xs font-bold text-white shadow-md hover:bg-brand-secondary transition-colors"
               >
                 <ShoppingCart className="h-4 w-4" /> View Cart & Checkout
               </Link>

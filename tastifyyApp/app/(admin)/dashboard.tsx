@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { BrandColors } from '../../constants/theme';
 export default function AdminDashboard() {
   return (
     <View style={styles.container}>
@@ -7,6 +8,6 @@ export default function AdminDashboard() {
   );
 }
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F5', alignItems: 'center', justifyContent: 'center' },
-  text: { fontSize: 18, color: '#888', fontWeight: '600' }
+  container: { flex: 1, backgroundColor: BrandColors.background, alignItems: 'center', justifyContent: 'center' },
+  text: { fontSize: 18, color: BrandColors.textMuted, fontWeight: '600' }
 });

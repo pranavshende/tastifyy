@@ -126,16 +126,16 @@ export default function CustomerBottomCards() {
 
       {/* 2. Floating Cart Bar Card */}
       {showCartCard && (
-        <div className="pointer-events-auto bg-[#1C1C1E] text-white rounded-2xl sm:rounded-full p-2 sm:p-2.5 pl-2.5 pr-2 sm:px-3 shadow-[0_10px_28px_rgba(0,0,0,0.25)] border border-white/10 flex items-center justify-between gap-2 animate-in slide-in-from-bottom-3 duration-200">
+        <div className="pointer-events-auto bg-brand-primary text-white rounded-2xl sm:rounded-full p-2 sm:p-2.5 pl-2.5 pr-2 sm:px-3 shadow-[0_10px_28px_rgba(0,0,0,0.25)] border border-white/10 flex items-center justify-between gap-2 animate-in slide-in-from-bottom-3 duration-200">
           <div className="flex items-center gap-2 min-w-0">
             <div className="relative flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 shrink-0">
               <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" strokeWidth={2} />
-              <span className="absolute -top-1 -right-1 bg-[#FF5B33] text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-black shadow-sm">
+              <span className="absolute -top-1 -right-1 bg-brand-primary text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border border-white shadow-sm">
                 {totalItems}
               </span>
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-[9.5px] text-gray-400 font-bold uppercase tracking-wider leading-none truncate">
+              <span className="text-[9.5px] text-white/80 font-bold uppercase tracking-wider leading-none truncate">
                 {totalItems} item{totalItems > 1 ? 's' : ''}
               </span>
               <span className="text-xs sm:text-sm font-black text-white leading-tight mt-0.5 truncate">
@@ -147,7 +147,7 @@ export default function CustomerBottomCards() {
           <button
             type="button"
             onClick={() => navigate('/customer/checkout')}
-            className="bg-gradient-to-r from-[#FF5B33] to-[#E04B28] hover:from-[#E04B28] hover:to-[#C1531A] text-white font-bold py-1.5 px-3 sm:py-2 sm:px-3.5 rounded-xl sm:rounded-full transition-all flex items-center gap-1 text-[11px] sm:text-xs shadow-[0_4px_14px_0_rgba(255,91,51,0.4)] shrink-0 active:scale-95 whitespace-nowrap"
+            className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-1.5 px-3 sm:py-2 sm:px-3.5 rounded-xl sm:rounded-full transition-all flex items-center gap-1 text-[11px] sm:text-xs shadow-lg shadow-orange-500/20 shrink-0 active:scale-95 whitespace-nowrap"
           >
             <span>View Cart</span>
             <ArrowRight className="w-3 h-3" />

@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { BrandColors } from '../../constants/theme';
 
 type TabIconProps = {
   name: keyof typeof Ionicons.glyphMap;
@@ -10,7 +11,7 @@ type TabIconProps = {
 function TabIcon({ name, focused }: TabIconProps) {
   return (
     <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
-      <Ionicons name={name} size={22} color={focused ? '#E86A22' : '#999'} />
+      <Ionicons name={name} size={22} color={focused ? BrandColors.primary : BrandColors.textMuted} />
     </View>
   );
 }
@@ -21,12 +22,12 @@ export default function RestaurantLayout() {
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: true,
-        tabBarActiveTintColor: '#E86A22',
-        tabBarInactiveTintColor: '#999',
+        tabBarActiveTintColor: BrandColors.primary,
+        tabBarInactiveTintColor: BrandColors.textMuted,
         tabBarStyle: {
-          backgroundColor: '#fff',
+          backgroundColor: BrandColors.surface,
           borderTopWidth: 1,
-          borderTopColor: '#F0F0F0',
+          borderTopColor: BrandColors.border,
           height: 64,
           paddingBottom: 8,
           paddingTop: 4,
