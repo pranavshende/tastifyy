@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
 import Landing from './pages/Landing';
+import SplashScreen from './components/ui/SplashScreen';
 import AdminLogin from './pages/admin/Login';
 import AdminDashboard from './pages/admin/Dashboard';
 import CustomerLogin from './pages/customer/Login';
@@ -256,6 +257,7 @@ function App() {
       <Router>
         <div className="min-h-screen bg-gray-50">
           <AppRoutes />
+          <SplashScreen />
         </div>
       </Router>
     </GoogleOAuthProvider>

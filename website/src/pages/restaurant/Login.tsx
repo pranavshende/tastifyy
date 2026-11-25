@@ -50,7 +50,7 @@ export default function RestaurantLogin() {
           <div className="absolute top-0 right-0 w-64 h-64 bg-brand-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
           <div className="relative z-10">
             <Link to="/" className="inline-block mb-8">
-              <Logo size="lg" showText={false} />
+              <Logo size="lg" />
             </Link>
             <h1 className="text-4xl font-black mb-4 leading-tight">Grow your business with us.</h1>
             <p className="text-gray-400 text-lg">Manage orders, update menus, and reach more customers.</p>

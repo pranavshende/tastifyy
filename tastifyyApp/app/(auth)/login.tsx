@@ -136,9 +136,12 @@ export default function LoginScreen() {
         {/* Header / Brand */}
         <View style={styles.header}>
           <View style={styles.logo}>
-            <Image source={require('../../assets/images/icon.png')} style={styles.logoImage} />
+            <Image
+              source={require('../../assets/images/icon.png')}
+              style={styles.logoImage}
+              resizeMode="cover"
+            />
           </View>
-          <Text style={styles.brand}>Tastifyy</Text>
           <Text style={styles.tagline}>
             {mode === 'login' ? 'Welcome back! 👋' : 'Join thousands of food lovers'}
           </Text>
@@ -280,16 +283,13 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, padding: 24, paddingTop: 60 },
   header: { alignItems: 'center', marginBottom: 36 },
   logo: {
-    width: 64, height: 64, borderRadius: 18,
-    backgroundColor: '#E86A22',
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#E86A22', shadowOpacity: 0.35,
+    width: 200, height: 72, borderRadius: 16,
+    backgroundColor: '#FFF4E5', overflow: 'hidden',
+    shadowColor: '#F5BE55', shadowOpacity: 0.25,
     shadowRadius: 12, shadowOffset: { width: 0, height: 6 },
-    elevation: 10, marginBottom: 12,
+    elevation: 8, marginBottom: 12,
   },
-  logoImage: { width: 64, height: 64, borderRadius: 18 },
-  logoText: { color: '#fff', fontSize: 28, fontWeight: '900' },
-  brand: { fontSize: 26, fontWeight: '900', color: '#171717', letterSpacing: -0.5, marginBottom: 6 },
+  logoImage: { width: '100%', height: '100%' },
   tagline: { fontSize: 15, color: '#888', fontWeight: '500' },
 
   tabs: {
