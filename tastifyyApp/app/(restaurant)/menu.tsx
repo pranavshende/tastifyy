@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import api from '../../api/axios';
+import { BrandColors } from '../../constants/theme';
 
 export default function RestaurantMenu() {
   const [categories, setCategories] = useState<any[]>([]);
@@ -48,7 +49,7 @@ export default function RestaurantMenu() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#E86A22" />
+        <ActivityIndicator size="large" color={BrandColors.primary} />
       </View>
     );
   }
@@ -62,7 +63,7 @@ export default function RestaurantMenu() {
 
       <ScrollView 
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#E86A22']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[BrandColors.primary]} />}
       >
         {categories.length === 0 ? (
           <View style={styles.empty}>
@@ -111,36 +112,36 @@ export default function RestaurantMenu() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F5' },
+  container: { flex: 1, backgroundColor: BrandColors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { padding: 24, paddingTop: 60, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-  title: { fontSize: 28, fontWeight: '900', color: '#171717' },
-  subtitle: { fontSize: 15, color: '#888', marginTop: 4 },
+  header: { padding: 24, paddingTop: 60, backgroundColor: BrandColors.surface, borderBottomWidth: 1, borderBottomColor: BrandColors.border },
+  title: { fontSize: 28, fontWeight: '900', color: BrandColors.text },
+  subtitle: { fontSize: 15, color: BrandColors.textMuted, marginTop: 4 },
   scroll: { padding: 16, paddingBottom: 40 },
   empty: { padding: 40, alignItems: 'center' },
-  emptyText: { fontSize: 18, fontWeight: '700', color: '#555', marginBottom: 8 },
-  emptySub: { fontSize: 14, color: '#999', textAlign: 'center', lineHeight: 20 },
+  emptyText: { fontSize: 18, fontWeight: '700', color: BrandColors.textSecondary, marginBottom: 8 },
+  emptySub: { fontSize: 14, color: BrandColors.textMuted, textAlign: 'center', lineHeight: 20 },
   
-  categoryCard: { backgroundColor: '#fff', borderRadius: 20, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3, overflow: 'hidden' },
-  catHeader: { backgroundColor: '#F9F9F9', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-  catTitle: { fontSize: 18, fontWeight: '800', color: '#171717' },
-  noItems: { padding: 16, color: '#999', fontSize: 14, fontStyle: 'italic' },
+  categoryCard: { backgroundColor: BrandColors.surface, borderRadius: 20, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3, overflow: 'hidden' },
+  catHeader: { backgroundColor: BrandColors.background, padding: 16, borderBottomWidth: 1, borderBottomColor: BrandColors.border },
+  catTitle: { fontSize: 18, fontWeight: '800', color: BrandColors.text },
+  noItems: { padding: 16, color: BrandColors.textMuted, fontSize: 14, fontStyle: 'italic' },
   
   itemsList: { paddingHorizontal: 16 },
   itemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16 },
-  itemBorder: { borderTopWidth: 1, borderTopColor: '#F0F0F0' },
+  itemBorder: { borderTopWidth: 1, borderTopColor: BrandColors.border },
   itemInfo: { flex: 1, marginRight: 16 },
   itemTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   vegIndicator: { width: 10, height: 10, borderRadius: 2, marginRight: 8 },
-  veg: { backgroundColor: '#22C55E' },
+  veg: { backgroundColor: BrandColors.secondary },
   nonVeg: { backgroundColor: '#EF4444' },
-  itemName: { fontSize: 16, fontWeight: '700', color: '#171717', flex: 1 },
-  itemPrice: { fontSize: 14, fontWeight: '800', color: '#E86A22', paddingLeft: 18 },
+  itemName: { fontSize: 16, fontWeight: '700', color: BrandColors.text, flex: 1 },
+  itemPrice: { fontSize: 14, fontWeight: '800', color: BrandColors.primary, paddingLeft: 18 },
   
   toggleBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1 },
-  toggleOn: { backgroundColor: '#ECFDF5', borderColor: '#10B981' },
-  toggleOff: { backgroundColor: '#F9FAFB', borderColor: '#D1D5DB' },
+  toggleOn: { backgroundColor: BrandColors.secondaryLight, borderColor: BrandColors.secondary },
+  toggleOff: { backgroundColor: BrandColors.background, borderColor: BrandColors.border },
   toggleText: { fontSize: 12, fontWeight: '700' },
-  toggleTextOn: { color: '#10B981' },
-  toggleTextOff: { color: '#6B7280' },
+  toggleTextOn: { color: BrandColors.secondary },
+  toggleTextOff: { color: BrandColors.textMuted },
 });

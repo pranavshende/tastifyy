@@ -6,6 +6,7 @@ import api from '../../api/axios';
 import { useCartStore } from '../../store/cartStore';
 import RazorpayCheckout from 'react-native-razorpay';
 import { RAZORPAY_KEY_ID } from '../../constants/config';
+import { BrandColors } from '../../constants/theme';
 
 export default function CartScreen() {
   const [loading, setLoading] = useState(false);
@@ -116,7 +117,7 @@ export default function CartScreen() {
             amount: Math.round(orderData.total_amount * 100).toString(),
             name: 'Tastifyy',
             order_id: orderData.razorpay_order_id,
-            theme: { color: '#E86A22' }
+            theme: { color: BrandColors.primary }
           };
 
           RazorpayCheckout.open(options).then(async (data: any) => {
@@ -157,7 +158,7 @@ export default function CartScreen() {
   if (cartItems.length === 0) {
     return (
       <View style={[styles.container, styles.center]}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+        <StatusBar barStyle="dark-content" backgroundColor={BrandColors.background} />
         <View style={styles.emptyIconWrap}>
           <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/3081/3081840.png' }} style={styles.emptyIconImage} />
         </View>
@@ -172,10 +173,10 @@ export default function CartScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={BrandColors.surface} />
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#171717" />
+          <Ionicons name="arrow-back" size={24} color={BrandColors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>Review Order</Text>
       </View>
@@ -183,7 +184,7 @@ export default function CartScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.addressCard}>
           <View style={styles.cardHeaderRow}>
-            <Ionicons name="location" size={20} color="#E86A22" />
+            <Ionicons name="location" size={20} color={BrandColors.primary} />
             <Text style={styles.billTitle}>Delivery Address</Text>
           </View>
           {selectedAddressId ? (
@@ -200,7 +201,7 @@ export default function CartScreen() {
             </View>
           ) : (
             <TouchableOpacity style={styles.addAddressBtn} onPress={() => router.push('/(customer)/profile')}>
-              <Ionicons name="add-circle-outline" size={20} color="#E86A22" style={{ marginRight: 8 }} />
+              <Ionicons name="add-circle-outline" size={20} color={BrandColors.primary} style={{ marginRight: 8 }} />
               <Text style={styles.addAddressBtnText}>Add Delivery Address</Text>
             </TouchableOpacity>
           )}
@@ -208,7 +209,7 @@ export default function CartScreen() {
 
         <View style={styles.itemsCard}>
           <View style={styles.cardHeaderRow}>
-            <Ionicons name="restaurant" size={20} color="#171717" />
+            <Ionicons name="restaurant" size={20} color={BrandColors.text} />
             <Text style={styles.billTitle}>Order Summary</Text>
           </View>
           {cartItems.map((item, index) => (
@@ -229,14 +230,14 @@ export default function CartScreen() {
             </View>
           ))}
           <TouchableOpacity style={styles.addMoreBtn} onPress={() => router.back()}>
-            <Ionicons name="add" size={16} color="#E86A22" />
+            <Ionicons name="add" size={16} color={BrandColors.primary} />
             <Text style={styles.addMoreText}>Add more items</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.couponCard}>
           <View style={styles.cardHeaderRow}>
-            <Ionicons name="pricetag" size={20} color="#171717" />
+            <Ionicons name="pricetag" size={20} color={BrandColors.text} />
             <Text style={styles.billTitle}>Offers & Benefits</Text>
           </View>
           {appliedCouponCode ? (
@@ -258,14 +259,14 @@ export default function CartScreen() {
                   value={couponCode}
                   onChangeText={setCouponCode}
                   autoCapitalize="characters"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={BrandColors.textMuted}
                 />
                 <TouchableOpacity 
                   style={[styles.applyCouponBtn, applyingCoupon && styles.disabledBtn]} 
                   onPress={handleApplyCoupon}
                   disabled={applyingCoupon || !couponCode}
                 >
-                  {applyingCoupon ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.applyCouponBtnText}>APPLY</Text>}
+                  {applyingCoupon ? <ActivityIndicator color={BrandColors.surface} size="small" /> : <Text style={styles.applyCouponBtnText}>APPLY</Text>}
                 </TouchableOpacity>
               </View>
               {couponError ? <Text style={styles.couponErrorText}>{couponError}</Text> : null}
@@ -321,7 +322,7 @@ export default function CartScreen() {
             activeOpacity={0.9}
           >
             <View style={styles.paymentIconWrap}>
-              <Ionicons name="card" size={24} color={paymentMethod === 'card' ? '#E86A22' : '#888'} />
+              <Ionicons name="card" size={24} color={paymentMethod === 'card' ? BrandColors.primary : BrandColors.textMuted} />
             </View>
             <View style={styles.paymentTextWrap}>
               <Text style={styles.codText}>Pay Online</Text>
@@ -338,7 +339,7 @@ export default function CartScreen() {
             activeOpacity={0.9}
           >
             <View style={styles.paymentIconWrap}>
-              <Ionicons name="cash" size={24} color={paymentMethod === 'cod' ? '#E86A22' : '#888'} />
+              <Ionicons name="cash" size={24} color={paymentMethod === 'cod' ? BrandColors.primary : BrandColors.textMuted} />
             </View>
             <View style={styles.paymentTextWrap}>
               <Text style={styles.codText}>Cash on Delivery</Text>
@@ -359,14 +360,14 @@ export default function CartScreen() {
           activeOpacity={0.8}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={BrandColors.surface} />
           ) : (
             <>
               <View>
                 <Text style={styles.checkoutTotal}>₹{finalTotal.toFixed(2)}</Text>
                 <Text style={styles.checkoutSub}>TOTAL</Text>
               </View>
-              <Text style={styles.checkoutText}>Place Order <Ionicons name="arrow-forward" size={18} color="#fff" /></Text>
+              <Text style={styles.checkoutText}>Place Order <Ionicons name="arrow-forward" size={18} color={BrandColors.surface} /></Text>
             </>
           )}
         </TouchableOpacity>
@@ -376,89 +377,89 @@ export default function CartScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: BrandColors.background },
   center: { justifyContent: 'center', alignItems: 'center' },
   
-  emptyIconWrap: { width: 140, height: 140, borderRadius: 70, backgroundColor: '#FFEAE6', alignItems: 'center', justifyContent: 'center', marginBottom: 32 },
+  emptyIconWrap: { width: 140, height: 140, borderRadius: 70, backgroundColor: BrandColors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 32 },
   emptyIconImage: { width: 70, height: 70, opacity: 0.8 },
-  emptyTitle: { fontSize: 24, fontWeight: '900', color: '#171717', marginBottom: 8 },
-  emptyText: { fontSize: 16, color: '#888', marginBottom: 32 },
-  browseBtn: { backgroundColor: '#E86A22', paddingHorizontal: 32, paddingVertical: 16, borderRadius: 16, shadowColor: '#E86A22', shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
-  browseText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  emptyTitle: { fontSize: 24, fontWeight: '900', color: BrandColors.text, marginBottom: 8 },
+  emptyText: { fontSize: 16, color: BrandColors.textMuted, marginBottom: 32 },
+  browseBtn: { backgroundColor: BrandColors.primary, paddingHorizontal: 32, paddingVertical: 16, borderRadius: 16, shadowColor: BrandColors.primary, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
+  browseText: { color: BrandColors.surface, fontSize: 16, fontWeight: '900' },
 
-  header: { backgroundColor: '#fff', padding: 20, paddingTop: 60, borderBottomWidth: 1, borderBottomColor: '#F0F0F0', flexDirection: 'row', alignItems: 'center' },
+  header: { backgroundColor: BrandColors.surface, padding: 20, paddingTop: 60, borderBottomWidth: 1, borderBottomColor: BrandColors.border, flexDirection: 'row', alignItems: 'center' },
   backBtn: { marginRight: 16 },
-  title: { fontSize: 20, fontWeight: '900', color: '#171717' },
+  title: { fontSize: 20, fontWeight: '900', color: BrandColors.text },
 
   scroll: { padding: 16, paddingBottom: 120 },
   
   cardHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  billTitle: { fontSize: 18, fontWeight: '900', color: '#171717', marginLeft: 8 },
+  billTitle: { fontSize: 18, fontWeight: '900', color: BrandColors.text, marginLeft: 8 },
   
-  addressCard: { backgroundColor: '#fff', borderRadius: 24, padding: 20, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, elevation: 3 },
-  addressBox: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', backgroundColor: '#FAFAFA', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#F0F0F0' },
+  addressCard: { backgroundColor: BrandColors.surface, borderRadius: 24, padding: 20, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, elevation: 3 },
+  addressBox: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', backgroundColor: BrandColors.background, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: BrandColors.border },
   addressTextWrap: { flex: 1, marginRight: 16 },
-  addressText: { fontSize: 14, color: '#555', lineHeight: 22, fontWeight: '500' },
-  changeAddressBtnWrap: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#FFEAE6', borderRadius: 8 },
-  changeAddressBtn: { color: '#E86A22', fontWeight: '800', fontSize: 12 },
-  addAddressBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderWidth: 1, borderColor: '#E86A22', borderRadius: 16, borderStyle: 'dashed', backgroundColor: '#FFF5E6' },
-  addAddressBtnText: { color: '#E86A22', fontWeight: '800', fontSize: 15 },
+  addressText: { fontSize: 14, color: BrandColors.textSecondary, lineHeight: 22, fontWeight: '500' },
+  changeAddressBtnWrap: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: BrandColors.primaryLight, borderRadius: 8 },
+  changeAddressBtn: { color: BrandColors.primary, fontWeight: '800', fontSize: 12 },
+  addAddressBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderWidth: 1, borderColor: BrandColors.primary, borderRadius: 16, borderStyle: 'dashed', backgroundColor: BrandColors.background },
+  addAddressBtnText: { color: BrandColors.primary, fontWeight: '800', fontSize: 15 },
 
-  itemsCard: { backgroundColor: '#fff', borderRadius: 24, padding: 20, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, elevation: 3 },
+  itemsCard: { backgroundColor: BrandColors.surface, borderRadius: 24, padding: 20, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, elevation: 3 },
   itemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16 },
-  itemBorder: { borderTopWidth: 1, borderTopColor: '#F5F5F5' },
+  itemBorder: { borderTopWidth: 1, borderTopColor: BrandColors.background },
   itemInfo: { flex: 1, paddingRight: 16 },
-  itemName: { fontSize: 16, fontWeight: '800', color: '#171717', marginBottom: 6 },
-  itemPrice: { fontSize: 16, fontWeight: '800', color: '#171717' },
+  itemName: { fontSize: 16, fontWeight: '800', color: BrandColors.text, marginBottom: 6 },
+  itemPrice: { fontSize: 16, fontWeight: '800', color: BrandColors.text },
   
-  qtyControl: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#EBEBEB' },
+  qtyControl: { flexDirection: 'row', alignItems: 'center', backgroundColor: BrandColors.surface, borderRadius: 12, borderWidth: 1, borderColor: BrandColors.border },
   qtyBtn: { paddingHorizontal: 14, paddingVertical: 8 },
-  qtyBtnText: { color: '#E86A22', fontSize: 18, fontWeight: '900' },
-  qtyText: { color: '#171717', fontSize: 15, fontWeight: '900', paddingHorizontal: 4 },
+  qtyBtnText: { color: BrandColors.primary, fontSize: 18, fontWeight: '900' },
+  qtyText: { color: BrandColors.text, fontSize: 15, fontWeight: '900', paddingHorizontal: 4 },
   
-  addMoreBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F0F0F0' },
-  addMoreText: { color: '#E86A22', fontWeight: '800', fontSize: 14, marginLeft: 4 },
+  addMoreBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: BrandColors.border },
+  addMoreText: { color: BrandColors.primary, fontWeight: '800', fontSize: 14, marginLeft: 4 },
 
-  couponCard: { backgroundColor: '#fff', borderRadius: 24, padding: 20, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, elevation: 3 },
+  couponCard: { backgroundColor: BrandColors.surface, borderRadius: 24, padding: 20, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, elevation: 3 },
   couponInputRow: { flexDirection: 'row', alignItems: 'center' },
-  couponInput: { flex: 1, height: 50, backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#EBEBEB', borderRadius: 16, paddingHorizontal: 16, fontSize: 15, marginRight: 12, textTransform: 'uppercase', color: '#171717', fontWeight: '700' },
-  applyCouponBtn: { backgroundColor: '#171717', height: 50, paddingHorizontal: 24, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  applyCouponBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  couponInput: { flex: 1, height: 50, backgroundColor: BrandColors.background, borderWidth: 1, borderColor: BrandColors.border, borderRadius: 16, paddingHorizontal: 16, fontSize: 15, marginRight: 12, textTransform: 'uppercase', color: BrandColors.text, fontWeight: '700' },
+  applyCouponBtn: { backgroundColor: BrandColors.text, height: 50, paddingHorizontal: 24, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  applyCouponBtnText: { color: BrandColors.surface, fontWeight: '800', fontSize: 14 },
   couponErrorText: { color: '#EF4444', fontSize: 13, marginTop: 12, fontWeight: '600' },
-  appliedCouponBox: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ECFDF5', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#A7F3D0' },
-  appliedCouponCode: { fontSize: 16, fontWeight: '900', color: '#059669', marginBottom: 4 },
-  appliedCouponText: { fontSize: 13, color: '#059669', fontWeight: '600' },
+  appliedCouponBox: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: BrandColors.secondaryLight, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: BrandColors.secondaryBorder },
+  appliedCouponCode: { fontSize: 16, fontWeight: '900', color: BrandColors.secondaryDark, marginBottom: 4 },
+  appliedCouponText: { fontSize: 13, color: BrandColors.secondaryDark, fontWeight: '600' },
   removeCouponBtnWrap: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 8 },
   removeCouponBtn: { color: '#EF4444', fontWeight: '800', fontSize: 12 },
 
-  billCard: { backgroundColor: '#fff', borderRadius: 24, padding: 20, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, elevation: 3 },
-  launchOffer: { backgroundColor: '#FFF4E8', borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#FFD5A8' },
-  launchOfferTitle: { color: '#A84B00', fontSize: 14, fontWeight: '900', marginBottom: 4 },
-  launchOfferText: { color: '#7A450F', fontSize: 12, fontWeight: '700', marginTop: 2 },
+  billCard: { backgroundColor: BrandColors.surface, borderRadius: 24, padding: 20, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, elevation: 3 },
+  launchOffer: { backgroundColor: BrandColors.background, borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: BrandColors.primaryLight },
+  launchOfferTitle: { color: BrandColors.primaryDark, fontSize: 14, fontWeight: '900', marginBottom: 4 },
+  launchOfferText: { color: BrandColors.textSecondary, fontSize: 12, fontWeight: '700', marginTop: 2 },
   billRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 },
-  billLabel: { fontSize: 14, color: '#555', fontWeight: '600' },
-  billValue: { fontSize: 14, color: '#171717', fontWeight: '800' },
-  billLabelDiscount: { fontSize: 14, color: '#059669', fontWeight: '700' },
-  billValueDiscount: { fontSize: 14, color: '#059669', fontWeight: '800' },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#F0F0F0', marginTop: 8, paddingTop: 16, marginBottom: 0 },
-  totalLabel: { fontSize: 18, color: '#171717', fontWeight: '900' },
-  totalValue: { fontSize: 20, color: '#E86A22', fontWeight: '900' },
+  billLabel: { fontSize: 14, color: BrandColors.textSecondary, fontWeight: '600' },
+  billValue: { fontSize: 14, color: BrandColors.text, fontWeight: '800' },
+  billLabelDiscount: { fontSize: 14, color: BrandColors.secondaryDark, fontWeight: '700' },
+  billValueDiscount: { fontSize: 14, color: BrandColors.secondaryDark, fontWeight: '800' },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: BrandColors.border, marginTop: 8, paddingTop: 16, marginBottom: 0 },
+  totalLabel: { fontSize: 18, color: BrandColors.text, fontWeight: '900' },
+  totalValue: { fontSize: 20, color: BrandColors.primary, fontWeight: '900' },
 
-  paymentCard: { backgroundColor: '#fff', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, elevation: 3 },
-  codRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FAFAFA', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#F0F0F0' },
-  radioSelected: { borderColor: '#E86A22', backgroundColor: '#FFF5E6' },
-  paymentIconWrap: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2, marginRight: 16 },
+  paymentCard: { backgroundColor: BrandColors.surface, borderRadius: 24, padding: 20, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, elevation: 3 },
+  codRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: BrandColors.background, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: BrandColors.border },
+  radioSelected: { borderColor: BrandColors.primary, backgroundColor: BrandColors.background },
+  paymentIconWrap: { width: 44, height: 44, borderRadius: 12, backgroundColor: BrandColors.surface, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2, marginRight: 16 },
   paymentTextWrap: { flex: 1 },
-  codText: { fontSize: 16, fontWeight: '800', color: '#171717', marginBottom: 4 },
-  paymentSub: { fontSize: 12, color: '#888', fontWeight: '500' },
-  radioActive: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: '#E86A22', alignItems: 'center', justifyContent: 'center' },
-  radioInactive: { borderColor: '#ccc' },
-  radioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#E86A22' },
+  codText: { fontSize: 16, fontWeight: '800', color: BrandColors.text, marginBottom: 4 },
+  paymentSub: { fontSize: 12, color: BrandColors.textMuted, fontWeight: '500' },
+  radioActive: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: BrandColors.primary, alignItems: 'center', justifyContent: 'center' },
+  radioInactive: { borderColor: BrandColors.border },
+  radioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: BrandColors.primary },
 
-  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', padding: 20, paddingBottom: 36, borderTopWidth: 1, borderTopColor: '#F0F0F0', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 16, elevation: 10 },
-  checkoutBtn: { backgroundColor: '#E86A22', borderRadius: 16, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', shadowColor: '#E86A22', shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
+  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: BrandColors.surface, padding: 20, paddingBottom: 36, borderTopWidth: 1, borderTopColor: BrandColors.border, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 16, elevation: 10 },
+  checkoutBtn: { backgroundColor: BrandColors.primary, borderRadius: 16, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', shadowColor: BrandColors.primary, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
   disabledBtn: { opacity: 0.7 },
-  checkoutTotal: { color: '#fff', fontSize: 18, fontWeight: '900' },
-  checkoutSub: { color: '#FFD8C4', fontSize: 11, fontWeight: '800', marginTop: 2 },
-  checkoutText: { color: '#fff', fontSize: 18, fontWeight: '900' }
+  checkoutTotal: { color: BrandColors.surface, fontSize: 18, fontWeight: '900' },
+  checkoutSub: { color: BrandColors.primaryLight, fontSize: 11, fontWeight: '800', marginTop: 2 },
+  checkoutText: { color: BrandColors.surface, fontSize: 18, fontWeight: '900' }
 });

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import api from '../../api/axios';
+import { BrandColors } from '../../constants/theme';
 
 export default function DeliveryOnboarding() {
   const [loading, setLoading] = useState(false);
@@ -110,7 +111,7 @@ export default function DeliveryOnboarding() {
           />
 
           <TouchableOpacity style={[styles.btn, loading && styles.btnDisabled]} onPress={handleNext} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Next Step →</Text>}
+            {loading ? <ActivityIndicator color={BrandColors.surface} /> : <Text style={styles.btnText}>Next Step →</Text>}
           </TouchableOpacity>
         </View>
       ) : (
@@ -159,7 +160,7 @@ export default function DeliveryOnboarding() {
               <Text style={styles.backBtnText}>← Back</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.submitBtn, loading && styles.btnDisabled]} onPress={handleSubmit} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Submit Application</Text>}
+              {loading ? <ActivityIndicator color={BrandColors.surface} /> : <Text style={styles.btnText}>Submit Application</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -169,27 +170,27 @@ export default function DeliveryOnboarding() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F5' },
+  container: { flex: 1, backgroundColor: BrandColors.background },
   content: { padding: 24, paddingTop: 60, paddingBottom: 40 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  title: { fontSize: 28, fontWeight: '900', color: '#171717' },
-  subtitle: { fontSize: 16, color: '#888', marginTop: 4 },
-  iconWrap: { width: 56, height: 56, borderRadius: 16, backgroundColor: '#22A3E820', alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 28, fontWeight: '900', color: BrandColors.text },
+  subtitle: { fontSize: 16, color: BrandColors.textMuted, marginTop: 4 },
+  iconWrap: { width: 56, height: 56, borderRadius: 16, backgroundColor: BrandColors.secondaryLight, alignItems: 'center', justifyContent: 'center' },
   icon: { fontSize: 28 },
-  section: { backgroundColor: '#fff', padding: 20, borderRadius: 20, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#171717', marginBottom: 16 },
-  label: { fontSize: 13, fontWeight: '600', color: '#444', marginBottom: 6, marginTop: 12 },
-  input: { backgroundColor: '#F9F9F9', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: '#171717', borderWidth: 1, borderColor: '#EEE' },
-  tabs: { flexDirection: 'row', backgroundColor: '#F0F0F0', borderRadius: 12, padding: 4, marginBottom: 8 },
+  section: { backgroundColor: BrandColors.surface, padding: 20, borderRadius: 20, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: BrandColors.text, marginBottom: 16 },
+  label: { fontSize: 13, fontWeight: '600', color: BrandColors.text, marginBottom: 6, marginTop: 12 },
+  input: { backgroundColor: BrandColors.background, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: BrandColors.text, borderWidth: 1, borderColor: BrandColors.border },
+  tabs: { flexDirection: 'row', backgroundColor: BrandColors.border, borderRadius: 12, padding: 4, marginBottom: 8 },
   tab: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
-  tabActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
-  tabText: { fontSize: 14, fontWeight: '600', color: '#888' },
-  tabTextActive: { color: '#E86A22', fontWeight: '700' },
+  tabActive: { backgroundColor: BrandColors.surface, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
+  tabText: { fontSize: 14, fontWeight: '600', color: BrandColors.textMuted },
+  tabTextActive: { color: BrandColors.primary, fontWeight: '700' },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
-  btn: { backgroundColor: '#E86A22', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 24, shadowColor: '#E86A22', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
+  btn: { backgroundColor: BrandColors.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 24, shadowColor: BrandColors.primary, shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
   btnDisabled: { opacity: 0.6 },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  backBtn: { width: '30%', backgroundColor: '#F0F0F0', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-  backBtnText: { color: '#555', fontSize: 15, fontWeight: '700' },
-  submitBtn: { width: '65%', backgroundColor: '#E86A22', borderRadius: 14, paddingVertical: 16, alignItems: 'center', shadowColor: '#E86A22', shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
+  btnText: { color: BrandColors.surface, fontSize: 16, fontWeight: '700' },
+  backBtn: { width: '30%', backgroundColor: BrandColors.border, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  backBtnText: { color: BrandColors.textSecondary, fontSize: 15, fontWeight: '700' },
+  submitBtn: { width: '65%', backgroundColor: BrandColors.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center', shadowColor: BrandColors.primary, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
 });

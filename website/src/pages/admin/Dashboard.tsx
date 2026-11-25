@@ -38,7 +38,7 @@ export default function AdminDashboard() {
       </main>
 
       {/* Mobile Bottom Navigation for Admin */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-brand-dark text-white border-t border-gray-800 z-40 grid grid-cols-5 items-center py-2 px-1 shadow-2xl pb-safe">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-brand-light text-brand-dark border-t border-gray-200 z-40 grid grid-cols-5 items-center py-2 px-1 shadow-2xl pb-safe">
         {[
           { id: 'overview', label: 'Overview', icon: <TrendingUp className="w-5 h-5" /> },
           { id: 'orders', label: 'Orders', icon: <ShoppingBag className="w-5 h-5" /> },
@@ -52,11 +52,11 @@ export default function AdminDashboard() {
               key={item.id}
               onClick={() => setActiveTab(item.id as Tab)}
               className={`flex flex-col items-center justify-center py-1 transition-colors ${
-                isActive ? 'text-brand-primary' : 'text-gray-400 hover:text-white'
+                isActive ? 'text-brand-primary' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               {item.icon}
-              <span className={`text-[10px] font-bold mt-1 tracking-tight ${isActive ? 'text-brand-primary font-black' : 'text-gray-400'}`}>
+              <span className={`text-[10px] font-bold mt-1 tracking-tight ${isActive ? 'text-brand-primary font-black' : 'text-gray-600'}`}>
                 {item.label}
               </span>
             </button>
@@ -230,7 +230,7 @@ function RestaurantsTab() {
               onClick={() => setStatusFilter(status)}
               className={`px-4 py-2 rounded-lg text-sm font-bold capitalize transition-colors ${
                 statusFilter === status 
-                  ? 'bg-brand-dark text-white shadow-sm' 
+                  ? 'bg-brand-primary text-white shadow-sm'
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
@@ -345,7 +345,7 @@ function DeliveryTab() {
               onClick={() => setStatusFilter(status)}
               className={`px-4 py-2 rounded-lg text-sm font-bold capitalize transition-colors ${
                 statusFilter === status 
-                  ? 'bg-brand-dark text-white shadow-sm' 
+                  ? 'bg-brand-primary text-white shadow-sm'
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
@@ -552,7 +552,7 @@ function SupportTab() {
               onClick={() => setStatusFilter(status)}
               className={`px-4 py-2 rounded-lg text-sm font-bold capitalize transition-colors ${
                 statusFilter === status 
-                  ? 'bg-brand-dark text-white shadow-sm' 
+                  ? 'bg-brand-primary text-white shadow-sm'
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
@@ -1180,7 +1180,7 @@ function ConfigTab() {
       </div>
 
       {toast && (
-        <div className="mb-6 p-4 bg-gray-900 text-white rounded-xl shadow-lg flex items-center gap-3">
+        <div className="mb-6 p-4 bg-green-700 text-white rounded-xl shadow-lg flex items-center gap-3">
           <div className="w-2 h-2 bg-brand-primary rounded-full animate-pulse"></div>
           <span className="font-bold">{toast}</span>
         </div>
@@ -1265,7 +1265,7 @@ function PayoutsTab() {
               onClick={() => setStatusFilter(status)}
               className={`px-4 py-2 rounded-lg text-sm font-bold capitalize transition-colors ${
                 statusFilter === status 
-                  ? 'bg-brand-dark text-white shadow-sm' 
+                  ? 'bg-brand-primary text-white shadow-sm'
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >

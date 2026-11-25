@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
 import api from '../../../api/axios';
 import { router, useLocalSearchParams } from 'expo-router';
+import { BrandColors } from '../../../constants/theme';
 
 export default function RateOrderScreen() {
   const { orderId } = useLocalSearchParams();
@@ -51,10 +52,10 @@ export default function RateOrderScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f9f9f9' },
+  container: { flex: 1, padding: 20, backgroundColor: BrandColors.background },
   title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
   label: { fontSize: 16, marginBottom: 5, fontWeight: 'bold' },
-  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, marginBottom: 15 },
-  submitBtn: { backgroundColor: '#E86A22', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 10 },
-  submitBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
+  input: { backgroundColor: BrandColors.surface, borderWidth: 1, borderColor: BrandColors.border, borderRadius: 8, padding: 12, marginBottom: 15 },
+  submitBtn: { backgroundColor: BrandColors.primary, padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 10 },
+  submitBtnText: { color: BrandColors.surface, fontSize: 16, fontWeight: 'bold' }
 });

@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom';
 
 export default function About() {
   return (
-    <div className="min-h-screen bg-[#FAFAFA] flex flex-col pb-24">
+    <div className="min-h-screen bg-brand-light flex flex-col pb-24">
       <SeoMetadata
         title="About Tastifyy | Local Food. Real Flavours."
         description="Learn about Tastifyy, a local food discovery and ordering platform helping people explore restaurant menus and local food businesses in Sakoli."
@@ -18,7 +18,7 @@ export default function About() {
       <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 lg:px-8 mt-12">
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 md:p-12 text-center">
           <div className="flex justify-center mb-8">
-            <Logo size="xl" showText={false} />
+            <Logo size="xl" />
           </div>
           
           <h1 className="text-4xl font-black text-gray-900 mb-4 tracking-tight">About Tastifyy</h1>

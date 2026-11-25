@@ -6,6 +6,7 @@ import { io, Socket } from 'socket.io-client';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../../store/authStore';
 import { SOCKET_URL } from '../../../constants/config';
+import { BrandColors } from '../../../constants/theme';
 
 export default function OrderDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -57,19 +58,19 @@ export default function OrderDetailsScreen() {
     };
   }, [id, user]);
 
-  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#E86A22" /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={BrandColors.primary} /></View>;
   if (!order) return null;
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return '#F59E0B'; // Amber
+      case 'pending': return BrandColors.primary;
       case 'accepted':
-      case 'preparing': return '#3B82F6'; // Blue
+      case 'preparing': return BrandColors.secondary;
       case 'ready_for_pickup':
-      case 'out_for_delivery': return '#8B5CF6'; // Purple
-      case 'delivered': return '#10B981'; // Green
+      case 'out_for_delivery': return BrandColors.primaryDark;
+      case 'delivered': return BrandColors.secondary; // Green
       case 'cancelled': return '#EF4444'; // Red
-      default: return '#6B7280'; // Gray
+      default: return BrandColors.textMuted; // Gray
     }
   };
 
@@ -79,7 +80,7 @@ export default function OrderDetailsScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#171717" />
+          <Ionicons name="arrow-back" size={24} color={BrandColors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Order #{order.id.slice(-6).toUpperCase()}</Text>
         <View style={{ width: 24 }} />
@@ -159,13 +160,13 @@ export default function OrderDetailsScreen() {
         {/* Rate Order */}
         {order.status === 'delivered' && (
           <TouchableOpacity style={styles.rateBtn} onPress={() => router.push(`/(customer)/rate/${order.id}` as any)}>
-            <Ionicons name="star" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Ionicons name="star" size={20} color={BrandColors.surface} style={{ marginRight: 8 }} />
             <Text style={styles.rateBtnText}>Rate this Order</Text>
           </TouchableOpacity>
         )}
 
         <TouchableOpacity style={styles.supportBtn} onPress={() => router.push(`/(customer)/support?orderId=${order.id}`)}>
-          <Ionicons name="help-buoy-outline" size={20} color="#171717" style={{ marginRight: 8 }} />
+          <Ionicons name="help-buoy-outline" size={20} color={BrandColors.text} style={{ marginRight: 8 }} />
           <Text style={styles.supportBtnText}>Get Support for this Order</Text>
         </TouchableOpacity>
         
@@ -175,7 +176,7 @@ export default function OrderDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F5' },
+  container: { flex: 1, backgroundColor: BrandColors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   
   header: {
@@ -185,17 +186,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 16,
-    backgroundColor: '#fff',
+    backgroundColor: BrandColors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0'
+    borderBottomColor: BrandColors.border
   },
   backBtn: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#171717' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: BrandColors.text },
 
   scroll: { padding: 16, paddingBottom: 40 },
   
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: BrandColors.surface,
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
@@ -204,34 +205,34 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 2
   },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#171717', marginBottom: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: BrandColors.text, marginBottom: 16 },
   
-  statusLabel: { fontSize: 13, color: '#888', fontWeight: '600', marginBottom: 4 },
+  statusLabel: { fontSize: 13, color: BrandColors.textMuted, fontWeight: '600', marginBottom: 4 },
   statusValue: { fontSize: 24, fontWeight: '900' },
   
-  trackingBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF5', padding: 12, borderRadius: 8, marginTop: 16, borderWidth: 1, borderColor: '#10B981' },
-  pulse: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981', marginRight: 8 },
-  trackingText: { color: '#10B981', fontSize: 13, fontWeight: '800' },
+  trackingBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: BrandColors.secondaryLight, padding: 12, borderRadius: 8, marginTop: 16, borderWidth: 1, borderColor: BrandColors.secondary },
+  pulse: { width: 8, height: 8, borderRadius: 4, backgroundColor: BrandColors.secondary, marginRight: 8 },
+  trackingText: { color: BrandColors.secondary, fontSize: 13, fontWeight: '800' },
 
-  restName: { fontSize: 18, fontWeight: '700', color: '#171717', marginBottom: 4 },
-  restAddress: { fontSize: 14, color: '#666' },
+  restName: { fontSize: 18, fontWeight: '700', color: BrandColors.text, marginBottom: 4 },
+  restAddress: { fontSize: 14, color: BrandColors.textSecondary },
 
   itemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
   itemLeft: { flexDirection: 'row', flex: 1 },
-  itemQty: { fontSize: 14, fontWeight: '700', color: '#E86A22', marginRight: 8 },
-  itemName: { fontSize: 14, color: '#333', fontWeight: '500', flex: 1 },
-  itemPrice: { fontSize: 14, fontWeight: '600', color: '#171717' },
+  itemQty: { fontSize: 14, fontWeight: '700', color: BrandColors.primary, marginRight: 8 },
+  itemName: { fontSize: 14, color: BrandColors.text, fontWeight: '500', flex: 1 },
+  itemPrice: { fontSize: 14, fontWeight: '600', color: BrandColors.text },
 
   billRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  billLabel: { fontSize: 14, color: '#666', fontWeight: '500' },
-  billValue: { fontSize: 14, color: '#171717', fontWeight: '700' },
-  divider: { height: 1, backgroundColor: '#F0F0F0', marginVertical: 12 },
-  totalLabel: { fontSize: 16, color: '#171717', fontWeight: '900' },
-  totalValue: { fontSize: 18, color: '#E86A22', fontWeight: '900' },
+  billLabel: { fontSize: 14, color: BrandColors.textSecondary, fontWeight: '500' },
+  billValue: { fontSize: 14, color: BrandColors.text, fontWeight: '700' },
+  divider: { height: 1, backgroundColor: BrandColors.border, marginVertical: 12 },
+  totalLabel: { fontSize: 16, color: BrandColors.text, fontWeight: '900' },
+  totalValue: { fontSize: 18, color: BrandColors.primary, fontWeight: '900' },
 
-  supportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#EBEBEB', marginBottom: 16 },
-  supportBtnText: { color: '#171717', fontSize: 15, fontWeight: '700' },
+  supportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: BrandColors.surface, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: BrandColors.border, marginBottom: 16 },
+  supportBtnText: { color: BrandColors.text, fontSize: 15, fontWeight: '700' },
 
-  rateBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#E86A22', padding: 16, borderRadius: 12, marginBottom: 16, shadowColor: '#E86A22', shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
-  rateBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' }
+  rateBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: BrandColors.primary, padding: 16, borderRadius: 12, marginBottom: 16, shadowColor: BrandColors.primary, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
+  rateBtnText: { color: BrandColors.surface, fontSize: 16, fontWeight: '800' }
 });

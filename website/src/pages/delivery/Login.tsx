@@ -110,7 +110,7 @@ export default function DeliveryLogin() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gray-900 hover:bg-black text-white font-bold py-4 rounded-xl transition-all shadow-md mt-4 disabled:opacity-70"
+            className="w-full bg-brand-primary hover:bg-brand-secondary text-white font-bold py-4 rounded-xl transition-all shadow-md mt-4 disabled:opacity-70"
           >
             {loading ? 'Processing...' : (isRegister ? 'Create Account' : 'Login to Dashboard')}
           </button>

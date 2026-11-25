@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, FlatList, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import api from '../../api/axios';
-import { Picker } from '@react-native-picker/picker'; // Optional: if installed, else we can use a custom picker or standard TextInput
+import { Picker } from '@react-native-picker/picker';
+import { BrandColors } from '../../constants/theme'; // Optional: if installed, else we can use a custom picker or standard TextInput
 
 export default function CustomerSupport() {
   const { orderId } = useLocalSearchParams();
@@ -56,7 +57,7 @@ export default function CustomerSupport() {
     }
   };
 
-  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#E86A22" /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={BrandColors.primary} /></View>;
 
   return (
     <View style={styles.container}>
@@ -99,7 +100,7 @@ export default function CustomerSupport() {
             />
 
             <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} disabled={submitting}>
-              {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>Submit Ticket</Text>}
+              {submitting ? <ActivityIndicator color={BrandColors.surface} /> : <Text style={styles.submitBtnText}>Submit Ticket</Text>}
             </TouchableOpacity>
           </View>
         }
@@ -128,40 +129,40 @@ export default function CustomerSupport() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F5' },
+  container: { flex: 1, backgroundColor: BrandColors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { padding: 24, paddingTop: 60, paddingBottom: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-  title: { fontSize: 28, fontWeight: '900', color: '#171717' },
-  subtitle: { fontSize: 14, color: '#888', marginTop: 4 },
+  header: { padding: 24, paddingTop: 60, paddingBottom: 20, backgroundColor: BrandColors.surface, borderBottomWidth: 1, borderBottomColor: BrandColors.border },
+  title: { fontSize: 28, fontWeight: '900', color: BrandColors.text },
+  subtitle: { fontSize: 14, color: BrandColors.textMuted, marginTop: 4 },
   
   list: { padding: 16 },
 
-  formCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, marginBottom: 24, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
-  formTitle: { fontSize: 18, fontWeight: '900', color: '#171717', marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: '700', color: '#555', marginBottom: 8, marginTop: 12 },
+  formCard: { backgroundColor: BrandColors.surface, borderRadius: 20, padding: 20, marginBottom: 24, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
+  formTitle: { fontSize: 18, fontWeight: '900', color: BrandColors.text, marginBottom: 16 },
+  label: { fontSize: 14, fontWeight: '700', color: BrandColors.textSecondary, marginBottom: 8, marginTop: 12 },
   
   categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  catBtn: { borderWidth: 1, borderColor: '#E5E7EB', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, marginBottom: 8 },
-  catBtnActive: { backgroundColor: '#E86A22', borderColor: '#E86A22' },
-  catText: { fontSize: 12, fontWeight: '600', color: '#6B7280', textTransform: 'capitalize' },
-  catTextActive: { color: '#fff' },
+  catBtn: { borderWidth: 1, borderColor: BrandColors.border, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, marginBottom: 8 },
+  catBtnActive: { backgroundColor: BrandColors.primary, borderColor: BrandColors.primary },
+  catText: { fontSize: 12, fontWeight: '600', color: BrandColors.textMuted, textTransform: 'capitalize' },
+  catTextActive: { color: BrandColors.surface },
 
-  input: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 16, height: 100, textAlignVertical: 'top', backgroundColor: '#F9FAFB', marginBottom: 20 },
-  submitBtn: { backgroundColor: '#171717', borderRadius: 12, paddingVertical: 16, alignItems: 'center' },
-  submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  input: { borderWidth: 1, borderColor: BrandColors.border, borderRadius: 12, padding: 16, height: 100, textAlignVertical: 'top', backgroundColor: BrandColors.background, marginBottom: 20 },
+  submitBtn: { backgroundColor: BrandColors.text, borderRadius: 12, paddingVertical: 16, alignItems: 'center' },
+  submitBtnText: { color: BrandColors.surface, fontSize: 16, fontWeight: '800' },
 
-  ticketCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#F0F0F0' },
+  ticketCard: { backgroundColor: BrandColors.surface, borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: BrandColors.border },
   ticketHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  ticketCategory: { fontSize: 12, fontWeight: '800', color: '#888' },
+  ticketCategory: { fontSize: 12, fontWeight: '800', color: BrandColors.textMuted },
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  badgeOpen: { backgroundColor: '#FEF3C7' },
-  badgeResolved: { backgroundColor: '#D1FAE5' },
+  badgeOpen: { backgroundColor: BrandColors.primaryLight },
+  badgeResolved: { backgroundColor: BrandColors.secondaryLight },
   badgeText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
-  textOpen: { color: '#D97706' },
-  textResolved: { color: '#059669' },
-  ticketDesc: { fontSize: 15, color: '#333', lineHeight: 22 },
+  textOpen: { color: BrandColors.primaryDark },
+  textResolved: { color: BrandColors.secondaryDark },
+  ticketDesc: { fontSize: 15, color: BrandColors.text, lineHeight: 22 },
   
-  resolutionBox: { marginTop: 12, backgroundColor: '#F9FAFB', padding: 12, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#10B981' },
-  resolutionTitle: { fontSize: 12, fontWeight: '800', color: '#10B981', marginBottom: 4 },
-  resolutionText: { fontSize: 14, color: '#4B5563' },
+  resolutionBox: { marginTop: 12, backgroundColor: BrandColors.background, padding: 12, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: BrandColors.secondary },
+  resolutionTitle: { fontSize: 12, fontWeight: '800', color: BrandColors.secondary, marginBottom: 4 },
+  resolutionText: { fontSize: 14, color: BrandColors.textSecondary },
 });

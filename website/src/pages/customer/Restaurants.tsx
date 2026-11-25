@@ -120,7 +120,7 @@ export default function Restaurants() {
               onClick={() => setIsOpenOnly(v => !v)}
               className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-bold border transition-all ${
                 isOpenOnly
-                  ? 'bg-gray-900 border-gray-900 text-white'
+                  ? 'bg-brand-primary border-brand-primary text-white'
                   : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
               }`}
             >

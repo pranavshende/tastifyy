@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Activity
 import { router } from 'expo-router';
 import api from '../../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { BrandColors } from '../../constants/theme';
 
 export default function SearchScreen() {
   const [restaurants, setRestaurants] = useState<any[]>([]);
@@ -76,11 +77,11 @@ export default function SearchScreen() {
 
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>
-            <Ionicons name="time" size={16} color="#E86A22" />
+            <Ionicons name="time" size={16} color={BrandColors.primary} />
             <Text style={styles.metaText}>{item.avg_preparation_time_mins || 30} mins</Text>
           </View>
           <View style={styles.metaItem}>
-            <Ionicons name="location" size={16} color="#E86A22" />
+            <Ionicons name="location" size={16} color={BrandColors.primary} />
             <Text style={styles.metaText}>{item.city}</Text>
           </View>
         </View>
@@ -90,21 +91,21 @@ export default function SearchScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" translucent={false} />
+      <StatusBar barStyle="dark-content" backgroundColor={BrandColors.surface} translucent={false} />
       
       <View style={styles.header}>
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+          <Ionicons name="search" size={20} color={BrandColors.textMuted} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search restaurants, cuisines..."
-            placeholderTextColor="#999"
+            placeholderTextColor={BrandColors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color="#CCC" />
+              <Ionicons name="close-circle" size={20} color={BrandColors.border} />
             </TouchableOpacity>
           )}
         </View>
@@ -144,7 +145,7 @@ export default function SearchScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.center}><ActivityIndicator size="large" color="#E86A22" /></View>
+        <View style={styles.center}><ActivityIndicator size="large" color={BrandColors.primary} /></View>
       ) : (
         <FlatList
           data={filteredRestaurants}
@@ -154,7 +155,7 @@ export default function SearchScreen() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="search-outline" size={64} color="#CCC" />
+              <Ionicons name="search-outline" size={64} color={BrandColors.border} />
               <Text style={styles.emptyTitle}>No restaurants found</Text>
               <Text style={styles.emptyText}>We couldn't find any places matching your current filters.</Text>
               <TouchableOpacity 
@@ -177,14 +178,14 @@ export default function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: BrandColors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   
   header: { 
     paddingTop: 16, 
-    backgroundColor: '#fff', 
+    backgroundColor: BrandColors.surface,
     borderBottomWidth: 1, 
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: BrandColors.border,
     paddingBottom: 16,
     shadowColor: '#000',
     shadowOpacity: 0.05,
@@ -195,11 +196,11 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: BrandColors.background,
     marginHorizontal: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#EBEBEB',
+    borderColor: BrandColors.border,
     paddingHorizontal: 16,
     marginBottom: 16,
     height: 52
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: '100%',
     fontSize: 15,
-    color: '#171717',
+    color: BrandColors.text,
     fontWeight: '500'
   },
   
@@ -226,33 +227,33 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#EBEBEB',
-    backgroundColor: '#fff',
+    borderColor: BrandColors.border,
+    backgroundColor: BrandColors.surface,
     shadowColor: '#000',
     shadowOpacity: 0.03,
     shadowRadius: 4,
     elevation: 2
   },
   filterChipActive: {
-    backgroundColor: '#171717',
-    borderColor: '#171717'
+    backgroundColor: BrandColors.text,
+    borderColor: BrandColors.text
   },
   filterChipActiveVeg: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0'
+    backgroundColor: BrandColors.secondaryLight,
+    borderColor: BrandColors.secondaryBorder
   },
-  filterChipText: { fontSize: 13, fontWeight: '700', color: '#666' },
-  filterChipTextActive: { color: '#fff' },
-  filterChipTextActiveVeg: { color: '#059669' },
+  filterChipText: { fontSize: 13, fontWeight: '700', color: BrandColors.textSecondary },
+  filterChipTextActive: { color: BrandColors.surface },
+  filterChipTextActiveVeg: { color: BrandColors.secondaryDark },
   
-  vegIconBox: { width: 14, height: 14, borderWidth: 1.5, borderColor: '#999', borderRadius: 4, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
-  vegIconBoxActive: { borderColor: '#059669' },
+  vegIconBox: { width: 14, height: 14, borderWidth: 1.5, borderColor: BrandColors.textMuted, borderRadius: 4, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
+  vegIconBoxActive: { borderColor: BrandColors.secondaryDark },
   vegIconDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'transparent' },
-  vegIconDotActive: { backgroundColor: '#059669' },
+  vegIconDotActive: { backgroundColor: BrandColors.secondaryDark },
 
   categoriesWrapper: {
     borderTopWidth: 1,
-    borderTopColor: '#F5F5F5',
+    borderTopColor: BrandColors.background,
     paddingTop: 16
   },
   categoriesScroll: { paddingHorizontal: 16, gap: 10 },
@@ -261,56 +262,56 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#EBEBEB',
-    backgroundColor: '#fff',
+    borderColor: BrandColors.border,
+    backgroundColor: BrandColors.surface,
     shadowColor: '#000',
     shadowOpacity: 0.02,
     shadowRadius: 4,
     elevation: 2
   },
   categoryPillActive: {
-    backgroundColor: '#E86A22',
-    borderColor: '#E86A22',
+    backgroundColor: BrandColors.primary,
+    borderColor: BrandColors.primary,
   },
-  categoryPillText: { fontSize: 14, fontWeight: '700', color: '#666' },
-  categoryPillTextActive: { color: '#fff' },
+  categoryPillText: { fontSize: 14, fontWeight: '700', color: BrandColors.textSecondary },
+  categoryPillTextActive: { color: BrandColors.surface },
 
   list: { padding: 16, paddingBottom: 40 },
   
-  card: { backgroundColor: '#fff', borderRadius: 24, marginBottom: 20, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 16, elevation: 6 },
+  card: { backgroundColor: BrandColors.surface, borderRadius: 24, marginBottom: 20, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 16, elevation: 6 },
   imageWrap: { position: 'relative', borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' },
   coverImage: { width: '100%', height: 180 },
   imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 80, backgroundColor: 'rgba(0,0,0,0.1)' },
   
-  ratingBadge: { position: 'absolute', top: 16, right: 16, backgroundColor: '#059669', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
-  ratingText: { fontSize: 14, fontWeight: '900', color: '#fff' },
+  ratingBadge: { position: 'absolute', top: 16, right: 16, backgroundColor: BrandColors.secondaryDark, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  ratingText: { fontSize: 14, fontWeight: '900', color: BrandColors.surface },
   
-  imagePlaceholder: { height: 180, backgroundColor: '#FFEAE6', alignItems: 'center', justifyContent: 'center' },
+  imagePlaceholder: { height: 180, backgroundColor: BrandColors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   imageEmoji: { fontSize: 60 },
   
   cardInfo: { padding: 20, position: 'relative' },
-  logoWrap: { position: 'absolute', top: -30, left: 20, width: 64, height: 64, borderRadius: 16, borderWidth: 3, borderColor: '#fff', backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
+  logoWrap: { position: 'absolute', top: -30, left: 20, width: 64, height: 64, borderRadius: 16, borderWidth: 3, borderColor: BrandColors.surface, backgroundColor: BrandColors.surface, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
   logoImage: { width: '100%', height: '100%', borderRadius: 13 },
   
   titleContent: {},
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
-  name: { fontSize: 20, fontWeight: '900', color: '#171717', flex: 1, lineHeight: 26 },
-  vegBadge: { backgroundColor: '#ECFDF5', paddingHorizontal: 6, paddingVertical: 4, borderRadius: 6, marginLeft: 8, alignSelf: 'flex-start' },
-  vegText: { color: '#10B981', fontSize: 10, fontWeight: '900' },
-  tags: { fontSize: 14, color: '#888', fontWeight: '500' },
+  name: { fontSize: 20, fontWeight: '900', color: BrandColors.text, flex: 1, lineHeight: 26 },
+  vegBadge: { backgroundColor: BrandColors.secondaryLight, paddingHorizontal: 6, paddingVertical: 4, borderRadius: 6, marginLeft: 8, alignSelf: 'flex-start' },
+  vegText: { color: BrandColors.secondary, fontSize: 10, fontWeight: '900' },
+  tags: { fontSize: 14, color: BrandColors.textMuted, fontWeight: '500' },
   
-  divider: { height: 1, backgroundColor: '#F0F0F0', marginVertical: 16 },
+  divider: { height: 1, backgroundColor: BrandColors.border, marginVertical: 16 },
   
   metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   metaItem: { flexDirection: 'row', alignItems: 'center' },
-  metaText: { fontSize: 13, fontWeight: '700', color: '#171717', marginLeft: 6 },
+  metaText: { fontSize: 13, fontWeight: '700', color: BrandColors.text, marginLeft: 6 },
 
   empty: { padding: 40, alignItems: 'center', marginTop: 40 },
-  emptyTitle: { fontSize: 22, fontWeight: '900', color: '#171717', marginTop: 16, marginBottom: 8 },
-  emptyText: { fontSize: 15, color: '#888', textAlign: 'center', marginBottom: 32, lineHeight: 22 },
+  emptyTitle: { fontSize: 22, fontWeight: '900', color: BrandColors.text, marginTop: 16, marginBottom: 8 },
+  emptyText: { fontSize: 15, color: BrandColors.textMuted, textAlign: 'center', marginBottom: 32, lineHeight: 22 },
   clearBtn: {
     paddingHorizontal: 24, paddingVertical: 14,
-    borderWidth: 2, borderColor: '#E86A22', borderRadius: 16
+    borderWidth: 2, borderColor: BrandColors.primary, borderRadius: 16
   },
-  clearBtnText: { color: '#E86A22', fontWeight: '900', fontSize: 15 }
+  clearBtnText: { color: BrandColors.primary, fontWeight: '900', fontSize: 15 }
 });

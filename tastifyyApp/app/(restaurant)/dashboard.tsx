@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import api from '../../api/axios';
 import { io, Socket } from 'socket.io-client';
 import { SOCKET_URL } from '../../constants/config';
+import { BrandColors } from '../../constants/theme';
 
 export default function RestaurantDashboard() {
   const { user, token } = useAuthStore();
@@ -61,7 +62,7 @@ export default function RestaurantDashboard() {
     }
   };
 
-  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#E86A22" /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={BrandColors.primary} /></View>;
 
   return (
     <View style={styles.container}>
@@ -140,49 +141,49 @@ export default function RestaurantDashboard() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F5' },
+  container: { flex: 1, backgroundColor: BrandColors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   
-  header: { padding: 24, paddingTop: 60, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+  header: { padding: 24, paddingTop: 60, backgroundColor: BrandColors.surface, borderBottomWidth: 1, borderBottomColor: BrandColors.border },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 28, fontWeight: '900', color: '#171717' },
-  liveIndicator: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  pulse: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981', marginRight: 6 },
-  liveText: { color: '#10B981', fontSize: 12, fontWeight: '800' },
+  title: { fontSize: 28, fontWeight: '900', color: BrandColors.text },
+  liveIndicator: { flexDirection: 'row', alignItems: 'center', backgroundColor: BrandColors.secondaryLight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  pulse: { width: 8, height: 8, borderRadius: 4, backgroundColor: BrandColors.secondary, marginRight: 6 },
+  liveText: { color: BrandColors.secondary, fontSize: 12, fontWeight: '800' },
   
   scroll: { padding: 16 },
   
-  empty: { backgroundColor: '#fff', borderRadius: 20, padding: 40, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3, marginTop: 12 },
-  iconWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#FFEAE6', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  empty: { backgroundColor: BrandColors.surface, borderRadius: 20, padding: 40, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3, marginTop: 12 },
+  iconWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: BrandColors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   icon: { fontSize: 32 },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: '#171717', marginBottom: 8 },
-  emptyText: { fontSize: 14, color: '#888', textAlign: 'center', lineHeight: 22 },
+  emptyTitle: { fontSize: 18, fontWeight: '800', color: BrandColors.text, marginBottom: 8 },
+  emptyText: { fontSize: 14, color: BrandColors.textMuted, textAlign: 'center', lineHeight: 22 },
 
-  card: { backgroundColor: '#fff', borderRadius: 20, padding: 20, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
-  cardUrgent: { borderColor: '#E86A22', borderWidth: 2 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: '#F5F5F5', paddingBottom: 16, marginBottom: 16 },
-  orderId: { fontSize: 18, fontWeight: '900', color: '#171717', marginBottom: 4 },
-  customerName: { fontSize: 14, color: '#555', fontWeight: '600' },
-  statusBadge: { backgroundColor: '#F3F4F6', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-  statusText: { fontSize: 11, fontWeight: '800', color: '#4B5563' },
+  card: { backgroundColor: BrandColors.surface, borderRadius: 20, padding: 20, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 },
+  cardUrgent: { borderColor: BrandColors.primary, borderWidth: 2 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', borderBottomWidth: 1, borderBottomColor: BrandColors.background, paddingBottom: 16, marginBottom: 16 },
+  orderId: { fontSize: 18, fontWeight: '900', color: BrandColors.text, marginBottom: 4 },
+  customerName: { fontSize: 14, color: BrandColors.textSecondary, fontWeight: '600' },
+  statusBadge: { backgroundColor: BrandColors.backgroundMuted, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  statusText: { fontSize: 11, fontWeight: '800', color: BrandColors.textSecondary },
 
   itemsList: { marginBottom: 16 },
   itemRow: { marginBottom: 8 },
-  itemText: { fontSize: 15, color: '#333', fontWeight: '500' },
+  itemText: { fontSize: 15, color: BrandColors.text, fontWeight: '500' },
 
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, backgroundColor: '#F9F9F9', padding: 12, borderRadius: 12 },
-  totalLabel: { fontSize: 14, fontWeight: '700', color: '#666' },
-  totalValue: { fontSize: 18, fontWeight: '900', color: '#E86A22' },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, backgroundColor: BrandColors.background, padding: 12, borderRadius: 12 },
+  totalLabel: { fontSize: 14, fontWeight: '700', color: BrandColors.textSecondary },
+  totalValue: { fontSize: 18, fontWeight: '900', color: BrandColors.primary },
 
   actionRow: { flexDirection: 'row', justifyContent: 'space-between' },
   rejectBtn: { flex: 1, borderWidth: 1, borderColor: '#EF4444', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginRight: 12 },
   rejectText: { color: '#EF4444', fontSize: 15, fontWeight: '800' },
-  acceptBtn: { flex: 2, backgroundColor: '#E86A22', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  acceptText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  acceptBtn: { flex: 2, backgroundColor: BrandColors.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  acceptText: { color: BrandColors.surface, fontSize: 15, fontWeight: '800' },
 
-  primaryBtn: { backgroundColor: '#3B82F6', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  primaryBtn: { backgroundColor: BrandColors.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  primaryBtnText: { color: BrandColors.surface, fontSize: 15, fontWeight: '800' },
   
-  successBtn: { backgroundColor: '#10B981', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  successBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  successBtn: { backgroundColor: BrandColors.secondary, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  successBtnText: { color: BrandColors.surface, fontSize: 15, fontWeight: '800' },
 });

@@ -228,9 +228,9 @@ export default function DeliveryDashboard() {
               </div>
             ) : (
               <div className="bg-white rounded-2xl shadow-lg border border-brand-primary/20 overflow-hidden">
-                <div className="bg-brand-dark text-white p-5 text-center">
+                <div className="bg-brand-secondary text-white p-5 text-center">
                   <h3 className="font-black text-lg">Current Delivery</h3>
-                  <p className="text-brand-primary/80 font-mono text-sm mt-1">#{activeOrder.id.slice(0,8).toUpperCase()}</p>
+                  <p className="text-white/80 font-mono text-sm mt-1">#{activeOrder.id.slice(0,8).toUpperCase()}</p>
                   <div className="mt-3 inline-block">
                     <StatusBadge status={activeOrder.status} />
                   </div>

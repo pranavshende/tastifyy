@@ -4,6 +4,7 @@ import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
 import { io, Socket } from 'socket.io-client';
 import { SOCKET_URL } from '../../constants/config';
+import { BrandColors } from '../../constants/theme';
 
 export default function DeliveryHomeScreen() {
   const { user, token } = useAuthStore();
@@ -135,7 +136,7 @@ export default function DeliveryHomeScreen() {
     }
   };
 
-  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#E86A22" /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={BrandColors.primary} /></View>;
 
   return (
     <View style={styles.container}>
@@ -147,8 +148,8 @@ export default function DeliveryHomeScreen() {
         <Switch 
           value={isOnline} 
           onValueChange={toggleOnline} 
-          trackColor={{ false: '#D1D5DB', true: '#10B981' }}
-          thumbColor="#fff"
+          trackColor={{ false: BrandColors.border, true: BrandColors.secondary }}
+          thumbColor={BrandColors.surface}
         />
       </View>
 
@@ -212,7 +213,7 @@ export default function DeliveryHomeScreen() {
             {/* If restaurant is still preparing, rider just waits */}
             {(activeOrder.status === 'restaurant_confirmed' || activeOrder.status === 'preparing') && (
               <View style={styles.waitBlock}>
-                <ActivityIndicator color="#E86A22" />
+                <ActivityIndicator color={BrandColors.primary} />
                 <Text style={styles.waitText}>Waiting for restaurant to prep...</Text>
               </View>
             )}
@@ -224,7 +225,7 @@ export default function DeliveryHomeScreen() {
           data={availableOrders}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#E86A22']} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[BrandColors.primary]} />}
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyIcon}>🛵</Text>
@@ -253,44 +254,44 @@ export default function DeliveryHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F5' },
+  container: { flex: 1, backgroundColor: BrandColors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { padding: 24, paddingTop: 60, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F0F0F0', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: '900', color: '#171717' },
-  subtitle: { fontSize: 13, color: '#888', marginTop: 4 },
+  header: { padding: 24, paddingTop: 60, backgroundColor: BrandColors.surface, borderBottomWidth: 1, borderBottomColor: BrandColors.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  title: { fontSize: 24, fontWeight: '900', color: BrandColors.text },
+  subtitle: { fontSize: 13, color: BrandColors.textMuted, marginTop: 4 },
   
   list: { padding: 16 },
   empty: { padding: 40, alignItems: 'center', marginTop: 40 },
   emptyIcon: { fontSize: 60, marginBottom: 16 },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: '#171717', marginBottom: 8 },
-  emptyText: { fontSize: 14, color: '#888', textAlign: 'center' },
+  emptyTitle: { fontSize: 18, fontWeight: '800', color: BrandColors.text, marginBottom: 8 },
+  emptyText: { fontSize: 14, color: BrandColors.textMuted, textAlign: 'center' },
 
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
+  card: { backgroundColor: BrandColors.surface, borderRadius: 16, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  cardTitle: { fontSize: 18, fontWeight: '800', color: '#171717' },
-  cardAmount: { fontSize: 18, fontWeight: '900', color: '#10B981' },
-  cardDetail: { fontSize: 14, color: '#555', marginBottom: 4 },
-  acceptBtn: { backgroundColor: '#E86A22', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 12 },
-  acceptBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  cardTitle: { fontSize: 18, fontWeight: '800', color: BrandColors.text },
+  cardAmount: { fontSize: 18, fontWeight: '900', color: BrandColors.secondary },
+  cardDetail: { fontSize: 14, color: BrandColors.textSecondary, marginBottom: 4 },
+  acceptBtn: { backgroundColor: BrandColors.primary, borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 12 },
+  acceptBtnText: { color: BrandColors.surface, fontSize: 15, fontWeight: '800' },
 
   activeContainer: { padding: 16 },
-  activeCard: { backgroundColor: '#fff', borderRadius: 20, padding: 24, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 16, elevation: 5, borderWidth: 2, borderColor: '#10B981' },
-  badge: { backgroundColor: '#ECFDF5', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginBottom: 20 },
-  badgeText: { color: '#10B981', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  activeCard: { backgroundColor: BrandColors.surface, borderRadius: 20, padding: 24, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 16, elevation: 5, borderWidth: 2, borderColor: BrandColors.secondary },
+  badge: { backgroundColor: BrandColors.secondaryLight, alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginBottom: 20 },
+  badgeText: { color: BrandColors.secondary, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   infoBlock: { marginBottom: 20 },
-  infoLabel: { fontSize: 11, fontWeight: '700', color: '#888', marginBottom: 4, letterSpacing: 0.5 },
-  infoTitle: { fontSize: 18, fontWeight: '800', color: '#171717', marginBottom: 2 },
-  infoDetail: { fontSize: 14, color: '#555' },
-  statusBlock: { marginBottom: 24, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-  statusCurrent: { fontSize: 16, fontWeight: '900', color: '#3B82F6' },
+  infoLabel: { fontSize: 11, fontWeight: '700', color: BrandColors.textMuted, marginBottom: 4, letterSpacing: 0.5 },
+  infoTitle: { fontSize: 18, fontWeight: '800', color: BrandColors.text, marginBottom: 2 },
+  infoDetail: { fontSize: 14, color: BrandColors.textSecondary },
+  statusBlock: { marginBottom: 24, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: BrandColors.border },
+  statusCurrent: { fontSize: 16, fontWeight: '900', color: BrandColors.primary },
   
-  actionBtn: { backgroundColor: '#10B981', borderRadius: 12, padding: 16, alignItems: 'center' },
-  deliverBtn: { backgroundColor: '#3B82F6' },
-  actionBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  actionBtn: { backgroundColor: BrandColors.secondary, borderRadius: 12, padding: 16, alignItems: 'center' },
+  deliverBtn: { backgroundColor: BrandColors.primary },
+  actionBtnText: { color: BrandColors.surface, fontSize: 16, fontWeight: '900' },
   disabledBtn: { opacity: 0.5 },
-  otpLabel: { fontSize: 13, fontWeight: '700', color: '#555', marginBottom: 8 },
-  otpInput: { backgroundColor: '#F9F9F9', borderWidth: 1, borderColor: '#DDD', borderRadius: 10, padding: 14, fontSize: 20, letterSpacing: 8, textAlign: 'center', marginBottom: 12 },
+  otpLabel: { fontSize: 13, fontWeight: '700', color: BrandColors.textSecondary, marginBottom: 8 },
+  otpInput: { backgroundColor: BrandColors.background, borderWidth: 1, borderColor: BrandColors.border, borderRadius: 10, padding: 14, fontSize: 20, letterSpacing: 8, textAlign: 'center', marginBottom: 12 },
   
-  waitBlock: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF5E6', padding: 16, borderRadius: 12 },
-  waitText: { color: '#E86A22', fontWeight: '700', marginLeft: 12 },
+  waitBlock: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: BrandColors.background, padding: 16, borderRadius: 12 },
+  waitText: { color: BrandColors.primary, fontWeight: '700', marginLeft: 12 },
 });

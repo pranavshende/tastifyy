@@ -93,7 +93,7 @@ export default function SakoliLanding() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] font-sans text-gray-900 flex flex-col">
+    <div className="min-h-screen bg-brand-light font-sans text-gray-900 flex flex-col">
       <SeoMetadata
         title="Food Delivery in Sakoli | Restaurants & Menus | Tastifyy"
         description="Discover restaurants in Sakoli, Maharashtra, explore their available menus, and check delivery options for your address with Tastifyy."

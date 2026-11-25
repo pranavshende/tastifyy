@@ -16,7 +16,7 @@ export default function Cuisines() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] flex flex-col pb-24">
+    <div className="min-h-screen bg-brand-light flex flex-col pb-24">
       <Header />
       
       <main className="flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 mt-8">

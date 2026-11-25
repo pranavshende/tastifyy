@@ -8,6 +8,7 @@ import api from '../../api/axios';
 import { useAuthStore } from '../../store/authStore';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as ImagePicker from 'expo-image-picker';
+import { BrandColors } from '../../constants/theme';
 
 GoogleSignin.configure({
   webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
@@ -136,9 +137,12 @@ export default function LoginScreen() {
         {/* Header / Brand */}
         <View style={styles.header}>
           <View style={styles.logo}>
-            <Image source={require('../../assets/images/icon.png')} style={styles.logoImage} />
+            <Image
+              source={require('../../assets/images/splash-icon.png')}
+              style={styles.logoImage}
+              resizeMode="cover"
+            />
           </View>
-          <Text style={styles.brand}>Tastifyy</Text>
           <Text style={styles.tagline}>
             {mode === 'login' ? 'Welcome back! 👋' : 'Join thousands of food lovers'}
           </Text>
@@ -178,7 +182,7 @@ export default function LoginScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="John Doe"
-                placeholderTextColor="#aaa"
+                placeholderTextColor={BrandColors.textMuted}
                 value={name}
                 onChangeText={setName}
                 autoCapitalize="words"
@@ -187,7 +191,7 @@ export default function LoginScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="+91 98765 43210"
-                placeholderTextColor="#aaa"
+                placeholderTextColor={BrandColors.textMuted}
                 value={phone}
                 onChangeText={setPhone}
                 keyboardType="phone-pad"
@@ -196,7 +200,7 @@ export default function LoginScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="YYYY-MM-DD"
-                placeholderTextColor="#aaa"
+                placeholderTextColor={BrandColors.textMuted}
                 value={dob}
                 onChangeText={setDob}
               />
@@ -207,7 +211,7 @@ export default function LoginScreen() {
           <TextInput
             style={styles.input}
             placeholder="you@example.com"
-            placeholderTextColor="#aaa"
+            placeholderTextColor={BrandColors.textMuted}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -218,7 +222,7 @@ export default function LoginScreen() {
           <TextInput
             style={styles.input}
             placeholder="••••••••"
-            placeholderTextColor="#aaa"
+            placeholderTextColor={BrandColors.textMuted}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -230,7 +234,7 @@ export default function LoginScreen() {
             disabled={loading}
           >
             {loading
-              ? <ActivityIndicator color="#fff" />
+              ? <ActivityIndicator color={BrandColors.surface} />
               : <Text style={styles.primaryBtnText}>{mode === 'login' ? 'Sign In' : 'Create Account'}</Text>
             }
           </TouchableOpacity>
@@ -276,38 +280,35 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F5' },
+  container: { flex: 1, backgroundColor: BrandColors.background },
   scroll: { flexGrow: 1, padding: 24, paddingTop: 60 },
   header: { alignItems: 'center', marginBottom: 36 },
   logo: {
-    width: 64, height: 64, borderRadius: 18,
-    backgroundColor: '#E86A22',
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#E86A22', shadowOpacity: 0.35,
+    width: 200, height: 72, borderRadius: 16,
+    backgroundColor: BrandColors.background, overflow: 'hidden',
+    shadowColor: BrandColors.primaryLight, shadowOpacity: 0.25,
     shadowRadius: 12, shadowOffset: { width: 0, height: 6 },
-    elevation: 10, marginBottom: 12,
+    elevation: 8, marginBottom: 12,
   },
-  logoImage: { width: 64, height: 64, borderRadius: 18 },
-  logoText: { color: '#fff', fontSize: 28, fontWeight: '900' },
-  brand: { fontSize: 26, fontWeight: '900', color: '#171717', letterSpacing: -0.5, marginBottom: 6 },
-  tagline: { fontSize: 15, color: '#888', fontWeight: '500' },
+  logoImage: { width: '100%', height: '100%' },
+  tagline: { fontSize: 15, color: BrandColors.textMuted, fontWeight: '500' },
 
   tabs: {
-    flexDirection: 'row', backgroundColor: '#F0F0F0',
+    flexDirection: 'row', backgroundColor: BrandColors.border,
     borderRadius: 14, padding: 4, marginBottom: 28,
   },
   tab: { flex: 1, paddingVertical: 10, borderRadius: 11, alignItems: 'center' },
-  tabActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
-  tabText: { fontSize: 14, fontWeight: '600', color: '#888' },
-  tabTextActive: { color: '#E86A22', fontWeight: '700' },
+  tabActive: { backgroundColor: BrandColors.surface, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
+  tabText: { fontSize: 14, fontWeight: '600', color: BrandColors.textMuted },
+  tabTextActive: { color: BrandColors.primary, fontWeight: '700' },
 
   form: { gap: 4 },
-  label: { fontSize: 13, fontWeight: '600', color: '#444', marginBottom: 6, marginTop: 12 },
+  label: { fontSize: 13, fontWeight: '600', color: BrandColors.text, marginBottom: 6, marginTop: 12 },
   input: {
-    backgroundColor: '#fff', borderRadius: 12,
+    backgroundColor: BrandColors.surface, borderRadius: 12,
     paddingHorizontal: 16, paddingVertical: 14,
-    fontSize: 15, color: '#171717',
-    borderWidth: 1.5, borderColor: '#EEE',
+    fontSize: 15, color: BrandColors.text,
+    borderWidth: 1.5, borderColor: BrandColors.border,
   },
   imagePickerContainer: {
     alignItems: 'center',
@@ -316,13 +317,13 @@ const styles = StyleSheet.create({
   imagePicker: {
     width: 90, height: 90,
     borderRadius: 45,
-    backgroundColor: '#fff',
-    borderWidth: 2, borderColor: '#EEE', borderStyle: 'dashed',
+    backgroundColor: BrandColors.surface,
+    borderWidth: 2, borderColor: BrandColors.border, borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden'
   },
   imagePickerText: {
-    color: '#888',
+    color: BrandColors.textMuted,
     fontSize: 12,
     fontWeight: '600'
   },
@@ -331,22 +332,22 @@ const styles = StyleSheet.create({
   },
 
   primaryBtn: {
-    backgroundColor: '#E86A22', borderRadius: 14,
+    backgroundColor: BrandColors.primary, borderRadius: 14,
     paddingVertical: 16, alignItems: 'center', marginTop: 24,
-    shadowColor: '#E86A22', shadowOpacity: 0.3,
+    shadowColor: BrandColors.primary, shadowOpacity: 0.3,
     shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8,
   },
   primaryBtnDisabled: { opacity: 0.6 },
-  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
+  primaryBtnText: { color: BrandColors.surface, fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
 
   divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#E0E0E0' },
-  dividerText: { marginHorizontal: 16, color: '#888', fontWeight: '600' },
+  dividerLine: { flex: 1, height: 1, backgroundColor: BrandColors.border },
+  dividerText: { marginHorizontal: 16, color: BrandColors.textMuted, fontWeight: '600' },
 
   googleBtn: {
-    backgroundColor: '#fff',
+    backgroundColor: BrandColors.surface,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: BrandColors.border,
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
@@ -357,17 +358,17 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   googleBtnText: {
-    color: '#171717',
+    color: BrandColors.text,
     fontSize: 16,
     fontWeight: '800',
   },
 
   ghostBtn: { alignItems: 'center', paddingVertical: 16, marginBottom: 24 },
-  ghostBtnText: { color: '#E86A22', fontSize: 16, fontWeight: '800' },
+  ghostBtnText: { color: BrandColors.primary, fontSize: 16, fontWeight: '800' },
 
-  partnerLink: { alignItems: 'center', paddingVertical: 16, borderTopWidth: 1, borderTopColor: '#F0F0F0' },
-  partnerLinkText: { color: '#666', fontSize: 14, fontWeight: '600' },
-  partnerLinkHighlight: { color: '#171717', fontWeight: '800' },
+  partnerLink: { alignItems: 'center', paddingVertical: 16, borderTopWidth: 1, borderTopColor: BrandColors.border },
+  partnerLinkText: { color: BrandColors.textSecondary, fontSize: 14, fontWeight: '600' },
+  partnerLinkHighlight: { color: BrandColors.text, fontWeight: '800' },
 
-  footer: { textAlign: 'center', color: '#AAA', fontSize: 13, lineHeight: 18, marginTop: 'auto' }
+  footer: { textAlign: 'center', color: BrandColors.textMuted, fontSize: 13, lineHeight: 18, marginTop: 'auto' }
 });

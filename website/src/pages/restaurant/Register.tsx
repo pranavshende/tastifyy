@@ -45,26 +45,26 @@ export default function RestaurantRegister() {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label className="block text-sm font-medium text-gray-700">Restaurant Name</label>
-              <input type="text" required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#E86A22] focus:border-[#E86A22]" onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              <input type="text" required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary" onChange={(e) => setFormData({...formData, name: e.target.value})} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Owner Name</label>
-              <input type="text" required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#E86A22] focus:border-[#E86A22]" onChange={(e) => setFormData({...formData, owner_name: e.target.value})} />
+              <input type="text" required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary" onChange={(e) => setFormData({...formData, owner_name: e.target.value})} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Phone</label>
-              <input type="text" required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#E86A22] focus:border-[#E86A22]" onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+              <input type="text" required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary" onChange={(e) => setFormData({...formData, phone: e.target.value})} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Email</label>
-              <input type="email" required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#E86A22] focus:border-[#E86A22]" onChange={(e) => setFormData({...formData, email: e.target.value})} />
+              <input type="email" required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary" onChange={(e) => setFormData({...formData, email: e.target.value})} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Password</label>
-              <input type="password" required minLength={6} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-[#E86A22] focus:border-[#E86A22]" onChange={(e) => setFormData({...formData, password: e.target.value})} />
+              <input type="password" required minLength={6} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand-primary focus:border-brand-primary" onChange={(e) => setFormData({...formData, password: e.target.value})} />
             </div>
             {error && <div className="bg-red-50 text-red-600 border border-red-100 rounded-md p-3 text-sm">{error}</div>}
-            <button type="submit" disabled={loading} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#E86A22] hover:bg-[#d55e1a] focus:outline-none disabled:opacity-60">
+            <button type="submit" disabled={loading} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-primary hover:bg-orange-600 focus:outline-none disabled:opacity-60">
               {loading ? 'Creating Account...' : 'Create Partner Account'}
             </button>
           </form>

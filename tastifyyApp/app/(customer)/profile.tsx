@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import { router } from 'expo-router';
 import api from '../../api/axios';
 import { Ionicons } from '@expo/vector-icons';
+import { BrandColors } from '../../constants/theme';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuthStore();
@@ -79,19 +80,19 @@ export default function ProfileScreen() {
   const renderSettingOption = (icon: any, title: string, subtitle?: string, onPress?: () => void) => (
     <TouchableOpacity style={styles.settingRow} activeOpacity={0.7} onPress={onPress}>
       <View style={styles.settingIconWrap}>
-        <Ionicons name={icon} size={22} color="#555" />
+        <Ionicons name={icon} size={22} color={BrandColors.textSecondary} />
       </View>
       <View style={styles.settingTextWrap}>
         <Text style={styles.settingTitle}>{title}</Text>
         {subtitle && <Text style={styles.settingSub}>{subtitle}</Text>}
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#CCC" />
+      <Ionicons name="chevron-forward" size={20} color={BrandColors.border} />
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#171717" translucent={false} />
+      <StatusBar barStyle="light-content" backgroundColor={BrandColors.text} translucent={false} />
       
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         {/* Profile Header */}
@@ -103,7 +104,7 @@ export default function ProfileScreen() {
           
           <View style={styles.headerTop}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-              <Ionicons name="arrow-back" size={24} color="#fff" />
+              <Ionicons name="arrow-back" size={24} color={BrandColors.surface} />
             </TouchableOpacity>
           </View>
 
@@ -116,7 +117,7 @@ export default function ProfileScreen() {
               <Text style={styles.email}>{user?.email || user?.phone || 'Login to view profile'}</Text>
             </View>
             <TouchableOpacity style={styles.editBtn}>
-              <Ionicons name="pencil" size={16} color="#fff" />
+              <Ionicons name="pencil" size={16} color={BrandColors.surface} />
             </TouchableOpacity>
           </View>
         </ImageBackground>
@@ -124,20 +125,20 @@ export default function ProfileScreen() {
         {/* Quick Links */}
         <View style={styles.quickLinksCard}>
           <TouchableOpacity style={styles.quickLinkItem} onPress={() => router.push('/(customer)/orders')}>
-            <View style={[styles.quickLinkIcon, { backgroundColor: '#FFF5E6' }]}>
-              <Ionicons name="receipt" size={24} color="#E86A22" />
+            <View style={[styles.quickLinkIcon, { backgroundColor: BrandColors.background }]}>
+              <Ionicons name="receipt" size={24} color={BrandColors.primary} />
             </View>
             <Text style={styles.quickLinkText}>Orders</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.quickLinkItem}>
-            <View style={[styles.quickLinkIcon, { backgroundColor: '#FCE7F3' }]}>
-              <Ionicons name="heart" size={24} color="#DB2777" />
+            <View style={[styles.quickLinkIcon, { backgroundColor: BrandColors.primaryLight }]}>
+              <Ionicons name="heart" size={24} color={BrandColors.primary} />
             </View>
             <Text style={styles.quickLinkText}>Favorites</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.quickLinkItem}>
-            <View style={[styles.quickLinkIcon, { backgroundColor: '#ECFDF5' }]}>
-              <Ionicons name="wallet" size={24} color="#059669" />
+            <View style={[styles.quickLinkIcon, { backgroundColor: BrandColors.secondaryLight }]}>
+              <Ionicons name="wallet" size={24} color={BrandColors.secondaryDark} />
             </View>
             <Text style={styles.quickLinkText}>Wallet</Text>
           </TouchableOpacity>
@@ -148,16 +149,16 @@ export default function ProfileScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Saved Addresses</Text>
             <TouchableOpacity onPress={() => setIsModalVisible(true)} style={styles.addBtnWrap}>
-              <Ionicons name="add" size={16} color="#E86A22" />
+              <Ionicons name="add" size={16} color={BrandColors.primary} />
               <Text style={styles.addBtnText}>Add New</Text>
             </TouchableOpacity>
           </View>
 
           {loading ? (
-            <ActivityIndicator color="#E86A22" style={{ marginVertical: 20 }} />
+            <ActivityIndicator color={BrandColors.primary} style={{ marginVertical: 20 }} />
           ) : addresses.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="location-outline" size={40} color="#CCC" />
+              <Ionicons name="location-outline" size={40} color={BrandColors.border} />
               <Text style={styles.emptyText}>No saved addresses found.</Text>
             </View>
           ) : (
@@ -169,9 +170,9 @@ export default function ProfileScreen() {
                       <Ionicons 
                         name={address.label.toLowerCase() === 'home' ? 'home' : address.label.toLowerCase() === 'work' ? 'briefcase' : 'location'} 
                         size={18} 
-                        color={address.is_default ? '#E86A22' : '#555'} 
+                        color={address.is_default ? BrandColors.primary : BrandColors.textSecondary}
                       />
-                      <Text style={[styles.addressLabel, address.is_default && { color: '#E86A22' }]}>{address.label}</Text>
+                      <Text style={[styles.addressLabel, address.is_default && { color: BrandColors.primary }]}>{address.label}</Text>
                     </View>
                     <TouchableOpacity onPress={() => handleDeleteAddress(address.id)} style={styles.deleteBtn}>
                       <Ionicons name="trash-outline" size={18} color="#FF4444" />
@@ -183,7 +184,7 @@ export default function ProfileScreen() {
                   <View style={styles.addressFooter}>
                     {address.is_default ? (
                       <View style={styles.defaultBadge}>
-                        <Ionicons name="checkmark-circle" size={14} color="#E86A22" style={{ marginRight: 4 }} />
+                        <Ionicons name="checkmark-circle" size={14} color={BrandColors.primary} style={{ marginRight: 4 }} />
                         <Text style={styles.defaultBadgeText}>Default Address</Text>
                       </View>
                     ) : (
@@ -222,7 +223,7 @@ export default function ProfileScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add Delivery Address</Text>
               <TouchableOpacity onPress={() => setIsModalVisible(false)} style={styles.closeModalBtn}>
-                <Ionicons name="close" size={24} color="#171717" />
+                <Ionicons name="close" size={24} color={BrandColors.text} />
               </TouchableOpacity>
             </View>
             
@@ -280,7 +281,7 @@ export default function ProfileScreen() {
                 onPress={handleAddAddress}
                 disabled={submitting}
               >
-                {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Save Address</Text>}
+                {submitting ? <ActivityIndicator color={BrandColors.surface} /> : <Text style={styles.saveBtnText}>Save Address</Text>}
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -291,7 +292,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: BrandColors.background },
   scroll: { flexGrow: 1 },
   
   headerBg: { width: '100%', paddingTop: 20, paddingBottom: 30, overflow: 'hidden', borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
@@ -300,65 +301,65 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   
   profileInfoWrap: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingTop: 10 },
-  avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#E86A22', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#fff', shadowColor: '#E86A22', shadowOpacity: 0.5, shadowRadius: 10, elevation: 8, marginRight: 16 },
-  avatarText: { color: '#fff', fontSize: 28, fontWeight: '900' },
+  avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: BrandColors.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: BrandColors.surface, shadowColor: BrandColors.primary, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8, marginRight: 16 },
+  avatarText: { color: BrandColors.surface, fontSize: 28, fontWeight: '900' },
   headerInfoText: { flex: 1 },
-  name: { fontSize: 24, fontWeight: '900', color: '#fff', marginBottom: 4 },
+  name: { fontSize: 24, fontWeight: '900', color: BrandColors.surface, marginBottom: 4 },
   email: { fontSize: 14, color: 'rgba(255,255,255,0.8)', fontWeight: '500' },
   editBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
 
-  quickLinksCard: { flexDirection: 'row', backgroundColor: '#fff', marginHorizontal: 20, marginTop: -20, borderRadius: 20, padding: 20, justifyContent: 'space-around', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 5 },
+  quickLinksCard: { flexDirection: 'row', backgroundColor: BrandColors.surface, marginHorizontal: 20, marginTop: -20, borderRadius: 20, padding: 20, justifyContent: 'space-around', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 5 },
   quickLinkItem: { alignItems: 'center' },
   quickLinkIcon: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  quickLinkText: { fontSize: 13, fontWeight: '700', color: '#555' },
+  quickLinkText: { fontSize: 13, fontWeight: '700', color: BrandColors.textSecondary },
 
-  section: { backgroundColor: '#fff', marginTop: 20, paddingVertical: 24, shadowColor: '#000', shadowOpacity: 0.02, shadowRadius: 8, elevation: 2 },
+  section: { backgroundColor: BrandColors.surface, marginTop: 20, paddingVertical: 24, shadowColor: '#000', shadowOpacity: 0.02, shadowRadius: 8, elevation: 2 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '900', color: '#171717' },
-  addBtnWrap: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#FFF5E6', borderRadius: 8 },
-  addBtnText: { color: '#E86A22', fontWeight: '800', fontSize: 13, marginLeft: 4 },
+  sectionTitle: { fontSize: 18, fontWeight: '900', color: BrandColors.text },
+  addBtnWrap: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, backgroundColor: BrandColors.background, borderRadius: 8 },
+  addBtnText: { color: BrandColors.primary, fontWeight: '800', fontSize: 13, marginLeft: 4 },
 
   emptyState: { padding: 40, alignItems: 'center' },
-  emptyText: { color: '#888', fontSize: 15, marginTop: 12, fontWeight: '500' },
+  emptyText: { color: BrandColors.textMuted, fontSize: 15, marginTop: 12, fontWeight: '500' },
 
   addressScroll: { paddingHorizontal: 20, paddingBottom: 10 },
-  addressCard: { width: 260, borderWidth: 1, borderColor: '#F0F0F0', borderRadius: 16, padding: 16, marginRight: 16, backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 6, elevation: 2 },
-  addressCardDefault: { borderColor: '#E86A22', backgroundColor: '#FFFDF9' },
+  addressCard: { width: 260, borderWidth: 1, borderColor: BrandColors.border, borderRadius: 16, padding: 16, marginRight: 16, backgroundColor: BrandColors.surface, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 6, elevation: 2 },
+  addressCardDefault: { borderColor: BrandColors.primary, backgroundColor: BrandColors.background },
   addressHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   labelWrap: { flexDirection: 'row', alignItems: 'center' },
-  addressLabel: { fontSize: 15, fontWeight: '800', color: '#171717', marginLeft: 8 },
+  addressLabel: { fontSize: 15, fontWeight: '800', color: BrandColors.text, marginLeft: 8 },
   deleteBtn: { padding: 4 },
-  addressLine: { fontSize: 14, color: '#444', marginBottom: 4, lineHeight: 22, fontWeight: '500' },
-  addressCity: { fontSize: 13, color: '#888', marginBottom: 16 },
-  addressFooter: { borderTopWidth: 1, borderTopColor: '#F5F5F5', paddingTop: 12, marginTop: 'auto' },
+  addressLine: { fontSize: 14, color: BrandColors.text, marginBottom: 4, lineHeight: 22, fontWeight: '500' },
+  addressCity: { fontSize: 13, color: BrandColors.textMuted, marginBottom: 16 },
+  addressFooter: { borderTopWidth: 1, borderTopColor: BrandColors.background, paddingTop: 12, marginTop: 'auto' },
   setDefaultBtn: { alignSelf: 'flex-start' },
-  setDefaultText: { color: '#888', fontSize: 13, fontWeight: '700' },
+  setDefaultText: { color: BrandColors.textMuted, fontSize: 13, fontWeight: '700' },
   defaultBadge: { flexDirection: 'row', alignItems: 'center' },
-  defaultBadgeText: { color: '#E86A22', fontSize: 13, fontWeight: '800' },
+  defaultBadgeText: { color: BrandColors.primary, fontSize: 13, fontWeight: '800' },
 
-  settingRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: '#F5F5F5' },
-  settingIconWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F9F9F9', alignItems: 'center', justifyContent: 'center', marginRight: 16 },
+  settingRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: BrandColors.background },
+  settingIconWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: BrandColors.background, alignItems: 'center', justifyContent: 'center', marginRight: 16 },
   settingTextWrap: { flex: 1 },
-  settingTitle: { fontSize: 16, fontWeight: '700', color: '#171717', marginBottom: 2 },
-  settingSub: { fontSize: 13, color: '#888' },
+  settingTitle: { fontSize: 16, fontWeight: '700', color: BrandColors.text, marginBottom: 2 },
+  settingSub: { fontSize: 13, color: BrandColors.textMuted },
 
   logoutBtn: { 
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', 
-    backgroundColor: '#fff', marginHorizontal: 20, marginTop: 24, padding: 16, borderRadius: 16,
+    backgroundColor: BrandColors.surface, marginHorizontal: 20, marginTop: 24, padding: 16, borderRadius: 16,
     borderWidth: 1, borderColor: '#FFE5E5'
   },
   logoutText: { color: '#FF4444', fontSize: 16, fontWeight: '800', marginLeft: 8 },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '80%' },
+  modalContent: { backgroundColor: BrandColors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  modalTitle: { fontSize: 20, fontWeight: '900', color: '#171717' },
-  closeModalBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F5F5F5', alignItems: 'center', justifyContent: 'center' },
+  modalTitle: { fontSize: 20, fontWeight: '900', color: BrandColors.text },
+  closeModalBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: BrandColors.background, alignItems: 'center', justifyContent: 'center' },
   
-  inputLabel: { fontSize: 13, fontWeight: '700', color: '#555', marginBottom: 8 },
-  input: { backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#EBEBEB', borderRadius: 16, padding: 16, fontSize: 15, marginBottom: 16, color: '#171717', fontWeight: '500' },
+  inputLabel: { fontSize: 13, fontWeight: '700', color: BrandColors.textSecondary, marginBottom: 8 },
+  input: { backgroundColor: BrandColors.background, borderWidth: 1, borderColor: BrandColors.border, borderRadius: 16, padding: 16, fontSize: 15, marginBottom: 16, color: BrandColors.text, fontWeight: '500' },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
   half: { width: '48%' },
-  saveBtn: { backgroundColor: '#E86A22', borderRadius: 16, padding: 16, alignItems: 'center', marginTop: 16, marginBottom: 20, shadowColor: '#E86A22', shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
-  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' }
+  saveBtn: { backgroundColor: BrandColors.primary, borderRadius: 16, padding: 16, alignItems: 'center', marginTop: 16, marginBottom: 20, shadowColor: BrandColors.primary, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
+  saveBtnText: { color: BrandColors.surface, fontSize: 16, fontWeight: '900' }
 });

@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, Image, StyleSheet } from 'react-native';
 import { useAuthStore } from '../store/authStore';
+import { BrandColors } from '../constants/theme';
 
 export default function RootLayout() {
   const { initAuth, initialized, user, loading } = useAuthStore();
@@ -43,11 +44,15 @@ export default function RootLayout() {
   if (!initialized || loading) {
     return (
       <View style={styles.splash}>
-        <View style={styles.logo}>
-          <Text style={styles.logoText}>T</Text>
+        <View style={styles.logoCard}>
+          <Image
+            source={require('../assets/images/splash-icon.png')}
+            style={styles.logoImage}
+            resizeMode="cover"
+          />
         </View>
-        <Text style={styles.brand}>Tastifyy</Text>
-        <ActivityIndicator color="#E86A22" style={{ marginTop: 40 }} />
+        <View style={styles.accent} />
+        <ActivityIndicator color={BrandColors.primary} style={{ marginTop: 24 }} />
       </View>
     );
   }
@@ -71,33 +76,31 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   splash: {
     flex: 1,
-    backgroundColor: '#FFF8F5',
+    backgroundColor: BrandColors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logo: {
-    width: 72,
-    height: 72,
+  logoCard: {
+    width: 280,
+    height: 100,
     borderRadius: 20,
-    backgroundColor: '#E86A22',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#E86A22',
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
-    marginBottom: 16,
+    backgroundColor: BrandColors.background,
+    overflow: 'hidden',
+    shadowColor: BrandColors.primaryLight,
+    shadowOpacity: 0.28,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
   },
-  logoText: {
-    color: '#fff',
-    fontSize: 36,
-    fontWeight: '900',
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
-  brand: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#171717',
-    letterSpacing: -0.5,
+  accent: {
+    width: 48,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: BrandColors.secondary,
+    marginTop: 24,
   },
 });

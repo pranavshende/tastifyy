@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView
 import { router } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../api/axios';
+import { BrandColors } from '../../constants/theme';
 
 export default function DeliveryProfile() {
   const { user, logout } = useAuthStore();
@@ -54,7 +55,7 @@ export default function DeliveryProfile() {
     router.replace('/(auth)/login');
   };
 
-  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#E86A22" /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={BrandColors.primary} /></View>;
 
   return (
     <View style={styles.container}>
@@ -100,7 +101,7 @@ export default function DeliveryProfile() {
           <TextInput style={styles.input} value={profile.upi_id} onChangeText={value => updateField('upi_id', value)} autoCapitalize="none" placeholder="name@bank" />
 
           <TouchableOpacity style={[styles.saveBtn, saving && styles.disabled]} onPress={saveProfile} disabled={saving}>
-            {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Save Profile</Text>}
+            {saving ? <ActivityIndicator color={BrandColors.surface} /> : <Text style={styles.saveText}>Save Profile</Text>}
           </TouchableOpacity>
         </View>
 
@@ -127,39 +128,39 @@ export default function DeliveryProfile() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F5' },
+  container: { flex: 1, backgroundColor: BrandColors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { padding: 24, paddingTop: 60, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-  title: { fontSize: 28, fontWeight: '900', color: '#171717' },
+  header: { padding: 24, paddingTop: 60, backgroundColor: BrandColors.surface, borderBottomWidth: 1, borderBottomColor: BrandColors.border },
+  title: { fontSize: 28, fontWeight: '900', color: BrandColors.text },
   
   content: { padding: 24 },
   
-  card: { backgroundColor: '#fff', borderRadius: 24, padding: 32, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 10, elevation: 2, marginBottom: 24 },
-  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#10B981', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  avatarText: { fontSize: 32, fontWeight: '900', color: '#fff' },
-  name: { fontSize: 24, fontWeight: '800', color: '#171717', marginBottom: 4 },
-  phone: { fontSize: 16, color: '#888', marginBottom: 16 },
+  card: { backgroundColor: BrandColors.surface, borderRadius: 24, padding: 32, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 10, elevation: 2, marginBottom: 24 },
+  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: BrandColors.secondary, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  avatarText: { fontSize: 32, fontWeight: '900', color: BrandColors.surface },
+  name: { fontSize: 24, fontWeight: '800', color: BrandColors.text, marginBottom: 4 },
+  phone: { fontSize: 16, color: BrandColors.textMuted, marginBottom: 16 },
   badge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  badgeActive: { backgroundColor: '#ECFDF5' },
-  badgePending: { backgroundColor: '#FFFBEB' },
+  badgeActive: { backgroundColor: BrandColors.secondaryLight },
+  badgePending: { backgroundColor: BrandColors.primaryLight },
   badgeText: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase' },
-  badgeTextActive: { color: '#10B981' },
-  badgeTextPending: { color: '#F59E0B' },
+  badgeTextActive: { color: BrandColors.secondary },
+  badgeTextPending: { color: BrandColors.primaryDark },
 
-  statsCard: { backgroundColor: '#fff', borderRadius: 24, padding: 24, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 10, elevation: 2, marginBottom: 32 },
-  formCard: { backgroundColor: '#fff', borderRadius: 24, padding: 24, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 10, elevation: 2, marginBottom: 24 },
-  formTitle: { fontSize: 17, fontWeight: '800', color: '#171717', marginTop: 4, marginBottom: 12 },
-  label: { fontSize: 13, fontWeight: '700', color: '#555', marginTop: 10, marginBottom: 6 },
-  input: { backgroundColor: '#F9F9F9', borderWidth: 1, borderColor: '#E5E5E5', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: '#171717' },
-  saveBtn: { backgroundColor: '#E86A22', borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginTop: 22 },
-  saveText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  statsCard: { backgroundColor: BrandColors.surface, borderRadius: 24, padding: 24, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 10, elevation: 2, marginBottom: 32 },
+  formCard: { backgroundColor: BrandColors.surface, borderRadius: 24, padding: 24, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 10, elevation: 2, marginBottom: 24 },
+  formTitle: { fontSize: 17, fontWeight: '800', color: BrandColors.text, marginTop: 4, marginBottom: 12 },
+  label: { fontSize: 13, fontWeight: '700', color: BrandColors.textSecondary, marginTop: 10, marginBottom: 6 },
+  input: { backgroundColor: BrandColors.background, borderWidth: 1, borderColor: BrandColors.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: BrandColors.text },
+  saveBtn: { backgroundColor: BrandColors.primary, borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginTop: 22 },
+  saveText: { color: BrandColors.surface, fontSize: 16, fontWeight: '800' },
   disabled: { opacity: 0.6 },
-  statsTitle: { fontSize: 16, fontWeight: '800', color: '#171717', marginBottom: 16 },
+  statsTitle: { fontSize: 16, fontWeight: '800', color: BrandColors.text, marginBottom: 16 },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  statBox: { flex: 1, backgroundColor: '#F9F9F9', borderRadius: 16, padding: 16, alignItems: 'center', marginHorizontal: 4 },
-  statVal: { fontSize: 24, fontWeight: '900', color: '#E86A22', marginBottom: 4 },
-  statLbl: { fontSize: 13, color: '#666', fontWeight: '600' },
+  statBox: { flex: 1, backgroundColor: BrandColors.background, borderRadius: 16, padding: 16, alignItems: 'center', marginHorizontal: 4 },
+  statVal: { fontSize: 24, fontWeight: '900', color: BrandColors.primary, marginBottom: 4 },
+  statLbl: { fontSize: 13, color: BrandColors.textSecondary, fontWeight: '600' },
 
-  logoutBtn: { backgroundColor: '#FFEAE6', borderRadius: 16, paddingVertical: 18, alignItems: 'center' },
-  logoutText: { color: '#E83A22', fontSize: 16, fontWeight: '800' },
+  logoutBtn: { backgroundColor: BrandColors.primaryLight, borderRadius: 16, paddingVertical: 18, alignItems: 'center' },
+  logoutText: { color: BrandColors.primaryDark, fontSize: 16, fontWeight: '800' },
 });

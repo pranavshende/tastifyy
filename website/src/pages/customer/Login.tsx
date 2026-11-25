@@ -204,7 +204,7 @@ export default function CustomerLogin() {
           
           <div className="relative z-10">
             <Link to="/" className="inline-block mb-12 hover:opacity-90 transition-opacity">
-              <Logo size="lg" textColor="text-white" invert />
+              <Logo size="lg" invert />
             </Link>
             <h1 className="text-4xl md:text-5xl font-black mb-6 leading-tight">Your next favorite meal is waiting.</h1>
             <p className="text-white/90 text-lg font-medium leading-relaxed max-w-sm">

@@ -1,11 +1,71 @@
 @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap');
 @import "tailwindcss";
 
+:root {
+  --tastifyy-primary: #FF7900;
+  --tastifyy-secondary: #269B24;
+  --tastifyy-cream: #FFF5E8;
+  --tastifyy-light-orange: #FFE4C2;
+  --tastifyy-surface: #FFFFFF;
+  --tastifyy-text: #171717;
+  --tastifyy-text-secondary: #555555;
+}
+
 @theme {
-  --color-brand-primary: #FF5B33;
-  --color-brand-secondary: #E04B28;
-  --color-brand-dark: #1A1A1A;
-  --color-brand-light: #FAFAFA; /* Off White / Gray 50 */
+  --color-brand-primary: var(--tastifyy-primary);
+  --color-brand-secondary: var(--tastifyy-secondary);
+  --color-brand-dark: var(--tastifyy-text);
+  --color-brand-light: var(--tastifyy-cream);
+  --color-brand-accent: var(--tastifyy-light-orange);
+  --color-brand-muted: var(--tastifyy-text-secondary);
+
+  --color-orange-50: #FFF5E8;
+  --color-orange-100: #FFE4C2;
+  --color-orange-200: #FFD09B;
+  --color-orange-300: #FFB66B;
+  --color-orange-400: #FF9638;
+  --color-orange-500: #FF7900;
+  --color-orange-600: #E36D00;
+  --color-orange-700: #C15D00;
+  --color-orange-800: #9B4A00;
+  --color-orange-900: #783A00;
+  --color-orange-950: #4A2300;
+
+  --color-green-50: #EAF7E8;
+  --color-green-100: #D5EFD1;
+  --color-green-200: #B2DDA9;
+  --color-green-300: #8ECD80;
+  --color-green-400: #56B44D;
+  --color-green-500: #269B24;
+  --color-green-600: #21861F;
+  --color-green-700: #1B711A;
+  --color-green-800: #155B15;
+  --color-green-900: #104610;
+  --color-green-950: #092D09;
+
+  --color-emerald-50: #EAF7E8;
+  --color-emerald-100: #D5EFD1;
+  --color-emerald-200: #B2DDA9;
+  --color-emerald-300: #8ECD80;
+  --color-emerald-400: #56B44D;
+  --color-emerald-500: #269B24;
+  --color-emerald-600: #21861F;
+  --color-emerald-700: #1B711A;
+  --color-emerald-800: #155B15;
+  --color-emerald-900: #104610;
+  --color-emerald-950: #092D09;
+
+  --color-gray-50: #FFF5E8;
+  --color-gray-100: #FFF1E4;
+  --color-gray-200: #EFE4D7;
+  --color-gray-300: #E1D4C5;
+  --color-gray-400: #93877C;
+  --color-gray-500: #555555;
+  --color-gray-600: #555555;
+  --color-gray-700: #3F352C;
+  --color-gray-800: #2C251F;
+  --color-gray-900: #171717;
+  --color-gray-950: #111111;
   
   --font-sans: 'Inter', 'Roboto', 'Outfit', system-ui, sans-serif;
   --font-handwriting: 'Caveat', cursive;
@@ -61,4 +121,10 @@
 
 body {
   @apply bg-brand-light text-brand-dark font-sans;
+}
+
+input,
+select,
+textarea {
+  accent-color: var(--tastifyy-primary);
 }

@@ -46,14 +46,14 @@ export default function RestaurantLogin() {
       <div className="max-w-4xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row-reverse">
         
         {/* Left Side - Brand / Image (Reversed for Restaurant to differentiate) */}
-        <div className="md:w-1/2 bg-brand-dark p-12 text-white flex flex-col justify-center relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-brand-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+        <div className="md:w-1/2 bg-brand-primary p-12 text-white flex flex-col justify-center relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
           <div className="relative z-10">
             <Link to="/" className="inline-block mb-8">
-              <Logo size="lg" showText={false} />
+              <Logo size="lg" invert />
             </Link>
             <h1 className="text-4xl font-black mb-4 leading-tight">Grow your business with us.</h1>
-            <p className="text-gray-400 text-lg">Manage orders, update menus, and reach more customers.</p>
+            <p className="text-white/85 text-lg">Manage orders, update menus, and reach more customers.</p>
           </div>
         </div>
 

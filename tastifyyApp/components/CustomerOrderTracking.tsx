@@ -4,6 +4,7 @@ import { io, Socket } from 'socket.io-client';
 import api from '../api/axios';
 import { useAuthStore } from '../store/authStore';
 import { SOCKET_URL } from '../constants/config';
+import { BrandColors } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function CustomerOrderTracking({ orderId }: { orderId: string }) {
@@ -47,12 +48,12 @@ export default function CustomerOrderTracking({ orderId }: { orderId: string }) 
 
   const getStatusColor = () => {
     switch(status) {
-      case 'pending': return '#F59E0B';
-      case 'restaurant_confirmed': case 'preparing': return '#3B82F6';
-      case 'ready': case 'rider_assigned': case 'picked_up': case 'out_for_delivery': return '#8B5CF6';
-      case 'delivered': return '#10B981';
+      case 'pending': return BrandColors.primary;
+      case 'restaurant_confirmed': case 'preparing': return BrandColors.secondary;
+      case 'ready': case 'rider_assigned': case 'picked_up': case 'out_for_delivery': return BrandColors.primaryDark;
+      case 'delivered': return BrandColors.secondary;
       case 'cancelled': case 'rejected': return '#EF4444';
-      default: return '#F59E0B';
+      default: return BrandColors.primary;
     }
   };
 

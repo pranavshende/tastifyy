@@ -209,7 +209,7 @@ export default function LocationSetup({ profile, onSaved, locationEndpoint = '/p
           {requestOpen && <textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Why does the restaurant location need to change?" className="w-full mb-3 rounded-xl border border-gray-200 p-3 text-sm" rows={3} />}
           <div className="flex gap-2">
             <input value={manualAddress} onChange={e => setManualAddress(e.target.value)} placeholder="Search restaurant address" className="min-w-0 flex-1 rounded-xl border border-gray-200 px-3 py-2.5 text-sm" />
-            <button type="button" onClick={searchManualAddress} disabled={loading} className="rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Find'}</button>
+            <button type="button" onClick={searchManualAddress} disabled={loading} className="rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-secondary disabled:opacity-50">{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Find'}</button>
           </div>
           {requestOpen && <p className="text-xs text-gray-500 mt-2">The new location will remain pending until an admin approves this request.</p>}
           {replacementMode && <p className="text-xs text-green-700 mt-2">Admin approved this replacement. Find the new location, then confirm it.</p>}
