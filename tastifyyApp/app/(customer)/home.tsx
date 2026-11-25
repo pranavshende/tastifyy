@@ -125,13 +125,13 @@ export default function CustomerHome() {
   const renderHeader = () => (
     <View style={styles.topHeader}>
       <View style={styles.brandRow}>
-        <View style={styles.brandLogoBox}>
-          <Ionicons name="restaurant" size={20} color="#fff" />
-        </View>
-        <View style={styles.brandTextWrap}>
-          <Text style={styles.brandName}>Tastifyy</Text>
-          <Text style={styles.brandTagline}>Food Delivery</Text>
-        </View>
+        <Image
+          source={require('../../assets/images/icon.png')}
+          style={styles.brandLogoImage}
+          resizeMode="cover"
+          accessibilityLabel="Tastifyy"
+        />
+        <Text style={styles.brandTagline}>Food Delivery</Text>
       </View>
 
       <View style={styles.topActions}>
@@ -454,37 +454,17 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F3F4F6',
   },
   brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
-  brandLogoBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#E86A22',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-    shadowColor: '#E86A22',
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
-  },
-  brandTextWrap: {
-    justifyContent: 'center',
-  },
-  brandName: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#111827',
-    letterSpacing: -0.5,
+  brandLogoImage: {
+    width: 132,
+    height: 48,
   },
   brandTagline: {
     fontSize: 11,
     fontWeight: '600',
     color: '#6B7280',
-    marginTop: -2,
+    marginTop: -3,
   },
   topActions: {
     flexDirection: 'row',

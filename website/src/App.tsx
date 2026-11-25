@@ -4,6 +4,7 @@ import { useAuthStore } from './store/authStore';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import Landing from './pages/Landing';
+import SplashScreen from './components/ui/SplashScreen';
 import CustomerHome from './pages/customer/Home';
 import About from './pages/customer/About';
 import RestaurantDetails from './pages/customer/RestaurantDetails';
@@ -264,6 +265,7 @@ function App() {
           <Suspense fallback={<RouteLoadingFallback />}>
             <AppRoutes />
           </Suspense>
+          <SplashScreen />
         </div>
       </Router>
     </GoogleOAuthProvider>

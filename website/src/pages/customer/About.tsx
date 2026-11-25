@@ -18,7 +18,7 @@ export default function About() {
       <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 lg:px-8 mt-12">
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 md:p-12 text-center">
           <div className="flex justify-center mb-8">
-            <Logo size="xl" showText={false} />
+            <Logo size="xl" />
           </div>
           
           <h1 className="text-4xl font-black text-gray-900 mb-4 tracking-tight">About Tastifyy</h1>

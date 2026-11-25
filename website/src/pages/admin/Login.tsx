@@ -35,7 +35,7 @@ export default function AdminLogin() {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <Logo size="xl" showText={false} />
+            <Logo size="xl" />
           </div>
           <h2 className="text-3xl font-bold text-white tracking-tight">Admin Console</h2>
           <p className="text-gray-400 mt-2">Sign in to manage the Tastifyy platform</p>
