@@ -126,7 +126,7 @@ export default function CustomerHome() {
     <View style={styles.topHeader}>
       <View style={styles.brandRow}>
         <Image
-          source={require('../../assets/images/icon.png')}
+          source={require('../../assets/images/splash-icon.png')}
           style={styles.brandLogoImage}
           resizeMode="cover"
           accessibilityLabel="Tastifyy"
